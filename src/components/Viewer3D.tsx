@@ -69,67 +69,35 @@ export default function Viewer3D({ modelUrl, modelName, modelId, readOnly }: Pro
     startTime: number; path: CameraPath; totalDuration: number; waypointDurations: number[]
   } | null>(null)
 
-  // Camera fly-to animation — independent rAF loop, no render-loop dependency
-  const flyAnimIdRef = useRef<number>(0)
-  const isFlyingRef = useRef(false)
-
   const flyToHotspot = useCallback((hs: Hotspot) => {
     const cam = cameraRef.current; const ctrl = controlsRef.current
-    if (!cam || !ctrl) { setSelectedHotspot(hs); return }
+    const SPLAT = splatModuleRef.current
+    if (!cam || !ctrl || !SPLAT) { setSelectedHotspot(hs); return }
 
     setSelectedHotspot(hs)
     setIsPlaying(false); isPlayingRef.current = false; playbackRef.current = null
 
-    const startPos = { x: cam.position.x, y: cam.position.y, z: cam.position.z }
-    let startTgt = { x: 0, y: 0, z: 0 }
-    try {
-      if ((ctrl as any).target) {
-        startTgt = { x: (ctrl as any).target.x, y: (ctrl as any).target.y, z: (ctrl as any).target.z }
-      }
-    } catch {}
-
-    const endPos = (hs.cameraPosition && hs.cameraPosition.x !== undefined)
+    // Determine target position and look-at point
+    const targetPos = (hs.cameraPosition && hs.cameraPosition.x !== undefined)
       ? hs.cameraPosition
       : { x: hs.position.x + 2, y: hs.position.y + 1, z: hs.position.z + 3 }
-    const endTgt = (hs.cameraTarget && hs.cameraTarget.x !== undefined)
+    const lookAt = (hs.cameraTarget && hs.cameraTarget.x !== undefined)
       ? hs.cameraTarget
       : hs.position
 
-    const SPLAT = splatModuleRef.current
-    if (!SPLAT) { setSelectedHotspot(hs); return }
+    // Set OrbitControls target (where the camera orbits around)
+    ctrl.setCameraTarget(new SPLAT.Vector3(lookAt.x, lookAt.y, lookAt.z))
 
-    // Cancel previous animation if running
-    if (flyAnimIdRef.current) cancelAnimationFrame(flyAnimIdRef.current)
-    isFlyingRef.current = true
+    // Set camera position
+    cam.position = new SPLAT.Vector3(targetPos.x, targetPos.y, targetPos.z)
 
-    const startTime = performance.now()
-    const duration = 1.0 // seconds
-
-    const tick = () => {
-      const elapsed = (performance.now() - startTime) / 1000
-      const t = Math.min(elapsed / duration, 1)
-      const eased = t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2
-
-      const px = startPos.x + (endPos.x - startPos.x) * eased
-      const py = startPos.y + (endPos.y - startPos.y) * eased
-      const pz = startPos.z + (endPos.z - startPos.z) * eased
-      const tx = startTgt.x + (endTgt.x - startTgt.x) * eased
-      const ty = startTgt.y + (endTgt.y - startTgt.y) * eased
-      const tz = startTgt.z + (endTgt.z - startTgt.z) * eased
-
-      ctrl.setCameraTarget(new SPLAT.Vector3(tx, ty, tz))
-      const dir = new SPLAT.Vector3(tx - px, ty - py, tz - pz)
-      cam.rotation = SPLAT.Quaternion.LookRotation(dir)
-      cam.position = new SPLAT.Vector3(px, py, pz)
-
-      if (t < 1) {
-        flyAnimIdRef.current = requestAnimationFrame(tick)
-      } else {
-        isFlyingRef.current = false
-        ctrl.setCameraTarget(new SPLAT.Vector3(endTgt.x, endTgt.y, endTgt.z))
-      }
-    }
-    flyAnimIdRef.current = requestAnimationFrame(tick)
+    // Set camera rotation to look at the target
+    const dir = new SPLAT.Vector3(
+      lookAt.x - targetPos.x,
+      lookAt.y - targetPos.y,
+      lookAt.z - targetPos.z
+    )
+    cam.rotation = SPLAT.Quaternion.LookRotation(dir)
   }, [])
 
   const [hotspotScreens, setHotspotScreens] = useState<Map<string, { x: number; y: number; visible: boolean; scale: number }>>(new Map())
@@ -213,7 +181,7 @@ export default function Viewer3D({ modelUrl, modelName, modelId, readOnly }: Pro
             }
           }
           if (!pb.path.loop && elapsed >= total) { setIsPlaying(false); isPlayingRef.current = false; playbackRef.current = null; setPlayProgress(1) }
-        } else if (!isFlyingRef.current) {
+        } else {
           controls.update()
         }
 
