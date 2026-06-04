@@ -1,6 +1,5 @@
 import { useEffect, useState, useCallback, useRef } from 'react'
 import { Link } from 'react-router-dom'
-import { motion } from 'framer-motion'
 import { useI18n } from '../i18n/I18nContext'
 import { getBuiltinModels } from '../utils/models'
 import { getCustomModels, deleteCustomModel } from '../store/modelStore'
@@ -91,18 +90,19 @@ export default function Admin() {
   return (
     <main className="min-h-screen bg-surface-0">
       <div className="max-w-3xl mx-auto px-6 pt-28 sm:pt-36 pb-20">
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="flex items-center justify-between mb-12">
+        <div className="flex items-center justify-between mb-12">
           <div>
             <h1 className="text-3xl font-display tracking-tight"><span className="gradient-text">{t.admin.title}</span></h1>
-            <Link to="/gallery" className="text-[12px] text-text-3/60 hover:text-text-2 transition-colors mt-1 inline-block">← 返回画廊</Link>
+            <Link to="/gallery" className="text-[13px] text-text-3/60 hover:text-text-2 transition-colors mt-1 inline-block">← 返回画廊</Link>
           </div>
           <button
             ref={addBtnRef}
             onClick={() => { setEditingModel(null); setShowForm(true) }}
-            className="btn-primary text-[13px]"
+            className="inline-flex items-center justify-center px-6 py-3 rounded-xl bg-[#e8e0d5] text-[#0a0908] text-[14px] font-semibold cursor-pointer border-none outline-none hover:shadow-lg hover:shadow-[#d4a574]/15 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.985] transition-all duration-300"
             type="button"
+            style={{ cursor: 'pointer' }}
           >+ 添加场景</button>
-        </motion.div>
+        </div>
 
         <section className="mb-8">
           <h2 className="text-caption font-semibold text-text-3/50 uppercase tracking-[0.15em] mb-3 pl-1">内置场景</h2>
