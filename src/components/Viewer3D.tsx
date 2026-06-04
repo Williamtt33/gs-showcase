@@ -215,7 +215,7 @@ export default function Viewer3D({ modelUrl, modelName, modelId, readOnly }: Pro
             }
           }
           if (!pb.path.loop && elapsed >= total) { setIsPlaying(false); isPlayingRef.current = false; playbackRef.current = null; setPlayProgress(1) }
-        } else {
+        } else if (!flyAnimRef.current) {
           controls.update()
         }
 
