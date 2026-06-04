@@ -85,19 +85,21 @@ export default function Viewer3D({ modelUrl, modelName, modelId, readOnly }: Pro
       ? hs.cameraTarget
       : hs.position
 
-    // Set OrbitControls target (where the camera orbits around)
-    ctrl.setCameraTarget(new SPLAT.Vector3(lookAt.x, lookAt.y, lookAt.z))
-
-    // Set camera position
-    cam.position = new SPLAT.Vector3(targetPos.x, targetPos.y, targetPos.z)
-
-    // Set camera rotation to look at the target
-    const dir = new SPLAT.Vector3(
+    // Compute look-at rotation using gsplat's Quaternion
+    const dirVec = new SPLAT.Vector3(
       lookAt.x - targetPos.x,
       lookAt.y - targetPos.y,
       lookAt.z - targetPos.z
     )
-    cam.rotation = SPLAT.Quaternion.LookRotation(dir)
+    const rot = SPLAT.Quaternion.LookRotation(dirVec)
+    const pos = new SPLAT.Vector3(targetPos.x, targetPos.y, targetPos.z)
+    const tgt = new SPLAT.Vector3(lookAt.x, lookAt.y, lookAt.z)
+
+    // Use CameraData.update() — the official gsplat API for camera state
+    cam.data.update(pos, rot)
+
+    // Sync OrbitControls: set target so future orbit interactions work correctly
+    ctrl.setCameraTarget(tgt)
   }, [])
 
   const [hotspotScreens, setHotspotScreens] = useState<Map<string, { x: number; y: number; visible: boolean; scale: number }>>(new Map())
