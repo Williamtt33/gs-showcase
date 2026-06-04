@@ -83,9 +83,9 @@ export default function Viewer3D({ modelUrl, modelName, modelId, readOnly }: Pro
     if (!cam || !ctrl) { setSelectedHotspot(hs); return }
 
     setSelectedHotspot(hs)
-    // Stop any playback
     setIsPlaying(false); isPlayingRef.current = false; playbackRef.current = null
 
+    // Start from current camera state (handles interruption gracefully)
     const startPos = { x: cam.position.x, y: cam.position.y, z: cam.position.z }
     let startTgt = { x: 0, y: 0, z: 0 }
     try {
@@ -94,7 +94,6 @@ export default function Viewer3D({ modelUrl, modelName, modelId, readOnly }: Pro
       }
     } catch {}
 
-    // Use saved camera state if available, otherwise compute from hotspot position
     const endPos = (hs.cameraPosition && hs.cameraPosition.x !== undefined)
       ? hs.cameraPosition
       : { x: hs.position.x + 2, y: hs.position.y + 1, z: hs.position.z + 3 }
@@ -102,9 +101,10 @@ export default function Viewer3D({ modelUrl, modelName, modelId, readOnly }: Pro
       ? hs.cameraTarget
       : hs.position
 
+    // Interrupt any in-progress animation
     flyAnimRef.current = {
       startTime: performance.now(),
-      duration: 1.2,
+      duration: 1.0,
       startPos,
       endPos,
       startTgt,
@@ -172,21 +172,30 @@ export default function Viewer3D({ modelUrl, modelName, modelId, readOnly }: Pro
           const fa = flyAnimRef.current
           const elapsed = (now - fa.startTime) / 1000
           const t = Math.min(elapsed / fa.duration, 1)
-          // Ease in-out
-          const eased = t < 0.5 ? 2 * t * t : -1 + (4 - 2 * t) * t
+          // Ease in-out cubic
+          const eased = t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2
           const cam = cameraRef.current; const ctrl = controlsRef.current
           if (cam && ctrl) {
-            cam.position = new SPLAT.Vector3(
-              fa.startPos.x + (fa.endPos.x - fa.startPos.x) * eased,
-              fa.startPos.y + (fa.endPos.y - fa.startPos.y) * eased,
-              fa.startPos.z + (fa.endPos.z - fa.startPos.z) * eased,
-            )
-            const tgtX = fa.startTgt.x + (fa.endTgt.x - fa.startTgt.x) * eased
-            const tgtY = fa.startTgt.y + (fa.endTgt.y - fa.startTgt.y) * eased
-            const tgtZ = fa.startTgt.z + (fa.endTgt.z - fa.startTgt.z) * eased
-            ctrl.setCameraTarget(new SPLAT.Vector3(tgtX, tgtY, tgtZ))
+            const px = fa.startPos.x + (fa.endPos.x - fa.startPos.x) * eased
+            const py = fa.startPos.y + (fa.endPos.y - fa.startPos.y) * eased
+            const pz = fa.startPos.z + (fa.endPos.z - fa.startPos.z) * eased
+            const tx = fa.startTgt.x + (fa.endTgt.x - fa.startTgt.x) * eased
+            const ty = fa.startTgt.y + (fa.endTgt.y - fa.startTgt.y) * eased
+            const tz = fa.startTgt.z + (fa.endTgt.z - fa.startTgt.z) * eased
+            cam.position = new SPLAT.Vector3(px, py, pz)
+            ctrl.setCameraTarget(new SPLAT.Vector3(tx, ty, tz))
+            // Compute and set camera rotation to look at the target
+            const q = lookAtQuaternion({ x: px, y: py, z: pz }, { x: tx, y: ty, z: tz })
+            cam.rotation = new (SPLAT as any).Quaternion(q.x, q.y, q.z, q.w)
           }
-          if (t >= 1) flyAnimRef.current = null
+          if (t >= 1) {
+            // Animation complete — let controls take over from final position
+            const fa2 = flyAnimRef.current
+            if (fa2 && ctrl) {
+              ctrl.setCameraTarget(new SPLAT.Vector3(fa2.endTgt.x, fa2.endTgt.y, fa2.endTgt.z))
+            }
+            flyAnimRef.current = null
+          }
         }
 
         if (isPlayingRef.current && playbackRef.current) {
