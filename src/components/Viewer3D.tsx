@@ -82,7 +82,6 @@ export default function Viewer3D({ modelUrl, modelName, modelId, readOnly }: Pro
   const flyToHotspot = useCallback((hs: Hotspot) => {
     const cam = cameraRef.current; const ctrl = controlsRef.current
     if (!cam || !ctrl) { setSelectedHotspot(hs); return }
-    if (!hs.cameraPosition || !hs.cameraTarget) { setSelectedHotspot(hs); return }
 
     setSelectedHotspot(hs)
     // Stop any playback
@@ -96,13 +95,21 @@ export default function Viewer3D({ modelUrl, modelName, modelId, readOnly }: Pro
       }
     } catch {}
 
+    // Use saved camera state if available, otherwise compute from hotspot position
+    const endPos = (hs.cameraPosition && hs.cameraPosition.x !== undefined)
+      ? hs.cameraPosition
+      : { x: hs.position.x + 2, y: hs.position.y + 1, z: hs.position.z + 3 }
+    const endTgt = (hs.cameraTarget && hs.cameraTarget.x !== undefined)
+      ? hs.cameraTarget
+      : hs.position
+
     flyAnimRef.current = {
       startTime: performance.now(),
-      duration: 1.2, // seconds
+      duration: 1.2,
       startPos,
-      endPos: hs.cameraPosition,
+      endPos,
       startTgt,
-      endTgt: hs.cameraTarget,
+      endTgt,
     }
   }, [])
 
