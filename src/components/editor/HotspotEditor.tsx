@@ -87,11 +87,12 @@ export default function HotspotEditor({ isOpen, mode, position, editingHotspot, 
       <div className="flex items-center gap-2 mt-5">
         <button onClick={() => onSave({ title, titleEn, description: desc, descriptionEn: descEn, icon, color })}
           disabled={!title.trim()}
-          className="btn-primary flex-1 py-2.5 text-[13px]">
+          className="flex-1 py-2.5 px-6 rounded-xl bg-[#e8e0d5] text-[#0a0908] text-[14px] font-semibold cursor-pointer border-none outline-none hover:shadow-lg hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.985] transition-all duration-300 disabled:opacity-25 disabled:cursor-not-allowed"
+          style={{ cursor: !title.trim() ? 'not-allowed' : 'pointer' }}>
           {t.editor.save}
         </button>
         {mode === 'edit' && onDelete && (
-          <button onClick={onDelete} className="px-4 py-2.5 rounded-xl bg-accent-3/[0.06] border border-accent-3/15 text-accent-3 text-[13px] hover:bg-accent-3/[0.12] transition-all font-medium">
+          <button onClick={onDelete} className="px-4 py-2.5 rounded-xl bg-accent-3/[0.06] border border-accent-3/15 text-accent-3 text-[13px] font-medium cursor-pointer hover:bg-accent-3/[0.12] transition-all" style={{ cursor: 'pointer' }}>
             {t.editor.delete}
           </button>
         )}
