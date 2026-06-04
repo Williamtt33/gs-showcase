@@ -11,11 +11,11 @@ export interface Hotspot {
   titleEn: string
   description: string
   descriptionEn: string
-  icon: string // emoji
-  color: string // hex
+  /** Sequential order number (1-based) for hotspot display */
+  order: number
   /** Camera viewpoint saved when hotspot was placed — for fly-to animation */
-  cameraPosition?: Vector3Like
-  cameraTarget?: Vector3Like
+  cameraPosition: Vector3Like
+  cameraTarget: Vector3Like
 }
 
 export interface CameraWaypoint {

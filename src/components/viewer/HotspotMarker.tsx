@@ -4,19 +4,20 @@ import { motion } from 'framer-motion'
 interface Props {
   screenX: number
   screenY: number
-  icon: string
-  color: string
+  number: number
   title: string
   isSelected: boolean
   onClick: () => void
   scale: number
 }
 
-export default function HotspotMarker({ screenX, screenY, icon, color, title, isSelected, onClick, scale }: Props) {
+export default function HotspotMarker({ screenX, screenY, number, title, isSelected, onClick, scale }: Props) {
   const [hovered, setHovered] = useState(false)
+  const active = hovered || isSelected
 
   return (
     <motion.div
+      data-hotspot
       className="absolute pointer-events-auto cursor-pointer z-30"
       style={{
         left: screenX,
@@ -30,52 +31,57 @@ export default function HotspotMarker({ screenX, screenY, icon, color, title, is
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
     >
-      {/* Ring animation */}
-      <motion.div
-        className="absolute inset-0 rounded-full"
-        style={{
-          background: `${color}20`,
-          border: `2px solid ${color}60`,
-        }}
-        animate={{
-          scale: hovered || isSelected ? 1.3 : 1,
-          opacity: hovered || isSelected ? 1 : 0.7,
-        }}
-        transition={{ duration: 0.2 }}
-      />
-
-      {/* Pulse ring */}
-      {(hovered || isSelected) && (
+      {/* Outer pulse ring on hover/select */}
+      {active && (
         <motion.div
-          className="absolute inset-0 rounded-full"
-          style={{ border: `1px solid ${color}40` }}
-          initial={{ scale: 1, opacity: 0.6 }}
-          animate={{ scale: 2, opacity: 0 }}
-          transition={{ duration: 1.5, repeat: Infinity }}
+          className="absolute rounded-full -inset-2"
+          style={{ border: '1.5px solid rgba(255,255,255,0.3)' }}
+          initial={{ scale: 0.8, opacity: 0.6 }}
+          animate={{ scale: 1.6, opacity: 0 }}
+          transition={{ duration: 1.8, repeat: Infinity }}
         />
       )}
 
-      {/* Icon */}
+      {/* Main circle: white border + number */}
       <div
-        className="relative w-8 h-8 rounded-full flex items-center justify-center text-sm backdrop-blur-sm"
+        className="relative flex items-center justify-center rounded-full select-none"
         style={{
-          background: `${color}30`,
-          border: `2px solid ${color}80`,
-          boxShadow: isSelected ? `0 0 16px ${color}60` : `0 0 8px ${color}20`,
+          width: active ? '36px' : '30px',
+          height: active ? '36px' : '30px',
+          background: active ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.55)',
+          border: active ? '2.5px solid rgba(255,255,255,0.85)' : '2px solid rgba(255,255,255,0.55)',
+          boxShadow: active
+            ? '0 0 20px rgba(255,255,255,0.25), 0 0 4px rgba(255,255,255,0.4)'
+            : '0 2px 8px rgba(0,0,0,0.5), 0 0 2px rgba(255,255,255,0.15)',
+          color: '#fff',
+          fontSize: active ? '15px' : '13px',
+          fontWeight: 700,
+          fontFamily: "'Inter', 'Noto Sans SC', sans-serif",
+          transition: 'all 0.25s cubic-bezier(0.22, 1, 0.36, 1)',
+          backdropFilter: 'blur(4px)',
+          WebkitBackdropFilter: 'blur(4px)',
         }}
       >
-        {icon}
+        {number}
       </div>
 
-      {/* Label */}
-      {(hovered || isSelected) && (
+      {/* Label tooltip on hover/select */}
+      {active && (
         <motion.div
-          initial={{ opacity: 0, y: -5 }}
+          initial={{ opacity: 0, y: -6 }}
           animate={{ opacity: 1, y: 0 }}
-          className="absolute top-full mt-1.5 left-1/2 -translate-x-1/2 whitespace-nowrap"
+          className="absolute top-full mt-2 left-1/2 -translate-x-1/2 whitespace-nowrap pointer-events-none"
         >
-          <span className="glass rounded-lg px-2 py-1 text-xs text-white/80">
-            {title}
+          <span
+            className="inline-block rounded-lg px-3 py-1.5 text-xs font-medium text-white/90"
+            style={{
+              background: 'rgba(0,0,0,0.75)',
+              border: '1px solid rgba(255,255,255,0.12)',
+              backdropFilter: 'blur(8px)',
+              WebkitBackdropFilter: 'blur(8px)',
+            }}
+          >
+            {title || `热点 ${number}`}
           </span>
         </motion.div>
       )}

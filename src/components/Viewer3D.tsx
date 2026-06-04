@@ -355,11 +355,12 @@ export default function Viewer3D({ modelUrl, modelName, modelId, readOnly }: Pro
           }
         } catch {}
 
-        // Open editor at the found position
+        // Open editor at the found position with auto-assigned order
+        const nextOrder = hotspots.length + 1
         const newHs: Hotspot = {
           id: '', position: bestPos,
           title: '', titleEn: '', description: '', descriptionEn: '',
-          icon: '📍', color: '#d4a574',
+          order: nextOrder,
           cameraPosition: { x: camPos.x, y: camPos.y, z: camPos.z },
           cameraTarget: camTgt,
         }
@@ -391,12 +392,19 @@ export default function Viewer3D({ modelUrl, modelName, modelId, readOnly }: Pro
 
 
   // --- Hotspot handlers ---
-  const handleSaveHotspot = useCallback((data: { title: string; titleEn: string; description: string; descriptionEn: string; icon: string; color: string }) => {
+  const handleSaveHotspot = useCallback((data: { title: string; titleEn: string; description: string; descriptionEn: string }) => {
     if (!data.title.trim()) return
     if (editingHotspot?.id) {
-      updateHotspot(modelId, editingHotspot.id, { ...data, position: editingHotspot.position })
+      updateHotspot(modelId, editingHotspot.id, data)
     } else if (editingHotspot?.position) {
-      addHotspot(modelId, { ...data, position: editingHotspot.position })
+      const hsData = {
+        ...data,
+        position: editingHotspot.position,
+        order: editingHotspot.order || hotspots.length + 1,
+        cameraPosition: editingHotspot.cameraPosition || { x: 0, y: 0, z: 5 },
+        cameraTarget: editingHotspot.cameraTarget || { x: 0, y: 0, z: 0 },
+      }
+      addHotspot(modelId, hsData)
     }
     setHotspots(getHotspots(modelId))
     setShowHotspotEditor(false); setEditingHotspot(null)
@@ -480,7 +488,7 @@ export default function Viewer3D({ modelUrl, modelName, modelId, readOnly }: Pro
       <HotspotMarker
         key={id}
         screenX={screen.x} screenY={screen.y}
-        icon={hs.icon} color={hs.color}
+        number={hs.order || (hotspots.indexOf(hs) + 1)}
         title={lang === 'zh' ? hs.title : hs.titleEn || hs.title}
         isSelected={selectedHotspot?.id === id}
         scale={screen.scale}
@@ -595,7 +603,7 @@ export default function Viewer3D({ modelUrl, modelName, modelId, readOnly }: Pro
                     const ctrl = controlsRef.current
                     let camTgt = { x: 0, y: 0, z: 0 }
                     try { if (ctrl && (ctrl as any).target) camTgt = { x: (ctrl as any).target.x, y: (ctrl as any).target.y, z: (ctrl as any).target.z } } catch {}
-                    setEditingHotspot({ id: '', position: pos, title: '', titleEn: '', description: '', descriptionEn: '', icon: '📍', color: '#d4a574', cameraPosition: { x: cam.position.x, y: cam.position.y, z: cam.position.z }, cameraTarget: camTgt })
+                    setEditingHotspot({ id: '', position: pos, title: '', titleEn: '', description: '', descriptionEn: '', order: hotspots.length + 1, cameraPosition: { x: cam.position.x, y: cam.position.y, z: cam.position.z }, cameraTarget: camTgt })
                     setShowHotspotEditor(true); setShowPathEditor(false); setSelectedHotspot(null)
                   }}
                   className="rounded-xl px-3 py-2.5 text-xs font-medium glass text-white/50 hover:text-white/80 transition-colors"

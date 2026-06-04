@@ -21,12 +21,12 @@ export default function HotspotInfo({ hotspot, onClose, onDelete, isEditing, lan
         >
           <div className="flex items-start justify-between mb-3">
             <div className="flex items-center gap-3">
-              <div
-                className="w-10 h-10 rounded-xl flex items-center justify-center text-lg"
-                style={{ background: `${hotspot.color}20`, border: `1px solid ${hotspot.color}40` }}
+              {/* Numbered circle */}
+              <span className="inline-flex items-center justify-center w-10 h-10 rounded-full bg-white/10 border-2 border-white/30 text-white text-base font-bold shrink-0"
+                style={{ fontFamily: "'Inter', 'Noto Sans SC', sans-serif" }}
               >
-                {hotspot.icon}
-              </div>
+                {hotspot.order || '?'}
+              </span>
               <div>
                 <h3 className="font-semibold text-white/90 text-sm">
                   {lang === 'zh' ? hotspot.title : hotspot.titleEn || hotspot.title}
@@ -36,9 +36,7 @@ export default function HotspotInfo({ hotspot, onClose, onDelete, isEditing, lan
             <button
               onClick={onClose}
               className="text-white/30 hover:text-white/70 transition-colors text-lg leading-none"
-            >
-              ×
-            </button>
+            >×</button>
           </div>
 
           <p className="text-sm text-white/50 leading-relaxed mb-4">

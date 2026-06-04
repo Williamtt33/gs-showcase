@@ -59,9 +59,6 @@ function extractText(item: any): { title: string; titleEn: string; description: 
   }
 }
 
-const DEFAULT_ICONS = ['📍', '🏷️', '💡', '🔍', '⭐', '🎯', '📌', '🔬', '🌿', '🏛️']
-const DEFAULT_COLORS = ['#d4a574', '#a3b5a6', '#c84b31', '#fbbf24', '#f472b6', '#fb923c']
-
 export interface ImportResult {
   hotspots: Omit<Hotspot, 'id'>[]
   errors: string[]
@@ -121,8 +118,9 @@ export function parseHotspotJSON(raw: string): ImportResult {
       titleEn: text.titleEn,
       description: text.description,
       descriptionEn: text.descriptionEn,
-      icon: item.icon || item.emoji || DEFAULT_ICONS[i % DEFAULT_ICONS.length],
-      color: item.color || DEFAULT_COLORS[i % DEFAULT_COLORS.length],
+      order: item.order || (i + 1),
+      cameraPosition: item.cameraPosition || item.camera_position || { x: 0, y: 0, z: 5 },
+      cameraTarget: item.cameraTarget || item.camera_target || { x: 0, y: 0, z: 0 },
     })
   })
 
@@ -138,7 +136,8 @@ export function exportHotspotsJSON(hotspots: Hotspot[]): string {
     titleEn: h.titleEn,
     description: h.description,
     descriptionEn: h.descriptionEn,
-    icon: h.icon,
-    color: h.color,
+    order: h.order,
+    cameraPosition: h.cameraPosition,
+    cameraTarget: h.cameraTarget,
   })), null, 2)
 }
