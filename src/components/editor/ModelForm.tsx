@@ -119,8 +119,9 @@ export default function ModelForm({ isOpen, editingModel, onSaved, onClose }: Pr
             </div>
 
             <div>
-              <label className="block text-[12px] font-medium text-text-2 mb-2">场景名称</label>
+              <label htmlFor="scene-name" className="block text-[12px] font-medium text-text-2 mb-2">场景名称</label>
               <input
+                id="scene-name" name="scene-name"
                 value={name} onChange={e => { setName(e.target.value); setError('') }}
                 placeholder="例如：春日花园、城市街景..."
                 className="w-full bg-surface-2/80 border border-border-1 rounded-xl px-4 py-3 text-[14px] text-text-1 placeholder:text-text-3/40 focus:outline-none focus:border-accent-1/40 transition-colors"
@@ -129,8 +130,9 @@ export default function ModelForm({ isOpen, editingModel, onSaved, onClose }: Pr
             </div>
 
             <div>
-              <label className="block text-[12px] font-medium text-text-2 mb-2">或输入文件路径</label>
+              <label htmlFor="scene-filepath" className="block text-[12px] font-medium text-text-2 mb-2">或输入文件路径</label>
               <input
+                id="scene-filepath" name="scene-filepath"
                 value={splatFile ? `[上传] ${splatFile.name}` : file}
                 onChange={e => { setFile(e.target.value); setError('') }}
                 placeholder="/models/your-scene.splat"
@@ -140,28 +142,28 @@ export default function ModelForm({ isOpen, editingModel, onSaved, onClose }: Pr
             </div>
 
             <div>
-              <label className="block text-[12px] font-medium text-text-2 mb-2">封面图片（可选）</label>
+              <label htmlFor="cover-input" className="block text-[12px] font-medium text-text-2 mb-2">封面图片（可选）</label>
               <div className="flex items-start gap-4">
-                <div
+                <button type="button"
                   className="w-24 h-16 rounded-xl border border-border-1 bg-surface-2 flex items-center justify-center shrink-0 overflow-hidden cursor-pointer hover:border-border-2 transition-colors"
                   onClick={() => document.getElementById('cover-input')?.click()}
                 >
                   {coverPreview ? (
-                    <img src={coverPreview} alt="" className="w-full h-full object-cover" />
+                    <img src={coverPreview} alt="封面预览" className="w-full h-full object-cover" />
                   ) : (
                     <div className="text-center">
                       <div className="text-lg opacity-30">🖼️</div>
                       <div className="text-[9px] text-text-3/40 mt-0.5">设置封面</div>
                     </div>
                   )}
-                </div>
+                </button>
                 <div className="flex-1">
                   <p className="text-[11px] text-text-3/50 mb-2">上传图片或在查看器中截图自动生成</p>
-                  <button
+                  <button type="button"
                     onClick={() => document.getElementById('cover-input')?.click()}
                     className="px-3 py-1.5 rounded-lg bg-white/[0.04] border border-white/[0.06] text-text-3 hover:text-text-2 text-[11px] transition-all font-medium"
                   >选择图片</button>
-                  <input id="cover-input" type="file" accept="image/*" onChange={e => { const f = e.target.files?.[0]; if (f) handleCoverFile(f) }} className="hidden" />
+                  <input id="cover-input" name="cover" type="file" accept="image/*" onChange={e => { const f = e.target.files?.[0]; if (f) handleCoverFile(f) }} className="hidden" />
                 </div>
               </div>
             </div>

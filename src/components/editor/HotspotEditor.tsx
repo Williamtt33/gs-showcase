@@ -48,19 +48,23 @@ export default function HotspotEditor({ isOpen, mode, position, editingHotspot, 
       )}
 
       <div className="space-y-3">
-        <input value={title} onChange={e => setTitle(e.target.value)} placeholder="标题 (中文)" autoFocus
+        <label htmlFor="hs-title" className="text-[10px] text-text-3/60 block">标题 (中文)</label>
+        <input id="hs-title" name="hs-title" value={title} onChange={e => setTitle(e.target.value)} placeholder="标题 (中文)" autoFocus
           className="w-full bg-surface-2/80 border border-border-1 rounded-xl px-3.5 py-2.5 text-[13px] text-text-1 placeholder:text-text-3/30 focus:outline-none focus:border-accent-1/40 transition-colors" />
-        <input value={titleEn} onChange={e => setTitleEn(e.target.value)} placeholder="Title (English)"
+        <label htmlFor="hs-title-en" className="text-[10px] text-text-3/60 block">Title (English)</label>
+        <input id="hs-title-en" name="hs-title-en" value={titleEn} onChange={e => setTitleEn(e.target.value)} placeholder="Title (English)"
           className="w-full bg-surface-2/80 border border-border-1 rounded-xl px-3.5 py-2.5 text-[13px] text-text-1 placeholder:text-text-3/30 focus:outline-none focus:border-accent-1/40 transition-colors" />
-        <textarea value={desc} onChange={e => setDesc(e.target.value)} placeholder="描述 (中文)" rows={2}
+        <label htmlFor="hs-desc" className="text-[10px] text-text-3/60 block">描述 (中文)</label>
+        <textarea id="hs-desc" name="hs-desc" value={desc} onChange={e => setDesc(e.target.value)} placeholder="描述 (中文)" rows={2}
           className="w-full bg-surface-2/80 border border-border-1 rounded-xl px-3.5 py-2.5 text-[13px] text-text-1 placeholder:text-text-3/30 focus:outline-none focus:border-accent-1/40 transition-colors resize-none" />
-        <textarea value={descEn} onChange={e => setDescEn(e.target.value)} placeholder="Description (English)" rows={2}
+        <label htmlFor="hs-desc-en" className="text-[10px] text-text-3/60 block">Description (English)</label>
+        <textarea id="hs-desc-en" name="hs-desc-en" value={descEn} onChange={e => setDescEn(e.target.value)} placeholder="Description (English)" rows={2}
           className="w-full bg-surface-2/80 border border-border-1 rounded-xl px-3.5 py-2.5 text-[13px] text-text-1 placeholder:text-text-3/30 focus:outline-none focus:border-accent-1/40 transition-colors resize-none" />
 
         {/* Icon + Color row */}
         <div className="flex gap-4">
           <div className="flex-1">
-            <label className="text-[10px] text-text-3/60 mb-1.5 block">图标</label>
+            <span className="text-[10px] text-text-3/60 mb-1.5 block">图标</span>
             <div className="flex flex-wrap gap-1">
               {EMOJI.map(e => (
                 <button key={e} onClick={() => setIcon(e)}
@@ -71,7 +75,7 @@ export default function HotspotEditor({ isOpen, mode, position, editingHotspot, 
           </div>
         </div>
         <div>
-          <label className="text-[10px] text-text-3/60 mb-1.5 block">颜色</label>
+          <span className="text-[10px] text-text-3/60 mb-1.5 block">颜色</span>
           <div className="flex gap-1">
             {COLORS.map(c => (
               <button key={c} onClick={() => setColor(c)}

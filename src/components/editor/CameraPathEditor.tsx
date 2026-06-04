@@ -96,7 +96,9 @@ export default function CameraPathEditor({
       {/* New path form */}
       {showNewForm ? (
         <div className="flex gap-2 mb-3">
+          <label htmlFor="path-name" className="sr-only">{t.editor.pathName}</label>
           <input
+            id="path-name" name="path-name"
             value={newName}
             onChange={e => setNewName(e.target.value)}
             onKeyDown={e => e.key === 'Enter' && handleAddPath()}
