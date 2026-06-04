@@ -410,7 +410,14 @@ export default function Viewer3D({ modelUrl, modelName, modelId, readOnly }: Pro
   })
 
   return (
-    <div ref={containerRef} className="relative w-full h-full bg-black overflow-hidden">
+    <div ref={containerRef} className="relative w-full h-full bg-black overflow-hidden"
+      onClick={(e) => {
+        // Deselect hotspot when clicking empty canvas space
+        if ((e.target as HTMLElement).tagName === 'CANVAS') {
+          setSelectedHotspot(null)
+        }
+      }}
+    >
       <canvas ref={canvasRef} className="gsplat-canvas absolute inset-0" tabIndex={-1} />
 
       <div className="absolute inset-0 pointer-events-none">
