@@ -69,6 +69,10 @@ export default function Viewer3D({ modelUrl, modelName, modelId, readOnly }: Pro
     startTime: number; path: CameraPath; totalDuration: number; waypointDurations: number[]
   } | null>(null)
 
+  // Fly-to animation refs
+  const flyAnimIdRef = useRef<number>(0)
+  const isFlyingRef = useRef(false)
+
   const flyToHotspot = useCallback((hs: Hotspot) => {
     const cam = cameraRef.current; const ctrl = controlsRef.current
     const SPLAT = splatModuleRef.current
@@ -77,29 +81,59 @@ export default function Viewer3D({ modelUrl, modelName, modelId, readOnly }: Pro
     setSelectedHotspot(hs)
     setIsPlaying(false); isPlayingRef.current = false; playbackRef.current = null
 
-    // Determine target position and look-at point
-    const targetPos = (hs.cameraPosition && hs.cameraPosition.x !== undefined)
+    // Cancel any in-progress fly animation
+    if (flyAnimIdRef.current) cancelAnimationFrame(flyAnimIdRef.current)
+
+    // Current camera state as start
+    const startPos = { x: cam.position.x, y: cam.position.y, z: cam.position.z }
+    let startLookAt = { x: 0, y: 0, z: 0 }
+    try {
+      if ((ctrl as any).target) {
+        startLookAt = { x: (ctrl as any).target.x, y: (ctrl as any).target.y, z: (ctrl as any).target.z }
+      }
+    } catch {}
+
+    // Target camera state
+    const endPos = (hs.cameraPosition && hs.cameraPosition.x !== undefined)
       ? hs.cameraPosition
       : { x: hs.position.x + 2, y: hs.position.y + 1, z: hs.position.z + 3 }
-    const lookAt = (hs.cameraTarget && hs.cameraTarget.x !== undefined)
+    const endLookAt = (hs.cameraTarget && hs.cameraTarget.x !== undefined)
       ? hs.cameraTarget
       : hs.position
 
-    // Compute look-at rotation using gsplat's Quaternion
-    const dirVec = new SPLAT.Vector3(
-      lookAt.x - targetPos.x,
-      lookAt.y - targetPos.y,
-      lookAt.z - targetPos.z
-    )
-    const rot = SPLAT.Quaternion.LookRotation(dirVec)
-    const pos = new SPLAT.Vector3(targetPos.x, targetPos.y, targetPos.z)
-    const tgt = new SPLAT.Vector3(lookAt.x, lookAt.y, lookAt.z)
+    const startTime = performance.now()
+    const duration = 0.8 // seconds
+    isFlyingRef.current = true
+    ctrl.dampening = 0 // Kill orbit damping during animation
 
-    // Use CameraData.update() — the official gsplat API for camera state
-    cam.data.update(pos, rot)
+    const tick = () => {
+      const elapsed = (performance.now() - startTime) / 1000
+      const t = Math.min(elapsed / duration, 1)
+      // easeInOutCubic
+      const ease = t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2
 
-    // Sync OrbitControls: set target so future orbit interactions work correctly
-    ctrl.setCameraTarget(tgt)
+      const px = startPos.x + (endPos.x - startPos.x) * ease
+      const py = startPos.y + (endPos.y - startPos.y) * ease
+      const pz = startPos.z + (endPos.z - startPos.z) * ease
+      const lx = startLookAt.x + (endLookAt.x - startLookAt.x) * ease
+      const ly = startLookAt.y + (endLookAt.y - startLookAt.y) * ease
+      const lz = startLookAt.z + (endLookAt.z - startLookAt.z) * ease
+
+      const dirVec = new SPLAT.Vector3(lx - px, ly - py, lz - pz)
+      const rot = SPLAT.Quaternion.LookRotation(dirVec)
+      const pos = new SPLAT.Vector3(px, py, pz)
+      cam.data.update(pos, rot)
+
+      if (t < 1) {
+        flyAnimIdRef.current = requestAnimationFrame(tick)
+      } else {
+        // Animation complete — sync OrbitControls and resume
+        isFlyingRef.current = false
+        ctrl.setCameraTarget(new SPLAT.Vector3(endLookAt.x, endLookAt.y, endLookAt.z))
+        ctrl.dampening = 0.2 // Restore default damping
+      }
+    }
+    flyAnimIdRef.current = requestAnimationFrame(tick)
   }, [])
 
   const [hotspotScreens, setHotspotScreens] = useState<Map<string, { x: number; y: number; visible: boolean; scale: number }>>(new Map())
@@ -157,7 +191,10 @@ export default function Viewer3D({ modelUrl, modelName, modelId, readOnly }: Pro
       const animate = () => {
         const now = performance.now()
 
-        if (isPlayingRef.current && playbackRef.current) {
+        // Skip controls.update() during fly animation
+        if (isFlyingRef.current) {
+          // Camera driven by flyToHotspot rAF loop — just render
+        } else if (isPlayingRef.current && playbackRef.current) {
           const pb = playbackRef.current
           const elapsed = (now - pb.startTime) / 1000
           const total = pb.totalDuration
