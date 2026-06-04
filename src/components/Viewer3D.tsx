@@ -219,19 +219,42 @@ export default function Viewer3D({ modelUrl, modelName, modelId, readOnly }: Pro
         while (fpsFrames.current.length > 0 && fpsFrames.current[0] < now - 1000) fpsFrames.current.shift()
         setFps(fpsFrames.current.length)
 
-        // Update hotspot positions (use ref to avoid stale closure)
+        // Update hotspot positions using gsplat's actual view-projection matrix
         const currentHotspots = hotspotsRef.current
         if (currentHotspots.length > 0) {
           const newScreens = new Map<string, { x: number; y: number; visible: boolean; scale: number }>()
-          const camPos = camera.position; const camFwd = camera.forward
-          const fov = (camera as any).data?.fovY ?? 50
+          const camPos = camera.position
+          const vp = (camera as any).data?.viewProj
+          const vpBuffer: number[] = vp?.buffer
           const rect = container.getBoundingClientRect()
+          const sw = rect.width; const sh = rect.height
           for (const hs of currentHotspots) {
-            const screen = worldToScreen(hs.position, camPos, camFwd, fov, rect.width, rect.height)
-            if (screen) {
-              const dist = Math.sqrt((hs.position.x - camPos.x) ** 2 + (hs.position.y - camPos.y) ** 2 + (hs.position.z - camPos.z) ** 2)
-              newScreens.set(hs.id, { x: screen.x, y: screen.y, visible: screen.visible, scale: Math.max(0.4, Math.min(1.5, 5 / dist)) })
+            if (!vpBuffer) {
+              // Fallback to simple projection
+              const fwd = camera.forward
+              const fov = (camera as any).data?.fovY ?? 50
+              const screen = worldToScreen(hs.position, camPos, fwd, fov, sw, sh)
+              if (screen) {
+                const dist = Math.sqrt((hs.position.x - camPos.x) ** 2 + (hs.position.y - camPos.y) ** 2 + (hs.position.z - camPos.z) ** 2)
+                newScreens.set(hs.id, { x: screen.x, y: screen.y, visible: screen.visible, scale: Math.max(0.4, Math.min(1.5, 5 / dist)) })
+              }
+              continue
             }
+            // Transform world point by view-projection matrix
+            const wx = hs.position.x, wy = hs.position.y, wz = hs.position.z
+            const cx = vpBuffer[0] * wx + vpBuffer[4] * wy + vpBuffer[8]  * wz + vpBuffer[12]
+            const cy = vpBuffer[1] * wx + vpBuffer[5] * wy + vpBuffer[9]  * wz + vpBuffer[13]
+            const cz = vpBuffer[2] * wx + vpBuffer[6] * wy + vpBuffer[10] * wz + vpBuffer[14]
+            const cw = vpBuffer[3] * wx + vpBuffer[7] * wy + vpBuffer[11] * wz + vpBuffer[15]
+            if (cw <= 0.0001) continue // Behind or at camera
+            // Perspective divide + NDC to screen
+            const ndcX = cx / cw
+            const ndcY = cy / cw
+            const screenX = (ndcX * 0.5 + 0.5) * sw
+            const screenY = (-ndcY * 0.5 + 0.5) * sh // Flip Y: NDC up -> screen down
+            const visible = ndcX >= -1.2 && ndcX <= 1.2 && ndcY >= -1.2 && ndcY <= 1.2 && cz > 0
+            const dist = Math.sqrt((wx - camPos.x) ** 2 + (wy - camPos.y) ** 2 + (wz - camPos.z) ** 2)
+            newScreens.set(hs.id, { x: screenX, y: screenY, visible, scale: Math.max(0.4, Math.min(1.5, 5 / dist)) })
           }
           setHotspotScreens(newScreens)
         }
