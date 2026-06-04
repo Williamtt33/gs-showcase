@@ -182,18 +182,14 @@ export default function Viewer3D({ modelUrl, modelName, modelId, readOnly }: Pro
             const tx = fa.startTgt.x + (fa.endTgt.x - fa.startTgt.x) * eased
             const ty = fa.startTgt.y + (fa.endTgt.y - fa.startTgt.y) * eased
             const tz = fa.startTgt.z + (fa.endTgt.z - fa.startTgt.z) * eased
-            cam.position = new SPLAT.Vector3(px, py, pz)
+            // Set target first, then update position and rotation
             ctrl.setCameraTarget(new SPLAT.Vector3(tx, ty, tz))
-            // Compute and set camera rotation to look at the target
-            const q = lookAtQuaternion({ x: px, y: py, z: pz }, { x: tx, y: ty, z: tz })
-            cam.rotation = new (SPLAT as any).Quaternion(q.x, q.y, q.z, q.w)
+            // Use gsplat's LookRotation to orient camera toward the target
+            const dir = new SPLAT.Vector3(tx - px, ty - py, tz - pz)
+            cam.rotation = SPLAT.Quaternion.LookRotation(dir)
+            cam.position = new SPLAT.Vector3(px, py, pz)
           }
           if (t >= 1) {
-            // Animation complete — let controls take over from final position
-            const fa2 = flyAnimRef.current
-            if (fa2 && ctrl) {
-              ctrl.setCameraTarget(new SPLAT.Vector3(fa2.endTgt.x, fa2.endTgt.y, fa2.endTgt.z))
-            }
             flyAnimRef.current = null
           }
         }
