@@ -18,6 +18,7 @@ export default function Navbar() {
   const links = [
     { to: '/', label: t.nav.home },
     { to: '/gallery', label: t.nav.gallery },
+    { to: '/upload', label: '上传' },
     { to: '/admin', label: t.nav.admin },
   ]
 

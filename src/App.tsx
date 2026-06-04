@@ -6,6 +6,7 @@ import Home from './pages/Home'
 import Gallery from './pages/GalleryPage'
 import Viewer from './pages/Viewer'
 import Admin from './pages/Admin'
+import UploadModel from './pages/UploadModel'
 import NotFound from './pages/NotFound'
 
 function AnimatedRoutes() {
@@ -17,6 +18,7 @@ function AnimatedRoutes() {
       <Route path="/gallery" element={<Gallery />} />
       <Route path="/viewer/:modelId" element={<Viewer />} />
       <Route path="/admin" element={<Admin />} />
+      <Route path="/upload" element={<UploadModel />} />
       <Route path="*" element={<NotFound />} />
     </Routes>
   )

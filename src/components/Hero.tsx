@@ -62,12 +62,22 @@ export default function Hero() {
           initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.9, delay: 0.5 }}
           className="flex flex-col sm:flex-row items-center justify-center gap-4"
         >
-          <Link
-            to="/gallery"
-            className="btn-primary text-[15px] px-10 py-4 rounded-xl"
-          >
-            {t.hero.ctaView}
-          </Link>
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+            <Link
+              to="/gallery"
+              className="inline-flex items-center justify-center px-10 py-4 rounded-xl bg-[#e8e0d5] text-[#0a0908] text-[15px] font-semibold cursor-pointer hover:shadow-lg hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.985] transition-all duration-300"
+              style={{ cursor: 'pointer' }}
+            >
+              {t.hero.ctaView}
+            </Link>
+            <Link
+              to="/upload"
+              className="inline-flex items-center justify-center px-10 py-4 rounded-xl bg-white/[0.04] border border-white/[0.08] text-text-2 text-[15px] font-medium cursor-pointer hover:bg-white/[0.08] hover:text-text-1 hover:-translate-y-0.5 active:translate-y-0 transition-all duration-300"
+              style={{ cursor: 'pointer' }}
+            >
+              上传场景
+            </Link>
+          </div>
         </motion.div>
       </div>
 
