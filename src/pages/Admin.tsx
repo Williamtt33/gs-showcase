@@ -82,7 +82,8 @@ export default function Admin() {
             <Link to="/gallery" className="text-[13px] text-text-3/60 hover:text-text-2 transition-colors mt-1 inline-block">← 返回画廊</Link>
           </div>
           <button
-            onClick={() => { setEditingModel(null); setShowForm(true) }}
+            id="add-scene-btn"
+            onClick={() => { console.log('[Admin] add scene clicked'); setEditingModel(null); setShowForm(true); }}
             className="inline-flex items-center justify-center px-6 py-3 rounded-xl bg-[#e8e0d5] text-[#0a0908] text-[14px] font-semibold cursor-pointer border-none outline-none hover:shadow-lg hover:shadow-[#d4a574]/15 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.985] transition-all duration-300"
             type="button"
             style={{ cursor: 'pointer' }}
