@@ -56,6 +56,7 @@ export default function Viewer3D({ modelUrl, modelName, modelId, readOnly }: Pro
 
   // Data state
   const [hotspots, setHotspots] = useState<Hotspot[]>([])
+  const hotspotsRef = useRef<Hotspot[]>([])
   const [cameraPaths, setCameraPaths] = useState<CameraPath[]>([])
   const [activePathId, setActivePathId] = useState<string | null>(null)
 
@@ -121,6 +122,7 @@ export default function Viewer3D({ modelUrl, modelName, modelId, readOnly }: Pro
 
   // Keep refs in sync with state for render loop closure
   useEffect(() => { isPlayingRef.current = isPlaying }, [isPlaying])
+  useEffect(() => { hotspotsRef.current = hotspots }, [hotspots])
 
   // --- Init & Load ---
   const initAndLoad = useCallback(async () => {
@@ -217,13 +219,14 @@ export default function Viewer3D({ modelUrl, modelName, modelId, readOnly }: Pro
         while (fpsFrames.current.length > 0 && fpsFrames.current[0] < now - 1000) fpsFrames.current.shift()
         setFps(fpsFrames.current.length)
 
-        // Update hotspot positions
-        if (hotspots.length > 0) {
+        // Update hotspot positions (use ref to avoid stale closure)
+        const currentHotspots = hotspotsRef.current
+        if (currentHotspots.length > 0) {
           const newScreens = new Map<string, { x: number; y: number; visible: boolean; scale: number }>()
           const camPos = camera.position; const camFwd = camera.forward
           const fov = (camera as any).data?.fovY ?? 50
           const rect = container.getBoundingClientRect()
-          for (const hs of hotspots) {
+          for (const hs of currentHotspots) {
             const screen = worldToScreen(hs.position, camPos, camFwd, fov, rect.width, rect.height)
             if (screen) {
               const dist = Math.sqrt((hs.position.x - camPos.x) ** 2 + (hs.position.y - camPos.y) ** 2 + (hs.position.z - camPos.z) ** 2)
