@@ -1,0 +1,28 @@
+[
+  {
+    "id": "garden-simple",
+    "name": "春日花园",
+    "nameEn": "Spring Garden",
+    "description": "一个精心打理的欧式花园，阳光透过树叶洒在草地上。",
+    "descriptionEn": "A beautifully maintained European garden bathed in dappled sunlight.",
+    "file": "simple.splat",
+    "thumbnail": "",
+    "tags": ["户外", "花园"],
+    "pointCount": "",
+    "size": "",
+    "featured": true
+  },
+  {
+    "id": "garden-6999",
+    "name": "花园漫步",
+    "nameEn": "Garden Walk",
+    "description": "深入探索花园的每一个角落，感受更丰富的细节层次。",
+    "descriptionEn": "Explore every corner of the garden with richer detail.",
+    "file": "point_cloud_6999.splat",
+    "thumbnail": "",
+    "tags": ["户外", "花园"],
+    "pointCount": "",
+    "size": "",
+    "featured": false
+  }
+]
