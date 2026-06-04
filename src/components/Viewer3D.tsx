@@ -5,7 +5,6 @@ import { motion, AnimatePresence } from 'framer-motion'
 import PerformancePanel from './PerformancePanel'
 import ControlsHelp from './ControlsHelp'
 import HotspotMarker from './viewer/HotspotMarker'
-import HotspotInfo from './viewer/HotspotInfo'
 import CameraPathPlayer from './viewer/CameraPathPlayer'
 import HotspotEditor from './editor/HotspotEditor'
 import CameraPathEditor from './editor/CameraPathEditor'
@@ -425,15 +424,19 @@ export default function Viewer3D({ modelUrl, modelName, modelId, readOnly }: Pro
   const hotspotElements = Array.from(hotspotScreens.entries()).map(([id, screen]) => {
     const hs = hotspots.find(h => h.id === id)
     if (!hs || !screen.visible) return null
+    const hotspotTitle = lang === 'zh' ? hs.title : hs.titleEn || hs.title
+    const hotspotDesc = lang === 'zh' ? hs.description : hs.descriptionEn || hs.description
     return (
       <HotspotMarker
         key={id}
         screenX={screen.x} screenY={screen.y}
         number={hs.order || (hotspots.indexOf(hs) + 1)}
-        title={lang === 'zh' ? hs.title : hs.titleEn || hs.title}
+        title={hotspotTitle}
+        description={hotspotDesc}
         isSelected={selectedHotspot?.id === id}
         scale={screen.scale}
-        onClick={() => { flyToHotspot(hs) }}
+        onFly={() => { flyToHotspot(hs) }}
+        onEdit={() => { setEditingHotspot(hs); setShowHotspotEditor(true) }}
       />
     )
   })
@@ -571,14 +574,6 @@ export default function Viewer3D({ modelUrl, modelName, modelId, readOnly }: Pro
         </button>
       )}
 
-      {/* Hotspot info panel */}
-      <HotspotInfo
-        hotspot={selectedHotspot} lang={lang}
-        isEditing={!readOnly}
-        onClose={() => setSelectedHotspot(null)}
-        onEdit={selectedHotspot ? () => { setEditingHotspot(selectedHotspot); setShowHotspotEditor(true) } : undefined}
-        onDelete={selectedHotspot && !readOnly ? () => handleDeleteHotspot(selectedHotspot.id) : undefined}
-      />
 
       {/* Hotspot editor — only in edit pages */}
       {!readOnly && (
