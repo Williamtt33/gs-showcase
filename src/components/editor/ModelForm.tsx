@@ -20,9 +20,18 @@ export default function ModelForm({ isOpen, editingModel, onSaved, onClose }: Pr
   const [splatFile, setSplatFile] = useState<File | null>(null)
   const [coverPreview, setCoverPreview] = useState<string | null>(null)
 
-  // Reset form when opening for a new model
+  // Sync form fields when modal opens (component stays mounted, uses CSS hidden)
   useEffect(() => {
-    if (isOpen && !editingModel) {
+    if (!isOpen) return
+    if (editingModel) {
+      // Edit mode: pre-fill from existing model
+      setName(editingModel.name || '')
+      setFile(editingModel.file || '')
+      setSplatFile(null)
+      setCoverPreview(null)
+      setError('')
+    } else {
+      // Add mode: reset to empty
       setName(''); setFile(''); setSplatFile(null); setCoverPreview(null); setError('')
     }
   }, [isOpen, editingModel])

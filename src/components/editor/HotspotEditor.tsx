@@ -22,6 +22,22 @@ export default function HotspotEditor({ isOpen, mode, position, editingHotspot, 
   const [icon, setIcon] = useState(editingHotspot?.icon || '📍')
   const [color, setColor] = useState(editingHotspot?.color || '#d4a574')
 
+  // Sync form fields when editor opens (component stays mounted, uses CSS hidden)
+  useEffect(() => {
+    if (!isOpen) return
+    if (editingHotspot) {
+      setTitle(editingHotspot.title || '')
+      setTitleEn(editingHotspot.titleEn || '')
+      setDesc(editingHotspot.description || '')
+      setDescEn(editingHotspot.descriptionEn || '')
+      setIcon(editingHotspot.icon || '📍')
+      setColor(editingHotspot.color || '#d4a574')
+    } else {
+      setTitle(''); setTitleEn(''); setDesc(''); setDescEn('')
+      setIcon('📍'); setColor('#d4a574')
+    }
+  }, [isOpen, editingHotspot])
+
   useEffect(() => {
     if (!isOpen) return
     const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose() }
