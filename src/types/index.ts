@@ -11,9 +11,10 @@ export interface Hotspot {
   titleEn: string
   description: string
   descriptionEn: string
-  /** Sequential order number (1-based) for hotspot display */
+  note: string
+  /** Sequential order number (1-based) for display */
   order: number
-  /** Camera viewpoint saved when hotspot was placed — for fly-to animation */
+  /** Camera viewpoint saved when annotation was placed */
   cameraPosition: Vector3Like
   cameraTarget: Vector3Like
 }

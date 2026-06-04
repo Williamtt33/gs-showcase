@@ -4,7 +4,7 @@ import { useI18n } from '../i18n/I18nContext'
 import { motion, AnimatePresence } from 'framer-motion'
 import PerformancePanel from './PerformancePanel'
 import ControlsHelp from './ControlsHelp'
-import HotspotMarker from './viewer/HotspotMarker'
+import AnnotationMarker from './viewer/AnnotationMarker'
 import CameraPathPlayer from './viewer/CameraPathPlayer'
 import HotspotEditor from './editor/HotspotEditor'
 import CameraPathEditor from './editor/CameraPathEditor'
@@ -340,10 +340,12 @@ export default function Viewer3D({ modelUrl, modelName, modelId, readOnly }: Pro
   const handleSaveHotspot = useCallback((data: { title: string; titleEn: string; description: string; descriptionEn: string }) => {
     if (!data.title.trim()) return
     if (editingHotspot?.id) {
-      updateHotspot(modelId, editingHotspot.id, data)
+      updateHotspot(modelId, editingHotspot.id, { ...data, note: data.description || data.descriptionEn })
     } else if (editingHotspot?.position) {
       const hsData = {
-        ...data,
+        title: data.title, titleEn: data.titleEn,
+        description: data.description, descriptionEn: data.descriptionEn,
+        note: data.description || data.descriptionEn,
         position: editingHotspot.position,
         order: editingHotspot.order || hotspots.length + 1,
         cameraPosition: editingHotspot.cameraPosition || { x: 0, y: 0, z: 5 },
@@ -425,22 +427,20 @@ export default function Viewer3D({ modelUrl, modelName, modelId, readOnly }: Pro
   const handleStopPath = useCallback(() => { setIsPlaying(false); playbackRef.current = null; setPlayProgress(0); setCurrentWaypoint(0) }, [])
   const handleToggleLoop = useCallback((pathId: string) => { const path = cameraPaths.find(p => p.id === pathId); if (path) { updateCameraPath(modelId, pathId, { loop: !path.loop }); setCameraPaths(getCameraPaths(modelId)) } }, [modelId, cameraPaths])
 
-  // --- Hotspot overlay rendering ---
+  // --- Annotation overlay rendering ---
   const hotspotElements = Array.from(hotspotScreens.entries()).map(([id, screen]) => {
     const hs = hotspots.find(h => h.id === id)
     if (!hs || !screen.visible) return null
-    const hotspotTitle = lang === 'zh' ? hs.title : hs.titleEn || hs.title
-    const hotspotDesc = lang === 'zh' ? hs.description : hs.descriptionEn || hs.description
     return (
-      <HotspotMarker
+      <AnnotationMarker
         key={id}
         screenX={screen.x} screenY={screen.y}
         number={hs.order || (hotspots.indexOf(hs) + 1)}
-        title={hotspotTitle}
-        description={hotspotDesc}
+        title={lang === 'zh' ? hs.title : hs.titleEn || hs.title}
+        note={hs.note || hs.description || (lang === 'zh' ? hs.description : hs.descriptionEn) || ''}
         isSelected={selectedHotspot?.id === id}
         scale={screen.scale}
-        onFly={() => { flyToHotspot(hs) }}
+        onSelect={() => { flyToHotspot(hs) }}
         onEdit={() => { setEditingHotspot(hs); setShowHotspotEditor(true) }}
       />
     )
@@ -539,7 +539,7 @@ export default function Viewer3D({ modelUrl, modelName, modelId, readOnly }: Pro
                   let camTgt = { x: 0, y: 0, z: 0 }
                   try { if (ctrl && (ctrl as any).target) camTgt = { x: (ctrl as any).target.x, y: (ctrl as any).target.y, z: (ctrl as any).target.z } } catch {}
                   const nextOrder = hotspots.length + 1
-                  setEditingHotspot({ id: '', position: pos, title: '', titleEn: '', description: '', descriptionEn: '', order: nextOrder, cameraPosition: { x: cam.position.x, y: cam.position.y, z: cam.position.z }, cameraTarget: camTgt })
+                  setEditingHotspot({ id: '', position: pos, title: '', titleEn: '', description: '', descriptionEn: '', note: '', order: nextOrder, cameraPosition: { x: cam.position.x, y: cam.position.y, z: cam.position.z }, cameraTarget: camTgt })
                   setShowHotspotEditor(true); setShowPathEditor(false)
                 }}
                 className="rounded-xl px-3 py-2.5 text-xs font-medium glass text-white/70 hover:text-white hover:bg-white/[0.06] transition-all cursor-pointer"
