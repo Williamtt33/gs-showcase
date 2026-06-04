@@ -114,8 +114,8 @@ export default function ModelForm({ isOpen, editingModel, onSaved, onClose }: Pr
 
           <div className="space-y-5">
             <div>
-              <label className="block text-[12px] font-medium text-text-2 mb-2">模型文件（.splat）</label>
-              <FileDropZone onFile={handleSplatFile} hint="拖拽 .splat 或 .ply 文件到此处" />
+              <label htmlFor="splat-file-upload" className="block text-[12px] font-medium text-text-2 mb-2">模型文件（.splat）</label>
+              <FileDropZone id="splat-file-upload" onFile={handleSplatFile} hint="拖拽 .splat 或 .ply 文件到此处" />
             </div>
 
             <div>

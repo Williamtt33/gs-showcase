@@ -6,9 +6,10 @@ interface Props {
   accept?: string
   hint?: string
   className?: string
+  id?: string
 }
 
-export default function FileDropZone({ onFile, accept = '.splat', hint, className = '' }: Props) {
+export default function FileDropZone({ onFile, accept = '.splat', hint, className = '', id }: Props) {
   const [dragover, setDragover] = useState(false)
   const [fileName, setFileName] = useState<string | null>(null)
   const [fileSize, setFileSize] = useState<string | null>(null)
@@ -73,6 +74,8 @@ export default function FileDropZone({ onFile, accept = '.splat', hint, classNam
 
         <input
           ref={inputRef}
+          id={id}
+          name={id}
           type="file"
           accept={accept}
           onChange={onInputChange}
