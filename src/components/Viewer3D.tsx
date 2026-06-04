@@ -49,7 +49,6 @@ export default function Viewer3D({ modelUrl, modelName, modelId, readOnly }: Pro
 
   // UI state
   const [showControls, setShowControls] = useState(true)
-  const [editMode, setEditMode] = useState(false)
   const [showHotspotEditor, setShowHotspotEditor] = useState(false)
   const [showPathEditor, setShowPathEditor] = useState(false)
   const [selectedHotspot, setSelectedHotspot] = useState<Hotspot | null>(null)
@@ -118,13 +117,10 @@ export default function Viewer3D({ modelUrl, modelName, modelId, readOnly }: Pro
     setEditingHotspot(null)
     setShowHotspotEditor(false)
     setShowPathEditor(false)
-    setEditMode(false)
   }, [modelId])
 
   // Keep refs in sync with state for render loop closure
   useEffect(() => { isPlayingRef.current = isPlaying }, [isPlaying])
-  const editModeRef = useRef(editMode)
-  editModeRef.current = editMode
 
   // --- Init & Load ---
   const initAndLoad = useCallback(async () => {
@@ -265,9 +261,8 @@ export default function Viewer3D({ modelUrl, modelName, modelId, readOnly }: Pro
           }
         }
         if (e.key === 'h' || e.key === 'H') setShowControls(prev => !prev)
-        if (e.key === 'e' || e.key === 'E') { if (!isLoading) setEditMode(prev => !prev) }
         // Arrow key hotspot navigation (guided tour)
-        if (!isLoading && !editMode && hotspots.length > 0) {
+        if (!isLoading && hotspots.length > 0) {
           if (e.key === 'ArrowLeft') {
             e.preventDefault()
             const idx = selectedHotspot ? hotspots.findIndex(h => h.id === selectedHotspot.id) : -1
@@ -284,97 +279,10 @@ export default function Viewer3D({ modelUrl, modelName, modelId, readOnly }: Pro
       }
       window.addEventListener('keydown', onKey)
 
-      // Canvas click handler — raycast to place hotspot on model surface
-      const onCanvasClick = (e: MouseEvent) => {
-        if (!editModeRef.current) return
-        const target = e.target as HTMLElement
-        if (target.closest('[data-hotspot]') || target.closest('.glass')) return
-        placeHotspotAtScreen(e.clientX, e.clientY)
-      }
-      canvas.addEventListener('click', onCanvasClick)
-
-      // Screen-to-world hotspot placement using IntersectionTester + ray marching
-      const placeHotspotAtScreen = (clientX: number, clientY: number) => {
-        const cam = cameraRef.current
-        const tester = intersectionTesterRef.current
-        if (!cam || !canvas) return null
-        const rect = canvas.getBoundingClientRect()
-        const x = clientX - rect.left
-        const y = clientY - rect.top
-
-        // Use IntersectionTester to verify a gaussian is at this screen position
-        if (tester) {
-          const hit = tester.testPoint(x, y)
-          if (!hit) return null // Click didn't hit any gaussian
-        }
-
-        // Get ray direction from camera through the pixel
-        const rayDir = cam.screenPointToRay(x, y)
-        const camPos = cam.position
-        const { width, height, viewProj } = cam.data
-
-        // Ray march to find approximate 3D hit position
-        // Step along ray, project back to screen, find closest match
-        let bestPos = { x: camPos.x + rayDir.x * 3, y: camPos.y + rayDir.y * 3, z: camPos.z + rayDir.z * 3 }
-        let bestDist = Infinity
-
-        for (let d = 0.5; d <= 80; d += 0.5) {
-          const wx = camPos.x + rayDir.x * d
-          const wy = camPos.y + rayDir.y * d
-          const wz = camPos.z + rayDir.z * d
-
-          // Transform world point to clip space using view-projection matrix
-          const b = viewProj.buffer
-          const cx = b[0] * wx + b[4] * wy + b[8] * wz + b[12]
-          const cy = b[1] * wx + b[5] * wy + b[9] * wz + b[13]
-          const cw = b[3] * wx + b[7] * wy + b[11] * wz + b[15]
-
-          if (cw <= 0.001) continue // Behind camera
-
-          // Perspective divide + NDC to screen
-          const sx = ((cx / cw) * 0.5 + 0.5) * width
-          const sy = ((-cy / cw) * 0.5 + 0.5) * height
-
-          const dx = sx - x
-          const dy = sy - y
-          const dist = dx * dx + dy * dy
-
-          if (dist < bestDist) {
-            bestDist = dist
-            bestPos = { x: wx, y: wy, z: wz }
-          }
-          if (dist < 4) break // Close enough
-        }
-
-        // Capture current camera viewpoint
-        const ctrl = controlsRef.current
-        let camTgt = { x: 0, y: 0, z: 0 }
-        try {
-          if (ctrl && (ctrl as any).target) {
-            camTgt = { x: (ctrl as any).target.x, y: (ctrl as any).target.y, z: (ctrl as any).target.z }
-          }
-        } catch {}
-
-        // Open editor at the found position with auto-assigned order
-        const nextOrder = hotspots.length + 1
-        const newHs: Hotspot = {
-          id: '', position: bestPos,
-          title: '', titleEn: '', description: '', descriptionEn: '',
-          order: nextOrder,
-          cameraPosition: { x: camPos.x, y: camPos.y, z: camPos.z },
-          cameraTarget: camTgt,
-        }
-        setEditingHotspot(newHs)
-        setShowHotspotEditor(true)
-        setSelectedHotspot(null)
-        return bestPos
-      }
-
       return () => {
         cancelAnimationFrame(animRef.current)
         ro.disconnect()
         window.removeEventListener('keydown', onKey)
-        canvas.removeEventListener('click', onCanvasClick)
         renderer.dispose()
       }
     } catch (err: any) {
@@ -492,16 +400,13 @@ export default function Viewer3D({ modelUrl, modelName, modelId, readOnly }: Pro
         title={lang === 'zh' ? hs.title : hs.titleEn || hs.title}
         isSelected={selectedHotspot?.id === id}
         scale={screen.scale}
-        onClick={() => {
-          if (editMode) { setEditingHotspot(hs); setShowHotspotEditor(true) }
-          else { flyToHotspot(hs) }
-        }}
+        onClick={() => { flyToHotspot(hs) }}
       />
     )
   })
 
   return (
-    <div ref={containerRef} className={`relative w-full h-full bg-black overflow-hidden ${editMode ? 'cursor-crosshair' : ''}`}>
+    <div ref={containerRef} className="relative w-full h-full bg-black overflow-hidden">
       <canvas ref={canvasRef} className="gsplat-canvas absolute inset-0" tabIndex={-1} />
 
       <div className="absolute inset-0 pointer-events-none">
@@ -544,7 +449,6 @@ export default function Viewer3D({ modelUrl, modelName, modelId, readOnly }: Pro
               const dataUrl = canvas.toDataURL('image/jpeg', 0.85)
               import('../utils/fileStorage').then(({ storeThumbnail }) => {
                 storeThumbnail(modelId, dataUrl).then(() => {
-                  // Brief visual feedback
                   const el = document.createElement('div')
                   el.className = 'fixed top-4 left-1/2 -translate-x-1/2 glass rounded-xl px-4 py-2 text-xs text-accent-2 z-[100] animate-fade-in'
                   el.textContent = '✅ 封面已保存'
@@ -555,85 +459,62 @@ export default function Viewer3D({ modelUrl, modelName, modelId, readOnly }: Pro
             }}
             className="glass rounded-xl px-3 py-2.5 text-sm text-white/40 hover:text-white/70 transition-colors"
             title="截取当前画面作为封面"
-          >
-            📷
-          </button>
+          >📷</button>
 
-          {/* Edit mode toggle — only in edit pages */}
+          {/* Annotation tools — only in edit pages */}
           {!readOnly && (
-            <button
-              onClick={() => { setEditMode(!editMode); setShowHotspotEditor(false); setShowPathEditor(false); setSelectedHotspot(null) }}
-              className={`rounded-xl px-3 py-2.5 text-xs font-medium transition-all ${
-                editMode ? 'bg-accent-1/15 border border-accent-1/30 text-accent-1' : 'glass text-white/40 hover:text-white/70'
-              }`}
-            >
-              {editMode ? '✎ 编辑中' : '✎ 编辑'}
-            </button>
-          )}
-
-          {/* Edit tools (only in edit mode) */}
-          <AnimatePresence>
-            {editMode && (
-              <motion.div initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -10 }} className="flex items-center gap-2">
-                <div className="w-px h-6 bg-white/10" />
-                <button
-                  onClick={() => {
-                    const canvas = canvasRef.current
-                    if (!canvas) return
-                    const rect = canvas.getBoundingClientRect()
-                    const cam = cameraRef.current
-                    const tester = intersectionTesterRef.current
-                    if (!cam) return
-                    const x = rect.width / 2; const y = rect.height / 2
-                    // Quick ray march to place hotspot at screen center
-                    let pos = { x: cam.position.x + cam.forward.x * 3, y: cam.position.y + cam.forward.y * 3, z: cam.position.z + cam.forward.z * 3 }
-                    if (tester?.testPoint(x, y)) {
-                      const rayDir = cam.screenPointToRay(x, y)
-                      const cp = cam.position; const vp = cam.data.viewProj.buffer
-                      const { width: w, height: h } = cam.data
-                      for (let d = 0.5; d <= 80; d += 0.5) {
-                        const wx = cp.x + rayDir.x * d; const wy = cp.y + rayDir.y * d; const wz = cp.z + rayDir.z * d
-                        const cw = vp[3] * wx + vp[7] * wy + vp[11] * wz + vp[15]
-                        if (cw <= 0.001) continue
-                        const sx = ((vp[0] * wx + vp[4] * wy + vp[8] * wz + vp[12]) / cw * 0.5 + 0.5) * w
-                        const sy = ((-(vp[1] * wx + vp[5] * wy + vp[9] * wz + vp[13]) / cw) * 0.5 + 0.5) * h
-                        if (Math.abs(sx - x) < 3 && Math.abs(sy - y) < 3) { pos = { x: wx, y: wy, z: wz }; break }
-                      }
+            <>
+              <div className="w-px h-6 bg-white/10" />
+              {/* Add annotation button */}
+              <button
+                onClick={() => {
+                  const canvas = canvasRef.current; const cam = cameraRef.current
+                  if (!canvas || !cam) return
+                  const rect = canvas.getBoundingClientRect()
+                  const x = rect.width / 2; const y = rect.height / 2
+                  const tester = intersectionTesterRef.current
+                  let pos = { x: cam.position.x + cam.forward.x * 3, y: cam.position.y + cam.forward.y * 3, z: cam.position.z + cam.forward.z * 3 }
+                  if (tester?.testPoint(x, y)) {
+                    const rayDir = cam.screenPointToRay(x, y)
+                    const cp = cam.position; const vp = cam.data.viewProj.buffer
+                    const { width: w, height: h } = cam.data
+                    for (let d = 0.5; d <= 80; d += 0.5) {
+                      const wx = cp.x + rayDir.x * d; const wy = cp.y + rayDir.y * d; const wz = cp.z + rayDir.z * d
+                      const cw = vp[3] * wx + vp[7] * wy + vp[11] * wz + vp[15]
+                      if (cw <= 0.001) continue
+                      const sx = ((vp[0] * wx + vp[4] * wy + vp[8] * wz + vp[12]) / cw * 0.5 + 0.5) * w
+                      const sy = ((-(vp[1] * wx + vp[5] * wy + vp[9] * wz + vp[13]) / cw) * 0.5 + 0.5) * h
+                      if (Math.abs(sx - x) < 3 && Math.abs(sy - y) < 3) { pos = { x: wx, y: wy, z: wz }; break }
                     }
-                    const ctrl = controlsRef.current
-                    let camTgt = { x: 0, y: 0, z: 0 }
-                    try { if (ctrl && (ctrl as any).target) camTgt = { x: (ctrl as any).target.x, y: (ctrl as any).target.y, z: (ctrl as any).target.z } } catch {}
-                    setEditingHotspot({ id: '', position: pos, title: '', titleEn: '', description: '', descriptionEn: '', order: hotspots.length + 1, cameraPosition: { x: cam.position.x, y: cam.position.y, z: cam.position.z }, cameraTarget: camTgt })
-                    setShowHotspotEditor(true); setShowPathEditor(false); setSelectedHotspot(null)
-                  }}
-                  className="rounded-xl px-3 py-2.5 text-xs font-medium glass text-white/50 hover:text-white/80 transition-colors"
-                >
-                  📍 添加热点
-                </button>
-                <button
-                  onClick={() => { setShowPathEditor(!showPathEditor); setShowHotspotEditor(false) }}
-                  className={`rounded-xl px-3 py-2.5 text-xs font-medium transition-all ${showPathEditor ? 'bg-accent-2/15 border border-accent-2/30 text-accent-2' : 'glass text-white/50 hover:text-white/80'}`}
-                >
-                  🎬 相机路径
-                </button>
-                <button onClick={handleImport} className="rounded-xl px-3 py-2.5 text-xs font-medium glass text-white/50 hover:text-white/80 transition-colors">
-                  📥 导入JSON
-                </button>
-                {hotspots.length > 0 && (
-                  <button onClick={handleExport} className="rounded-xl px-3 py-2.5 text-xs font-medium glass text-white/50 hover:text-white/80 transition-colors">
-                    📤 导出
-                  </button>
-                )}
-                <span className="text-xs text-white/20 ml-1">点击模型放置热点</span>
-              </motion.div>
-            )}
-          </AnimatePresence>
+                  }
+                  const ctrl = controlsRef.current
+                  let camTgt = { x: 0, y: 0, z: 0 }
+                  try { if (ctrl && (ctrl as any).target) camTgt = { x: (ctrl as any).target.x, y: (ctrl as any).target.y, z: (ctrl as any).target.z } } catch {}
+                  const nextOrder = hotspots.length + 1
+                  setEditingHotspot({ id: '', position: pos, title: '', titleEn: '', description: '', descriptionEn: '', order: nextOrder, cameraPosition: { x: cam.position.x, y: cam.position.y, z: cam.position.z }, cameraTarget: camTgt })
+                  setShowHotspotEditor(true); setShowPathEditor(false)
+                }}
+                className="rounded-xl px-3 py-2.5 text-xs font-medium glass text-white/70 hover:text-white hover:bg-white/[0.06] transition-all cursor-pointer"
+                style={{ cursor: 'pointer' }}
+              >📌 添加标注</button>
+              {/* Camera path button */}
+              <button
+                onClick={() => { setShowPathEditor(!showPathEditor); setShowHotspotEditor(false) }}
+                className={`rounded-xl px-3 py-2.5 text-xs font-medium transition-all ${showPathEditor ? 'bg-accent-2/15 border border-accent-2/30 text-accent-2' : 'glass text-white/50 hover:text-white/80'}`}
+              >🎬 相机路径</button>
+              {/* Import/Export */}
+              <button onClick={handleImport} className="rounded-xl px-3 py-2.5 text-xs font-medium glass text-white/40 hover:text-white/70 transition-colors">📥</button>
+              {hotspots.length > 0 && (
+                <button onClick={handleExport} className="rounded-xl px-3 py-2.5 text-xs font-medium glass text-white/40 hover:text-white/70 transition-colors">📤</button>
+              )}
+            </>
+          )}
         </motion.div>
       )}
 
       {/* Camera path player (always visible when paths exist, not in edit mode) */}
       <AnimatePresence>
-        {!editMode && cameraPaths.length > 0 && (
+        {cameraPaths.length > 0 && (
           <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 10 }}>
             <CameraPathPlayer
               paths={cameraPaths} activePathId={activePathId} isPlaying={isPlaying}
@@ -658,9 +539,13 @@ export default function Viewer3D({ modelUrl, modelName, modelId, readOnly }: Pro
       )}
 
       {/* Hotspot info panel */}
-      {!editMode && (
-        <HotspotInfo hotspot={selectedHotspot} lang={lang} isEditing={!readOnly} onClose={() => setSelectedHotspot(null)} />
-      )}
+      <HotspotInfo
+        hotspot={selectedHotspot} lang={lang}
+        isEditing={!readOnly}
+        onClose={() => setSelectedHotspot(null)}
+        onEdit={selectedHotspot ? () => { setEditingHotspot(selectedHotspot); setShowHotspotEditor(true) } : undefined}
+        onDelete={selectedHotspot && !readOnly ? () => handleDeleteHotspot(selectedHotspot.id) : undefined}
+      />
 
       {/* Hotspot editor — only in edit pages */}
       {!readOnly && (

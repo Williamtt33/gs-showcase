@@ -4,12 +4,13 @@ import type { Hotspot } from '../../types'
 interface Props {
   hotspot: Hotspot | null
   onClose: () => void
+  onEdit?: () => void
   onDelete?: () => void
   isEditing?: boolean
   lang: string
 }
 
-export default function HotspotInfo({ hotspot, onClose, onDelete, isEditing, lang }: Props) {
+export default function HotspotInfo({ hotspot, onClose, onEdit, onDelete, isEditing, lang }: Props) {
   return (
     <AnimatePresence>
       {hotspot && (
@@ -47,13 +48,21 @@ export default function HotspotInfo({ hotspot, onClose, onDelete, isEditing, lan
             <span>pos: ({hotspot.position.x.toFixed(2)}, {hotspot.position.y.toFixed(2)}, {hotspot.position.z.toFixed(2)})</span>
           </div>
 
-          {isEditing && onDelete && (
-            <button
-              onClick={onDelete}
-              className="mt-3 w-full py-2 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 text-xs hover:bg-red-500/20 transition-colors"
-            >
-              删除此热点
-            </button>
+          {isEditing && (
+            <div className="flex gap-2 mt-3">
+              {onEdit && (
+                <button onClick={onEdit}
+                  className="flex-1 py-2 rounded-lg bg-white/[0.04] border border-white/[0.08] text-text-2 text-xs hover:bg-white/[0.08] transition-colors cursor-pointer"
+                  style={{ cursor: 'pointer' }}
+                >编辑标注</button>
+              )}
+              {onDelete && (
+                <button onClick={onDelete}
+                  className="flex-1 py-2 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 text-xs hover:bg-red-500/20 transition-colors cursor-pointer"
+                  style={{ cursor: 'pointer' }}
+                >删除</button>
+              )}
+            </div>
           )}
         </motion.div>
       )}

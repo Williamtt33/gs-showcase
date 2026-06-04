@@ -191,9 +191,8 @@ export default function EditModel() {
 
           {/* Quick hint */}
           <div className="text-[10px] text-text-3/40 leading-relaxed border-t border-border-1 pt-3">
-            <p>💡 按 <kbd className="px-1 py-0.5 rounded bg-white/[0.04] border border-white/[0.08] text-[9px]">E</kbd> 切换编辑模式</p>
-            <p className="mt-1">在编辑模式下点击模型表面放置热点</p>
-            <p>使用工具栏管理相机路径和导入导出</p>
+            <p>💡 移动视角到目标位置后，点击工具栏 <span className="text-white/60">📌 添加标注</span> 按钮</p>
+            <p className="mt-1">点击标注圆圈可飞回对应视角，左/右方向键浏览</p>
           </div>
         </div>
       </motion.div>
