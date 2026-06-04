@@ -56,6 +56,7 @@ export default function Viewer() {
           modelUrl={modelUrl}
           modelName={lang === 'zh' ? model.name : model.nameEn}
           modelId={model.id}
+          readOnly
         />
       )}
 

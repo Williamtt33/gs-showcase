@@ -22,9 +22,10 @@ interface Props {
   modelUrl: string
   modelName: string
   modelId: string
+  readOnly?: boolean
 }
 
-export default function Viewer3D({ modelUrl, modelName, modelId }: Props) {
+export default function Viewer3D({ modelUrl, modelName, modelId, readOnly }: Props) {
   const { t, lang } = useI18n()
   const containerRef = useRef<HTMLDivElement>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
@@ -550,15 +551,17 @@ export default function Viewer3D({ modelUrl, modelName, modelId }: Props) {
             📷
           </button>
 
-          {/* Edit mode toggle */}
-          <button
-            onClick={() => { setEditMode(!editMode); setShowHotspotEditor(false); setShowPathEditor(false); setSelectedHotspot(null) }}
-            className={`rounded-xl px-3 py-2.5 text-xs font-medium transition-all ${
-              editMode ? 'bg-accent-1/15 border border-accent-1/30 text-accent-1' : 'glass text-white/40 hover:text-white/70'
-            }`}
-          >
-            {editMode ? '✎ 编辑中' : '✎ 编辑'}
-          </button>
+          {/* Edit mode toggle — only in edit pages */}
+          {!readOnly && (
+            <button
+              onClick={() => { setEditMode(!editMode); setShowHotspotEditor(false); setShowPathEditor(false); setSelectedHotspot(null) }}
+              className={`rounded-xl px-3 py-2.5 text-xs font-medium transition-all ${
+                editMode ? 'bg-accent-1/15 border border-accent-1/30 text-accent-1' : 'glass text-white/40 hover:text-white/70'
+              }`}
+            >
+              {editMode ? '✎ 编辑中' : '✎ 编辑'}
+            </button>
+          )}
 
           {/* Edit tools (only in edit mode) */}
           <AnimatePresence>
@@ -646,28 +649,32 @@ export default function Viewer3D({ modelUrl, modelName, modelId }: Props) {
         </button>
       )}
 
-      {/* Hotspot info panel (view mode) */}
+      {/* Hotspot info panel */}
       {!editMode && (
-        <HotspotInfo hotspot={selectedHotspot} lang={lang} onClose={() => setSelectedHotspot(null)} />
+        <HotspotInfo hotspot={selectedHotspot} lang={lang} isEditing={!readOnly} onClose={() => setSelectedHotspot(null)} />
       )}
 
-      {/* Hotspot editor (edit mode) */}
-      <HotspotEditor
-        isOpen={showHotspotEditor}
-        mode={editingHotspot?.id ? 'edit' : 'add'}
-        editingHotspot={editingHotspot}
-        onSave={handleSaveHotspot}
-        onDelete={editingHotspot?.id ? () => handleDeleteHotspot(editingHotspot!.id) : undefined}
-        onClose={() => { setShowHotspotEditor(false); setEditingHotspot(null) }}
-      />
+      {/* Hotspot editor — only in edit pages */}
+      {!readOnly && (
+        <HotspotEditor
+          isOpen={showHotspotEditor}
+          mode={editingHotspot?.id ? 'edit' : 'add'}
+          editingHotspot={editingHotspot}
+          onSave={handleSaveHotspot}
+          onDelete={editingHotspot?.id ? () => handleDeleteHotspot(editingHotspot!.id) : undefined}
+          onClose={() => { setShowHotspotEditor(false); setEditingHotspot(null) }}
+        />
+      )}
 
-      {/* Camera path editor */}
-      <CameraPathEditor
-        isOpen={showPathEditor} paths={cameraPaths} activePathId={activePathId}
-        onSelectPath={setActivePathId} onAddPath={handleAddPath} onDeletePath={handleDeletePath}
-        onRecordWaypoint={handleRecordWaypoint} onDeleteWaypoint={handleDeleteWaypoint}
-        onClearWaypoints={handleClearWaypoints} onClose={() => setShowPathEditor(false)}
-      />
+      {/* Camera path editor — only in edit pages */}
+      {!readOnly && (
+        <CameraPathEditor
+          isOpen={showPathEditor} paths={cameraPaths} activePathId={activePathId}
+          onSelectPath={setActivePathId} onAddPath={handleAddPath} onDeletePath={handleDeletePath}
+          onRecordWaypoint={handleRecordWaypoint} onDeleteWaypoint={handleDeleteWaypoint}
+          onClearWaypoints={handleClearWaypoints} onClose={() => setShowPathEditor(false)}
+        />
+      )}
 
       <ControlsHelp isVisible={showControls && !isLoading && !error} onClose={() => setShowControls(false)} />
 

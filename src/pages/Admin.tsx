@@ -9,11 +9,10 @@ import type { ModelMeta } from '../types'
 interface ModelRowProps {
   model: ModelMeta
   isBuiltin: boolean
-  onEdit: (model: ModelMeta) => void
   onDelete: (id: string) => void
 }
 
-function ModelRow({ model, isBuiltin, onEdit, onDelete }: ModelRowProps) {
+function ModelRow({ model, isBuiltin, onDelete }: ModelRowProps) {
   return (
     <div className="group flex items-center justify-between px-5 py-3.5 rounded-xl border border-border-1 bg-surface-2/40 hover:bg-surface-2/80 transition-all duration-300">
       <div className="flex items-center gap-3 min-w-0">
@@ -26,9 +25,9 @@ function ModelRow({ model, isBuiltin, onEdit, onDelete }: ModelRowProps) {
         >查看</Link>
         {!isBuiltin && (
           <>
-            <button onClick={() => onEdit(model)}
+            <Link to={`/edit/${model.id}`}
               className="px-3 py-1.5 rounded-lg text-text-3/60 hover:text-text-2 transition-all text-[12px] hover:bg-white/[0.03]"
-            >编辑</button>
+            >编辑</Link>
             <button onClick={() => onDelete(model.id)}
               className="px-3 py-1.5 rounded-lg text-accent-3/50 hover:text-accent-3 hover:bg-accent-3/[0.06] transition-all text-[12px]"
             >删除</button>
@@ -60,11 +59,6 @@ export default function Admin() {
   }, [])
 
   useEffect(() => { load() }, [load])
-
-  const handleEdit = (model: ModelMeta) => {
-    setEditingModel(model)
-    setShowForm(true)
-  }
 
   const handleDelete = (id: string) => {
     if (window.confirm(t.admin.deleteConfirm)) {
@@ -98,7 +92,7 @@ export default function Admin() {
             </div>
           ) : (
             <div className="space-y-2">
-              {builtinModels.map(m => <ModelRow key={m.id} model={m} isBuiltin onEdit={handleEdit} onDelete={handleDelete} />)}
+              {builtinModels.map(m => <ModelRow key={m.id} model={m} isBuiltin onDelete={handleDelete} />)}
             </div>
           )}
         </section>
@@ -111,7 +105,7 @@ export default function Admin() {
             </div>
           ) : (
             <div className="space-y-2">
-              {customModels.map(m => <ModelRow key={m.id} model={m} isBuiltin={false} onEdit={handleEdit} onDelete={handleDelete} />)}
+              {customModels.map(m => <ModelRow key={m.id} model={m} isBuiltin={false} onDelete={handleDelete} />)}
             </div>
           )}
         </section>

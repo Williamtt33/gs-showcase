@@ -7,6 +7,7 @@ import Gallery from './pages/GalleryPage'
 import Viewer from './pages/Viewer'
 import Admin from './pages/Admin'
 import UploadModel from './pages/UploadModel'
+import EditModel from './pages/EditModel'
 import NotFound from './pages/NotFound'
 
 function AnimatedRoutes() {
@@ -19,6 +20,7 @@ function AnimatedRoutes() {
       <Route path="/viewer/:modelId" element={<Viewer />} />
       <Route path="/admin" element={<Admin />} />
       <Route path="/upload" element={<UploadModel />} />
+      <Route path="/edit/:modelId" element={<EditModel />} />
       <Route path="*" element={<NotFound />} />
     </Routes>
   )
@@ -26,7 +28,7 @@ function AnimatedRoutes() {
 
 export default function App() {
   const location = useLocation()
-  const isViewer = location.pathname.startsWith('/viewer/')
+  const isViewer = location.pathname.startsWith('/viewer/') || location.pathname.startsWith('/edit/')
 
   return (
     <I18nProvider>
