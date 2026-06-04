@@ -20,14 +20,19 @@ export default function ModelForm({ isOpen, editingModel, onSaved, onClose }: Pr
   const [splatFile, setSplatFile] = useState<File | null>(null)
   const [coverPreview, setCoverPreview] = useState<string | null>(null)
 
+  // Reset form when opening for a new model
+  useEffect(() => {
+    if (isOpen && !editingModel) {
+      setName(''); setFile(''); setSplatFile(null); setCoverPreview(null); setError('')
+    }
+  }, [isOpen, editingModel])
+
   useEffect(() => {
     if (!isOpen) return
     const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose() }
     window.addEventListener('keydown', handler)
     return () => window.removeEventListener('keydown', handler)
   }, [isOpen, onClose])
-
-  if (!isOpen) return null
 
   const handleSplatFile = (f: File) => {
     setSplatFile(f)
@@ -94,7 +99,7 @@ export default function ModelForm({ isOpen, editingModel, onSaved, onClose }: Pr
 
   return (
     <div
-      className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+      className={`fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4 ${isOpen ? '' : 'hidden'}`}
       onClick={onClose}
     >
       <motion.div

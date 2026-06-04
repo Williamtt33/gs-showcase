@@ -39,8 +39,6 @@ export default function CameraPathEditor({
     return () => window.removeEventListener('keydown', handler)
   }, [isOpen, onClose])
 
-  if (!isOpen) return null
-
   const activePath = paths.find(p => p.id === activePathId)
 
   const handleAddPath = () => {
@@ -54,7 +52,7 @@ export default function CameraPathEditor({
     <motion.div
       initial={{ opacity: 0, scale: 0.95 }}
       animate={{ opacity: 1, scale: 1 }}
-      className="absolute top-20 right-4 glass rounded-2xl p-5 z-20 max-w-sm w-full shadow-xl shadow-black/20"
+      className={`absolute top-20 right-4 glass rounded-2xl p-5 z-20 max-w-sm w-full shadow-xl shadow-black/20 ${isOpen ? '' : 'hidden'}`}
     >
       <div className="flex items-center justify-between mb-4">
         <h3 className="font-semibold text-white/80 text-sm">{t.editor.cameraPath}</h3>

@@ -29,14 +29,12 @@ export default function HotspotEditor({ isOpen, mode, position, editingHotspot, 
     return () => window.removeEventListener('keydown', handler)
   }, [isOpen, onClose])
 
-  if (!isOpen) return null
-
   const pos = editingHotspot?.position || position
 
   return (
     <motion.div
       initial={{ opacity: 0, scale: 0.96, y: 8 }} animate={{ opacity: 1, scale: 1, y: 0 }}
-      className="absolute top-20 left-4 glass rounded-2xl p-5 z-20 w-[340px] max-w-[calc(100vw-2rem)] shadow-2xl shadow-black/30"
+      className={`absolute top-20 left-4 glass rounded-2xl p-5 z-20 w-[340px] max-w-[calc(100vw-2rem)] shadow-2xl shadow-black/30 ${isOpen ? '' : 'hidden'}`}
     >
       <div className="flex items-center justify-between mb-4">
         <h3 className="font-semibold text-text-1 text-[14px]">{mode === 'add' ? t.editor.addHotspot : t.editor.editHotspot}</h3>
