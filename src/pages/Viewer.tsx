@@ -10,6 +10,7 @@ export default function Viewer() {
   const { t, lang } = useI18n()
   const [model, setModel] = useState<ModelInfo | null>(null)
   const [modelUrl, setModelUrl] = useState<string | null>(null)
+  const [downloadProgress, setDownloadProgress] = useState(0)
   const [notFound, setNotFound] = useState(false)
   const [loadError, setLoadError] = useState<string | null>(null)
   const genRef = useRef(0)
@@ -24,7 +25,9 @@ export default function Viewer() {
       if (!m) { setNotFound(true); return }
       setModel(m)
       try {
-        const url = await resolveModelUrl(m)
+        const url = await resolveModelUrl(m, (p) => {
+          if (currentGen === genRef.current) setDownloadProgress(p)
+        })
         if (currentGen !== genRef.current) return // Stale request
         setModelUrl(url)
       } catch (e: any) {
@@ -57,6 +60,7 @@ export default function Viewer() {
           modelName={lang === 'zh' ? model.name : model.nameEn}
           modelId={model.id}
           readOnly
+          downloadProgress={downloadProgress}
         />
       )}
 

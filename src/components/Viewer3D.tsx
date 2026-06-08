@@ -17,9 +17,11 @@ interface Props {
   modelName: string
   modelId: string
   readOnly?: boolean
+  /** External download progress (0–100) when model is pre-fetched */
+  downloadProgress?: number
 }
 
-export default function Viewer3D({ modelUrl, modelName, modelId, readOnly }: Props) {
+export default function Viewer3D({ modelUrl, modelName, modelId, readOnly, downloadProgress }: Props) {
   const { t, lang } = useI18n()
   const containerRef = useRef<HTMLDivElement>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
@@ -376,11 +378,15 @@ export default function Viewer3D({ modelUrl, modelName, modelId, readOnly }: Pro
       {isLoading && (
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="absolute inset-0 flex flex-col items-center justify-center bg-black/60 backdrop-blur-sm z-20">
           <div className="w-16 h-16 border-2 border-white/10 border-t-accent-1 rounded-full animate-spin mb-6" />
-          <p className="text-white/60 text-sm mb-3">{t.viewer.loading}</p>
+          <p className="text-white/60 text-sm mb-3">
+            {downloadProgress !== undefined && downloadProgress < 100 ? '正在下载模型...' : t.viewer.loading}
+          </p>
           <div className="w-64 h-1 bg-white/10 rounded-full overflow-hidden">
-            <motion.div className="h-full bg-gradient-to-r from-accent-1 to-accent-2" animate={{ width: `${progress}%` }} transition={{ duration: 0.3 }} />
+            <motion.div className="h-full bg-gradient-to-r from-accent-1 to-accent-2"
+              animate={{ width: `${downloadProgress !== undefined ? Math.max(progress, downloadProgress) : progress}%` }}
+              transition={{ duration: 0.3 }} />
           </div>
-          <p className="text-white/30 text-xs mt-2">{progress}%</p>
+          <p className="text-white/30 text-xs mt-2">{downloadProgress !== undefined ? Math.max(progress, downloadProgress) : progress}%</p>
         </motion.div>
       )}
 

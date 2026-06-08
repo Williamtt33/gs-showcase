@@ -12,6 +12,7 @@ export default function EditModel() {
 
   const [model, setModel] = useState<ModelMeta | null>(null)
   const [modelUrl, setModelUrl] = useState<string | null>(null)
+  const [downloadProgress, setDownloadProgress] = useState(0)
   const [notFound, setNotFound] = useState(false)
   const [loading, setLoading] = useState(true)
 
@@ -31,7 +32,7 @@ export default function EditModel() {
       setName(m.name)
       setDescription(m.description)
       try {
-        const url = await resolveModelUrl(m)
+        const url = await resolveModelUrl(m, setDownloadProgress)
         setModelUrl(url)
       } catch {}
       setLoading(false)
@@ -108,6 +109,7 @@ export default function EditModel() {
           modelName={model.name}
           modelId={model.id}
           readOnly={false}
+          downloadProgress={downloadProgress}
         />
       )}
 
