@@ -205,7 +205,9 @@ export default function Admin() {
           </div>
           <div className="flex items-center gap-3">
             <button
-              onClick={() => { setEditingModel(null); setShowForm(true) }}
+              type="button"
+              id="upload-scene-btn"
+              onClick={(e) => { e.preventDefault(); setEditingModel(null); setShowForm(true) }}
               className="inline-flex items-center justify-center px-6 py-3 rounded-xl bg-[#e8e0d5] text-[#0a0908] text-[14px] font-semibold cursor-pointer border-none outline-none hover:shadow-lg hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.985] transition-all duration-300"
               style={{ cursor: 'pointer' }}
             >+ 上传场景</button>
