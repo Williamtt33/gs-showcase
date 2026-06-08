@@ -185,34 +185,24 @@ export default function Viewer3D({ modelUrl, modelName, modelId, readOnly, downl
         if (isFlyingRef.current) {
           // Camera driven by flyToHotspot rAF loop — just render
         } else {
-          // ── WASD flight movement ──
+          // ── WASD direct camera flight ──
           const keys = keysRef.current
-          if (keys.size > 0) {
+          const hasFlightKeys = keys.size > 0
+          if (hasFlightKeys) {
             const dt = Math.min((now - lastTimeRef.current) / 1000, 0.1)
             if (lastTimeRef.current > 0 && dt > 0) {
+              const cp = camera.position
               const fwd = camera.forward
               // Right vector = cross(forward, worldUp)
-              const wx = 0, wy = 1, wz = 0
-              const rx = wy * fwd.z - wz * fwd.y
-              const ry = wz * fwd.x - wx * fwd.z
-              const rz = wx * fwd.y - wy * fwd.x
+              const rx = 1 * fwd.z - 0 * fwd.y  // worldUp=(0,1,0)
+              const ry = 0 * fwd.x - 0 * fwd.z
+              const rz = 0 * fwd.y - 1 * fwd.x
               const rLen = Math.sqrt(rx * rx + ry * ry + rz * rz)
               const rightX = rLen > 0.0001 ? rx / rLen : 1
               const rightY = rLen > 0.0001 ? ry / rLen : 0
               const rightZ = rLen > 0.0001 ? rz / rLen : 0
 
-              // Estimate orbit target from camera forward (gsplat stores target in closure, not this._target)
-              const cp = camera.position
-              const lookDist = 3 // reasonable estimate of orbit distance
-              const tgtX = cp.x + fwd.x * lookDist
-              const tgtY = cp.y + fwd.y * lookDist
-              const tgtZ = cp.z + fwd.z * lookDist
-
-              // Speed scales with orbit distance — faster when far, precise when close
-              const actualDist = Math.sqrt(
-                (cp.x - tgtX) ** 2 + (cp.y - tgtY) ** 2 + (cp.z - tgtZ) ** 2
-              )
-              const speed = flightSpeedRef.current * Math.max(actualDist, 0.5) * dt
+              const speed = flightSpeedRef.current * dt
 
               let moveX = 0, moveY = 0, moveZ = 0
               if (keys.has('KeyW')) { moveX += fwd.x * speed; moveY += fwd.y * speed; moveZ += fwd.z * speed }
@@ -225,8 +215,16 @@ export default function Viewer3D({ modelUrl, modelName, modelId, readOnly, downl
               if (moveX !== 0 || moveY !== 0 || moveZ !== 0) {
                 const SPLAT = splatModuleRef.current
                 if (SPLAT) {
+                  // Directly move camera position
+                  camera.position = new SPLAT.Vector3(
+                    cp.x + moveX, cp.y + moveY, cp.z + moveZ
+                  )
+                  // Sync orbit target so controls.update() works correctly after release
+                  const newFwd = camera.forward
                   controls.setCameraTarget(new SPLAT.Vector3(
-                    tgtX + moveX, tgtY + moveY, tgtZ + moveZ
+                    cp.x + moveX + newFwd.x * 3,
+                    cp.y + moveY + newFwd.y * 3,
+                    cp.z + moveZ + newFwd.z * 3,
                   ))
                 }
               }
@@ -234,7 +232,10 @@ export default function Viewer3D({ modelUrl, modelName, modelId, readOnly, downl
           }
           lastTimeRef.current = now
 
-          controls.update()
+          // Only run orbit controls when not actively flying with WASD
+          if (!hasFlightKeys) {
+            controls.update()
+          }
         }
 
         renderer.render(scene, camera)
