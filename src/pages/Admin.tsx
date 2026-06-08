@@ -152,6 +152,7 @@ export default function Admin() {
   const [showForm, setShowForm] = useState(false)
   const [editingModel, setEditingModel] = useState<ModelMeta | null>(null)
   const [loadingBuiltin, setLoadingBuiltin] = useState(true)
+  const [loginKey, setLoginKey] = useState(0) // force LoginScreen remount on logout
 
   const load = useCallback(async () => {
     try {
@@ -175,6 +176,7 @@ export default function Admin() {
   const handleLogout = () => {
     setAuth(false)
     setAuthenticated(false)
+    setLoginKey(k => k + 1) // force fresh login form
   }
 
   const handleDelete = (id: string) => {
@@ -184,99 +186,102 @@ export default function Admin() {
     }
   }
 
-  /* ── Not authenticated → login screen ── */
-  if (!authenticated) {
-    return <LoginScreen onLogin={handleLogin} />
-  }
-
-  /* ── Authenticated → admin dashboard ── */
+  /* ── CSS hidden pattern: both screens always mounted to keep ModelForm stable ── */
   return (
-    <main className="min-h-dyn bg-surface-0">
-      <div className="max-w-3xl mx-auto px-6 pt-28 sm:pt-36 pb-20">
-        {/* Header */}
-        <div className="flex items-center justify-between mb-12">
-          <div>
-            <h1 className="text-3xl font-display tracking-tight">
-              <span className="gradient-text">{t.admin.title}</span>
-            </h1>
-            <Link to="/" className="text-[13px] text-text-3/60 hover:text-text-2 transition-colors mt-1 inline-block">
-              ← 返回首页
-            </Link>
-          </div>
-          <div className="flex items-center gap-3">
-            <button
-              type="button"
-              id="upload-scene-btn"
-              onClick={(e) => { e.preventDefault(); setEditingModel(null); setShowForm(true) }}
-              className="inline-flex items-center justify-center px-6 py-3 rounded-xl bg-[#e8e0d5] text-[#0a0908] text-[14px] font-semibold cursor-pointer border-none outline-none hover:shadow-lg hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.985] transition-all duration-300"
-              style={{ cursor: 'pointer' }}
-            >+ 上传场景</button>
-          </div>
-        </div>
-
-        {/* Builtin models */}
-        <section className="mb-8">
-          <h2 className="text-caption font-semibold text-text-3/50 uppercase tracking-[0.15em] mb-3 pl-1">内置场景</h2>
-          {loadingBuiltin ? (
-            <div className="rounded-2xl border border-dashed border-border-1 p-10 text-center">
-              <div className="w-6 h-6 border-2 border-white/[0.06] border-t-accent-1 rounded-full animate-spin mx-auto" />
-            </div>
-          ) : (
-            <div className="space-y-2">
-              {builtinModels.map(m => <ModelRow key={m.id} model={m} isBuiltin onDelete={handleDelete} />)}
-            </div>
-          )}
-        </section>
-
-        {/* Custom models */}
-        <section className="mb-12">
-          <h2 className="text-caption font-semibold text-text-3/50 uppercase tracking-[0.15em] mb-3 pl-1">自定义场景</h2>
-          {customModels.length === 0 ? (
-            <div className="rounded-2xl border border-dashed border-border-1 p-10 text-center">
-              <p className="text-text-3 text-[13px] mb-4">还没有自定义场景，点击上方按钮添加</p>
-            </div>
-          ) : (
-            <div className="space-y-2">
-              {customModels.map(m => <ModelRow key={m.id} model={m} isBuiltin={false} onDelete={handleDelete} />)}
-            </div>
-          )}
-        </section>
-
-        {/* Export + logout footer */}
-        <section className="space-y-3">
-          {customModels.length > 0 && (
-            <div className="rounded-2xl border border-border-1 bg-surface-2/40 p-5 flex items-center justify-between">
-              <p className="text-[12px] text-text-3/60">数据存储在浏览器中，建议定期导出备份</p>
-              <button
-                onClick={() => {
-                  const data = { customModels: getCustomModels(), exportDate: new Date().toISOString() }
-                  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' })
-                  const url = URL.createObjectURL(blob); const a = document.createElement('a')
-                  a.href = url; a.download = `gs-backup-${Date.now()}.json`; a.click(); URL.revokeObjectURL(url)
-                }}
-                className="px-4 py-2 rounded-lg bg-white/[0.03] border border-white/[0.06] text-text-2 text-[12px] hover:bg-white/[0.06] transition-all cursor-pointer"
-                style={{ cursor: 'pointer' }}
-              >📥 导出备份</button>
-            </div>
-          )}
-
-          <div className="flex justify-center">
-            <button
-              onClick={handleLogout}
-              className="text-[12px] text-text-3/30 hover:text-accent-3/50 transition-colors cursor-pointer py-2"
-              style={{ cursor: 'pointer' }}
-            >退出登录</button>
-          </div>
-        </section>
+    <>
+      {/* Login screen */}
+      <div className={authenticated ? 'hidden' : ''}>
+        <LoginScreen key={loginKey} onLogin={handleLogin} />
       </div>
 
-      {/* Model form modal */}
-      <ModelForm
-        isOpen={showForm}
-        editingModel={editingModel}
-        onSaved={load}
-        onClose={() => { setShowForm(false); setEditingModel(null) }}
-      />
-    </main>
+      {/* Admin dashboard */}
+      <main className={`min-h-dyn bg-surface-0 ${!authenticated ? 'hidden' : ''}`}>
+        <div className="max-w-3xl mx-auto px-6 pt-28 sm:pt-36 pb-20">
+          {/* Header */}
+          <div className="flex items-center justify-between mb-12">
+            <div>
+              <h1 className="text-3xl font-display tracking-tight">
+                <span className="gradient-text">{t.admin.title}</span>
+              </h1>
+              <Link to="/" className="text-[13px] text-text-3/60 hover:text-text-2 transition-colors mt-1 inline-block">
+                ← 返回首页
+              </Link>
+            </div>
+            <div className="flex items-center gap-3">
+              <button
+                type="button"
+                id="upload-scene-btn"
+                onClick={(e) => { e.preventDefault(); setEditingModel(null); setShowForm(true) }}
+                className="inline-flex items-center justify-center px-6 py-3 rounded-xl bg-[#e8e0d5] text-[#0a0908] text-[14px] font-semibold cursor-pointer border-none outline-none hover:shadow-lg hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.985] transition-all duration-300"
+                style={{ cursor: 'pointer' }}
+              >+ 上传场景</button>
+            </div>
+          </div>
+
+          {/* Builtin models */}
+          <section className="mb-8">
+            <h2 className="text-caption font-semibold text-text-3/50 uppercase tracking-[0.15em] mb-3 pl-1">内置场景</h2>
+            {loadingBuiltin ? (
+              <div className="rounded-2xl border border-dashed border-border-1 p-10 text-center">
+                <div className="w-6 h-6 border-2 border-white/[0.06] border-t-accent-1 rounded-full animate-spin mx-auto" />
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {builtinModels.map(m => <ModelRow key={m.id} model={m} isBuiltin onDelete={handleDelete} />)}
+              </div>
+            )}
+          </section>
+
+          {/* Custom models */}
+          <section className="mb-12">
+            <h2 className="text-caption font-semibold text-text-3/50 uppercase tracking-[0.15em] mb-3 pl-1">自定义场景</h2>
+            {customModels.length === 0 ? (
+              <div className="rounded-2xl border border-dashed border-border-1 p-10 text-center">
+                <p className="text-text-3 text-[13px] mb-4">还没有自定义场景，点击上方按钮添加</p>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {customModels.map(m => <ModelRow key={m.id} model={m} isBuiltin={false} onDelete={handleDelete} />)}
+              </div>
+            )}
+          </section>
+
+          {/* Export + logout footer */}
+          <section className="space-y-3">
+            {customModels.length > 0 && (
+              <div className="rounded-2xl border border-border-1 bg-surface-2/40 p-5 flex items-center justify-between">
+                <p className="text-[12px] text-text-3/60">数据存储在浏览器中，建议定期导出备份</p>
+                <button
+                  onClick={() => {
+                    const data = { customModels: getCustomModels(), exportDate: new Date().toISOString() }
+                    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' })
+                    const url = URL.createObjectURL(blob); const a = document.createElement('a')
+                    a.href = url; a.download = `gs-backup-${Date.now()}.json`; a.click(); URL.revokeObjectURL(url)
+                  }}
+                  className="px-4 py-2 rounded-lg bg-white/[0.03] border border-white/[0.06] text-text-2 text-[12px] hover:bg-white/[0.06] transition-all cursor-pointer"
+                  style={{ cursor: 'pointer' }}
+                >📥 导出备份</button>
+              </div>
+            )}
+
+            <div className="flex justify-center">
+              <button
+                onClick={handleLogout}
+                className="text-[12px] text-text-3/30 hover:text-accent-3/50 transition-colors cursor-pointer py-2"
+                style={{ cursor: 'pointer' }}
+              >退出登录</button>
+            </div>
+          </section>
+        </div>
+
+        {/* Model form modal — always mounted, shown/hidden via CSS */}
+        <ModelForm
+          isOpen={showForm}
+          editingModel={editingModel}
+          onSaved={load}
+          onClose={() => { setShowForm(false); setEditingModel(null) }}
+        />
+      </main>
+    </>
   )
 }
