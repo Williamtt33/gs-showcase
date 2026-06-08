@@ -65,7 +65,7 @@ export default function Viewer() {
       )}
 
       {/* Back button */}
-      {model && modelUrl && (
+      {model && (
         <motion.div
           initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.5 }}
           className="absolute top-4 left-1/2 -translate-x-1/2 z-50"
@@ -79,12 +79,26 @@ export default function Viewer() {
         </motion.div>
       )}
 
-      {/* Loading state */}
+      {/* Loading state — shows progress bar during download */}
       {(!model || !modelUrl) && !notFound && !loadError && (
         <div className="h-full flex items-center justify-center bg-surface-0">
           <div className="text-center">
-            <div className="w-12 h-12 border-2 border-white/[0.06] border-t-accent-1 rounded-full animate-spin mx-auto mb-4" />
-            <p className="text-text-3/60 text-sm">{t.gallery.loading}</p>
+            <div className="w-16 h-16 border-2 border-white/[0.06] border-t-accent-1 rounded-full animate-spin mx-auto mb-6" />
+            <p className="text-white/60 text-sm mb-3">
+              {model && !modelUrl ? '正在下载模型...' : t.gallery.loading}
+            </p>
+            {model && !modelUrl && (
+              <>
+                <div className="w-64 h-1.5 bg-white/[0.06] rounded-full overflow-hidden">
+                  <motion.div
+                    className="h-full bg-gradient-to-r from-accent-1 to-accent-2 rounded-full"
+                    animate={{ width: `${downloadProgress}%` }}
+                    transition={{ duration: 0.2 }}
+                  />
+                </div>
+                <p className="text-white/25 text-xs mt-2 font-mono">{downloadProgress}%</p>
+              </>
+            )}
           </div>
         </div>
       )}

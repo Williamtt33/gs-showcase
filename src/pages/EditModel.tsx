@@ -15,6 +15,7 @@ export default function EditModel() {
   const [downloadProgress, setDownloadProgress] = useState(0)
   const [notFound, setNotFound] = useState(false)
   const [loading, setLoading] = useState(true)
+  const [downloading, setDownloading] = useState(false)
 
   // Form state
   const [name, setName] = useState('')
@@ -26,16 +27,19 @@ export default function EditModel() {
   useEffect(() => {
     if (!modelId) return
     setLoading(true)
+    setDownloading(false)
     getModelById(modelId).then(async (m) => {
       if (!m) { setNotFound(true); setLoading(false); return }
       setModel(m)
       setName(m.name)
       setDescription(m.description)
+      setLoading(false)
+      setDownloading(true)
       try {
         const url = await resolveModelUrl(m, setDownloadProgress)
         setModelUrl(url)
       } catch {}
-      setLoading(false)
+      setDownloading(false)
     })
   }, [modelId])
 
@@ -84,7 +88,10 @@ export default function EditModel() {
   if (loading) {
     return (
       <div className="h-screen flex items-center justify-center bg-surface-0">
-        <div className="w-10 h-10 border-2 border-white/[0.06] border-t-accent-1 rounded-full animate-spin" />
+        <div className="text-center">
+          <div className="w-12 h-12 border-2 border-white/[0.06] border-t-accent-1 rounded-full animate-spin mx-auto mb-4" />
+          <p className="text-text-3/60 text-sm">加载场景信息...</p>
+        </div>
       </div>
     )
   }
@@ -111,6 +118,24 @@ export default function EditModel() {
           readOnly={false}
           downloadProgress={downloadProgress}
         />
+      )}
+
+      {/* Download progress overlay */}
+      {downloading && !modelUrl && (
+        <div className="absolute inset-0 flex items-center justify-center bg-black/70 backdrop-blur-sm z-30">
+          <div className="text-center">
+            <div className="w-16 h-16 border-2 border-white/[0.06] border-t-accent-1 rounded-full animate-spin mx-auto mb-6" />
+            <p className="text-white/60 text-sm mb-3">正在下载模型...</p>
+            <div className="w-64 h-1.5 bg-white/[0.06] rounded-full overflow-hidden">
+              <motion.div
+                className="h-full bg-gradient-to-r from-accent-1 to-accent-2 rounded-full"
+                animate={{ width: `${downloadProgress}%` }}
+                transition={{ duration: 0.2 }}
+              />
+            </div>
+            <p className="text-white/25 text-xs mt-2 font-mono">{downloadProgress}%</p>
+          </div>
+        </div>
       )}
 
       {/* Back link */}
