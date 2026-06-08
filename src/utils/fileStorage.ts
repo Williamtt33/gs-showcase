@@ -1,7 +1,8 @@
 const DB_NAME = 'gs-showcase-files'
-const DB_VERSION = 1
+const DB_VERSION = 2
 const STORE_SPLAT = 'splat-files'
 const STORE_THUMBS = 'thumbnails'
+const STORE_CACHE = 'model-cache'
 
 function openDB(): Promise<IDBDatabase> {
   return new Promise((resolve, reject) => {
@@ -13,6 +14,9 @@ function openDB(): Promise<IDBDatabase> {
       }
       if (!db.objectStoreNames.contains(STORE_THUMBS)) {
         db.createObjectStore(STORE_THUMBS)
+      }
+      if (!db.objectStoreNames.contains(STORE_CACHE)) {
+        db.createObjectStore(STORE_CACHE)
       }
     }
     req.onsuccess = () => resolve(req.result)
@@ -97,28 +101,8 @@ export async function getThumbnail(modelId: string): Promise<string | null> {
 export async function cacheModelFile(url: string, buffer: ArrayBuffer): Promise<void> {
   const db = await openDB()
   return new Promise((resolve, reject) => {
-    // Use a separate store for downloaded cache
-    if (!db.objectStoreNames.contains('model-cache')) {
-      db.close()
-      // Need to upgrade — reopen with higher version
-      const req2 = indexedDB.open(DB_NAME, DB_VERSION + 1)
-      req2.onupgradeneeded = () => {
-        if (!req2.result.objectStoreNames.contains('model-cache')) {
-          req2.result.createObjectStore('model-cache')
-        }
-      }
-      req2.onsuccess = () => {
-        const db2 = req2.result
-        const tx = db2.transaction('model-cache', 'readwrite')
-        tx.objectStore('model-cache').put({ buffer, cachedAt: Date.now() }, url)
-        tx.oncomplete = () => { db2.close(); resolve() }
-        tx.onerror = () => reject(tx.error)
-      }
-      req2.onerror = () => reject(req2.error)
-      return
-    }
-    const tx = db.transaction('model-cache', 'readwrite')
-    tx.objectStore('model-cache').put({ buffer, cachedAt: Date.now() }, url)
+    const tx = db.transaction(STORE_CACHE, 'readwrite')
+    tx.objectStore(STORE_CACHE).put({ buffer, cachedAt: Date.now() }, url)
     tx.oncomplete = () => resolve()
     tx.onerror = () => reject(tx.error)
   })
@@ -127,10 +111,9 @@ export async function cacheModelFile(url: string, buffer: ArrayBuffer): Promise<
 /** Get a cached model file blob URL by its URL path */
 export async function getCachedModelFile(url: string): Promise<string | null> {
   const db = await openDB()
-  if (!db.objectStoreNames.contains('model-cache')) return null
   return new Promise((resolve, reject) => {
-    const tx = db.transaction('model-cache', 'readonly')
-    const req = tx.objectStore('model-cache').get(url)
+    const tx = db.transaction(STORE_CACHE, 'readonly')
+    const req = tx.objectStore(STORE_CACHE).get(url)
     req.onsuccess = () => {
       const data = req.result
       if (!data?.buffer) { resolve(null); return }
