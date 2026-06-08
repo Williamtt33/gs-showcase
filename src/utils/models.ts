@@ -8,7 +8,8 @@ let cachedManifest: ModelMeta[] | null = null
 
 export async function getBuiltinModels(): Promise<ModelMeta[]> {
   if (cachedManifest) return cachedManifest
-  const res = await fetch(`/models/manifest.json?t=${Date.now()}`)
+  const base = import.meta.env.BASE_URL
+  const res = await fetch(`${base}models/manifest.json?t=${Date.now()}`)
   if (!res.ok) throw new Error(`Failed to fetch manifest (${res.status})`)
   const models: ModelMeta[] = await res.json()
   if (!Array.isArray(models)) throw new Error('Invalid manifest format')
@@ -39,8 +40,8 @@ export async function resolveModelUrl(model: ModelMeta): Promise<string> {
   if (model.file.startsWith('http://') || model.file.startsWith('https://')) {
     return model.file
   }
-  // Path relative to /models/
-  return `/models/${model.file}`
+  // Path relative to base URL /models/
+  return `${import.meta.env.BASE_URL}models/${model.file}`
 }
 
 /** Get the display URL for showing in UI (not the real loadable URL) */
