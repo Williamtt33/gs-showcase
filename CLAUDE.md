@@ -10,6 +10,22 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 **Tradeoff:** These bias toward caution over speed. For trivial tasks, use judgment.
 
+### 0. Overriding Collaboration Rules (User-Mandated)
+
+These rules override any conflicting guidance in this document:
+
+1. **Expose conflicts, don't reconcile them.** When code logic, architecture, old/new code, or implementation ideas conflict, explicitly present the problem. No implicit compatibility, vague compromises, or automatic smoothing. All conflicts must be surfaced and explicitly resolved.
+
+2. **Read before writing.** Before adding, modifying, or refactoring code, thoroughly read and understand existing code, context logic, module associations, and business rules. When encountering unclear logic, historical patterns, or implicit constraints, stop and ask — never guess.
+
+3. **Set checkpoints for long-running operations.** For refactoring, debugging, large feature development, and complex transformations, divide into stages and set verification checkpoints. If direction deviates or thinking becomes confused, pause immediately, realign with goals, then continue.
+
+4. **Convention over novelty.** Project's existing coding style, design patterns, code paradigms take priority over personal preferences, novel syntax, or niche implementations. Maintain codebase consistency — don't introduce patterns that break the established norm.
+
+5. **Fail explicitly, not silently.** All interface calls, logic validation, and exception branches must have observable results. Actively throw exceptions, output logs, or clearly prompt on failure. Never swallow exceptions, ignore return values, or let problems silently fail.
+
+6. **Fit existing project style.** All code output should match the project's existing style and structure. Prioritize reusing existing implementations. When logic or solutions diverge, directly point out conflicts.
+
 ### 1. Think Before Coding
 
 - State assumptions explicitly. If uncertain, ask.
@@ -84,11 +100,12 @@ The core 3D viewer wraps `gsplat` (v1.2.9), which provides a WebGL-based Gaussia
 
 ### Routing (React Router v7)
 
-Five routes with animated page transitions:
+Six routes with animated page transitions:
 - `/` — Home (Hero + features + CTA)
 - `/gallery` — Scene gallery grid
-- `/viewer/:modelId` — Full-screen 3D viewer (hides nav/footer)
-- `/about` — Technical explanation (consumer-friendly, no comparison table)
+- `/viewer/:modelId` — Full-screen 3D viewer (read-only, hides nav/footer)
+- `/edit/:modelId` — Full-screen 3D editor (annotation + camera path tools)
+- `/upload` — Upload new .splat files
 - `/admin` — Model management (CRUD for custom models)
 
 ### Data model (`src/types/index.ts`)

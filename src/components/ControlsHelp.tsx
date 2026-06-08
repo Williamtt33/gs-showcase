@@ -21,18 +21,8 @@ export default function ControlsHelp({ isVisible, onClose }: Props) {
     {
       title: '⌨️ 快捷键',
       items: [
-        { key: 'E', action: '切换编辑模式' },
         { key: 'H', action: '切换帮助面板' },
         { key: 'R', action: t.controls.reset },
-      ],
-    },
-    {
-      title: '✏️ 编辑模式 (按E)',
-      items: [
-        { key: '点击画布', action: '放置热点标注' },
-        { key: '点击热点', action: '编辑已有热点' },
-        { key: '📥 导入JSON', action: '从Supersplat等导入' },
-        { key: '🎬', action: '录制相机飞行路径' },
       ],
     },
   ]

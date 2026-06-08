@@ -85,7 +85,6 @@ export default function ModelForm({ isOpen, editingModel, onSaved, onClose }: Pr
         tags: [], pointCount: '', size: '',
         featured: false,
         hotspots: editingModel?.hotspots || [],
-        cameraPaths: editingModel?.cameraPaths || [],
       }
 
       if (editingModel) {

@@ -108,7 +108,6 @@ export default function UploadModel() {
         size: '',
         featured: false,
         hotspots: [],
-        cameraPaths: [],
       }
 
       addCustomModel(model, modelId)

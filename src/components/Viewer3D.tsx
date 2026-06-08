@@ -1,21 +1,16 @@
 import { useEffect, useRef, useCallback, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useI18n } from '../i18n/I18nContext'
-import { motion, AnimatePresence } from 'framer-motion'
+import { motion } from 'framer-motion'
 import PerformancePanel from './PerformancePanel'
 import ControlsHelp from './ControlsHelp'
 import AnnotationMarker from './viewer/AnnotationMarker'
-import CameraPathPlayer from './viewer/CameraPathPlayer'
 import HotspotEditor from './editor/HotspotEditor'
-import CameraPathEditor from './editor/CameraPathEditor'
-import { worldToScreen, interpolateWaypoints, lookAtQuaternion } from '../utils/math3d'
-import { parseHotspotJSON, exportHotspotsJSON } from '../utils/hotspotImporter'
+import { worldToScreen } from '../utils/math3d'
 import {
   getHotspots, addHotspot, updateHotspot, deleteHotspot,
-  getCameraPaths, addCameraPath, deleteCameraPath,
-  addWaypoint, deleteWaypoint, updateCameraPath,
 } from '../store/modelStore'
-import type { Hotspot, CameraPath } from '../types'
+import type { Hotspot } from '../types'
 
 interface Props {
   modelUrl: string
@@ -49,25 +44,13 @@ export default function Viewer3D({ modelUrl, modelName, modelId, readOnly }: Pro
   // UI state
   const [showControls, setShowControls] = useState(true)
   const [showHotspotEditor, setShowHotspotEditor] = useState(false)
-  const [showPathEditor, setShowPathEditor] = useState(false)
   const [selectedHotspot, setSelectedHotspot] = useState<Hotspot | null>(null)
   const [editingHotspot, setEditingHotspot] = useState<Hotspot | null>(null)
 
   // Data state
   const [hotspots, setHotspots] = useState<Hotspot[]>([])
   const hotspotsRef = useRef<Hotspot[]>([])
-  const [cameraPaths, setCameraPaths] = useState<CameraPath[]>([])
-  const [activePathId, setActivePathId] = useState<string | null>(null)
-
-  // Camera path playback
-  const [isPlaying, setIsPlaying] = useState(false)
-  const isPlayingRef = useRef(false)
-  const [playProgress, setPlayProgress] = useState(0)
-  const [currentWaypoint, setCurrentWaypoint] = useState(0)
   const [showPerf, setShowPerf] = useState(false)
-  const playbackRef = useRef<{
-    startTime: number; path: CameraPath; totalDuration: number; waypointDurations: number[]
-  } | null>(null)
 
   // Fly-to animation refs
   const flyAnimIdRef = useRef<number>(0)
@@ -79,30 +62,35 @@ export default function Viewer3D({ modelUrl, modelName, modelId, readOnly }: Pro
     if (!cam || !ctrl || !SPLAT) { setSelectedHotspot(hs); return }
 
     setSelectedHotspot(hs)
-    setIsPlaying(false); isPlayingRef.current = false; playbackRef.current = null
 
     // Cancel any in-progress fly animation
     if (flyAnimIdRef.current) cancelAnimationFrame(flyAnimIdRef.current)
 
     // Current camera state as start
     const startPos = { x: cam.position.x, y: cam.position.y, z: cam.position.z }
-    let startLookAt = { x: 0, y: 0, z: 0 }
-    try {
-      if ((ctrl as any).target) {
-        startLookAt = { x: (ctrl as any).target.x, y: (ctrl as any).target.y, z: (ctrl as any).target.z }
-      }
-    } catch {}
 
-    // Target camera state
-    const endPos = (hs.cameraPosition && hs.cameraPosition.x !== undefined)
-      ? hs.cameraPosition
-      : { x: hs.position.x + 2, y: hs.position.y + 1, z: hs.position.z + 3 }
-    const endLookAt = (hs.cameraTarget && hs.cameraTarget.x !== undefined)
-      ? hs.cameraTarget
-      : hs.position
+    // Target: fly close to the annotation point, looking at it
+    const endLookAt = { x: hs.position.x, y: hs.position.y, z: hs.position.z }
+    // Approach direction from annotation point toward current camera
+    const dx = startPos.x - hs.position.x
+    const dy = startPos.y - hs.position.y
+    const dz = startPos.z - hs.position.z
+    const dist = Math.sqrt(dx * dx + dy * dy + dz * dz)
+    const closeDist = 1.5 // units from the point
+    const endPos = dist > 0.01
+      ? {
+          x: hs.position.x + (dx / dist) * closeDist,
+          y: hs.position.y + (dy / dist) * closeDist,
+          z: hs.position.z + (dz / dist) * closeDist,
+        }
+      : {
+          x: hs.position.x + 2,
+          y: hs.position.y + 1,
+          z: hs.position.z + 1.5,
+        }
 
     const startTime = performance.now()
-    const duration = 0.8 // seconds
+    const duration = 0.5 // seconds — quick snap to the point
     isFlyingRef.current = true
     ctrl.dampening = 0 // Kill orbit damping during animation
 
@@ -115,11 +103,8 @@ export default function Viewer3D({ modelUrl, modelName, modelId, readOnly }: Pro
       const px = startPos.x + (endPos.x - startPos.x) * ease
       const py = startPos.y + (endPos.y - startPos.y) * ease
       const pz = startPos.z + (endPos.z - startPos.z) * ease
-      const lx = startLookAt.x + (endLookAt.x - startLookAt.x) * ease
-      const ly = startLookAt.y + (endLookAt.y - startLookAt.y) * ease
-      const lz = startLookAt.z + (endLookAt.z - startLookAt.z) * ease
-
-      const dirVec = new SPLAT.Vector3(lx - px, ly - py, lz - pz)
+      // Keep camera facing the annotation point throughout — no lookAt interpolation
+      const dirVec = new SPLAT.Vector3(endLookAt.x - px, endLookAt.y - py, endLookAt.z - pz)
       const rot = SPLAT.Quaternion.LookRotation(dirVec)
       const pos = new SPLAT.Vector3(px, py, pz)
       cam.data.update(pos, rot)
@@ -136,22 +121,20 @@ export default function Viewer3D({ modelUrl, modelName, modelId, readOnly }: Pro
     flyAnimIdRef.current = requestAnimationFrame(tick)
   }, [])
 
-  const [hotspotScreens, setHotspotScreens] = useState<Map<string, { x: number; y: number; visible: boolean; scale: number }>>(new Map())
+  // Hotspot screen positions — stored in ref to avoid React re-render per frame.
+  // Updated directly in the render loop via DOM manipulation for 60fps smoothness.
+  const hotspotScreensRef = useRef<Map<string, { x: number; y: number; visible: boolean; scale: number }>>(new Map())
+  const overlayRef = useRef<HTMLDivElement>(null)
 
   // Load data
   useEffect(() => {
     setHotspots(getHotspots(modelId))
-    const paths = getCameraPaths(modelId)
-    setCameraPaths(paths)
-    if (paths.length > 0 && !activePathId) setActivePathId(paths[0].id)
     setSelectedHotspot(null)
     setEditingHotspot(null)
     setShowHotspotEditor(false)
-    setShowPathEditor(false)
   }, [modelId])
 
   // Keep refs in sync with state for render loop closure
-  useEffect(() => { isPlayingRef.current = isPlaying }, [isPlaying])
   useEffect(() => { hotspotsRef.current = hotspots }, [hotspots])
 
   // --- Init & Load ---
@@ -194,32 +177,6 @@ export default function Viewer3D({ modelUrl, modelName, modelId, readOnly }: Pro
         // Skip controls.update() during fly animation
         if (isFlyingRef.current) {
           // Camera driven by flyToHotspot rAF loop — just render
-        } else if (isPlayingRef.current && playbackRef.current) {
-          const pb = playbackRef.current
-          const elapsed = (now - pb.startTime) / 1000
-          const total = pb.totalDuration
-          const t = pb.path.loop ? (elapsed % total) / total : Math.min(elapsed / total, 1)
-          setPlayProgress(t)
-
-          if (pb.path.waypoints.length >= 2) {
-            let accumulatedTime = 0
-            for (let i = 1; i < pb.path.waypoints.length; i++) {
-              const segDur = pb.path.waypoints[i].duration
-              if (t * total < accumulatedTime + segDur) {
-                const segT = (t * total - accumulatedTime) / segDur
-                const segNorm = (i - 1 + segT) / (pb.path.waypoints.length - 1)
-                const pos = interpolateWaypoints(pb.path.waypoints.map(w => w.position), segNorm)
-                const tgt = interpolateWaypoints(pb.path.waypoints.map(w => w.target), segNorm)
-                camera.position = new SPLAT.Vector3(pos.x, pos.y, pos.z)
-                const q = lookAtQuaternion(pos, tgt)
-                camera.rotation = new (SPLAT as any).Quaternion(q.x, q.y, q.z, q.w)
-                setCurrentWaypoint(i - 1)
-                break
-              }
-              accumulatedTime += segDur
-            }
-          }
-          if (!pb.path.loop && elapsed >= total) { setIsPlaying(false); isPlayingRef.current = false; playbackRef.current = null; setPlayProgress(1) }
         } else {
           controls.update()
         }
@@ -267,7 +224,24 @@ export default function Viewer3D({ modelUrl, modelName, modelId, readOnly }: Pro
             const dist = Math.sqrt((wx - camPos.x) ** 2 + (wy - camPos.y) ** 2 + (wz - camPos.z) ** 2)
             newScreens.set(hs.id, { x: screenX, y: screenY, visible, scale: Math.max(0.4, Math.min(1.5, 5 / dist)) })
           }
-          setHotspotScreens(newScreens)
+          // Store in ref and update DOM directly — bypass React for 60fps smoothness
+          hotspotScreensRef.current = newScreens
+          const overlay = overlayRef.current
+          if (overlay) {
+            overlay.querySelectorAll<HTMLElement>('[data-hotspot]').forEach(el => {
+              const id = el.dataset.hotspot
+              if (!id) return
+              const screen = newScreens.get(id)
+              if (screen?.visible) {
+                el.style.display = ''
+                el.style.transform = `translate(0, -50%) scale(${screen.scale})`
+                el.style.left = `${screen.x}px`
+                el.style.top = `${screen.y}px`
+              } else {
+                el.style.display = 'none'
+              }
+            })
+          }
         }
 
         animRef.current = requestAnimationFrame(animate)
@@ -363,83 +337,20 @@ export default function Viewer3D({ modelUrl, modelName, modelId, readOnly }: Pro
     setSelectedHotspot(null); setEditingHotspot(null); setShowHotspotEditor(false)
   }, [modelId])
 
-  // --- Import/Export ---
-  const handleImport = useCallback(() => {
-    const input = document.createElement('input')
-    input.type = 'file'; input.accept = '.json'
-    input.onchange = async () => {
-      const file = input.files?.[0]
-      if (!file) return
-      try {
-        const text = await file.text()
-        const result = parseHotspotJSON(text)
-        if (result.errors.length > 0) {
-          alert('Import warnings:\n' + result.errors.join('\n'))
-        }
-        if (result.hotspots.length > 0) {
-          result.hotspots.forEach(h => addHotspot(modelId, h))
-          setHotspots(getHotspots(modelId))
-          alert(`Imported ${result.hotspots.length} hotspots!`)
-        }
-      } catch (e: any) {
-        alert('Import failed: ' + e.message)
-      }
-    }
-    input.click()
-  }, [modelId])
-
-  const handleExport = useCallback(() => {
-    const json = exportHotspotsJSON(hotspots)
-    const blob = new Blob([json], { type: 'application/json' })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url; a.download = `${modelId}-hotspots.json`; a.click()
-    URL.revokeObjectURL(url)
-  }, [hotspots, modelId])
-
-  // --- Camera path handlers ---
-  const handleAddPath = useCallback((name: string, nameEn: string) => {
-    const path = addCameraPath(modelId, { name, nameEn, waypoints: [], loop: true })
-    setCameraPaths(getCameraPaths(modelId)); setActivePathId(path.id)
-  }, [modelId])
-  const handleDeletePath = useCallback((pathId: string) => {
-    deleteCameraPath(modelId, pathId)
-    const paths = getCameraPaths(modelId)
-    setCameraPaths(paths); setActivePathId(paths.length > 0 ? paths[0].id : null)
-    if (activePathId === pathId) setIsPlaying(false)
-  }, [modelId, activePathId])
-  const handleRecordWaypoint = useCallback((pathId: string) => {
-    const camera = cameraRef.current
-    if (!camera) return
-    const pos = camera.position; const fwd = camera.forward
-    addWaypoint(modelId, pathId, { position: { x: pos.x, y: pos.y, z: pos.z }, target: { x: pos.x + fwd.x * 3, y: pos.y + fwd.y * 3, z: pos.z + fwd.z * 3 }, duration: 3 })
-    setCameraPaths(getCameraPaths(modelId))
-  }, [modelId])
-  const handleDeleteWaypoint = useCallback((pathId: string, wpId: string) => { deleteWaypoint(modelId, pathId, wpId); setCameraPaths(getCameraPaths(modelId)) }, [modelId])
-  const handleClearWaypoints = useCallback((pathId: string) => { updateCameraPath(modelId, pathId, { waypoints: [] }); setCameraPaths(getCameraPaths(modelId)) }, [modelId])
-  const handlePlayPath = useCallback(() => {
-    const path = cameraPaths.find(p => p.id === activePathId)
-    if (!path || path.waypoints.length < 2) return
-    const waypointDurations = path.waypoints.map(w => w.duration)
-    playbackRef.current = { startTime: performance.now(), path, totalDuration: waypointDurations.reduce((a, b) => a + b, 0), waypointDurations }
-    setIsPlaying(true); setCurrentWaypoint(0)
-  }, [cameraPaths, activePathId])
-  const handleStopPath = useCallback(() => { setIsPlaying(false); playbackRef.current = null; setPlayProgress(0); setCurrentWaypoint(0) }, [])
-  const handleToggleLoop = useCallback((pathId: string) => { const path = cameraPaths.find(p => p.id === pathId); if (path) { updateCameraPath(modelId, pathId, { loop: !path.loop }); setCameraPaths(getCameraPaths(modelId)) } }, [modelId, cameraPaths])
-
-  // --- Annotation overlay rendering ---
-  const hotspotElements = Array.from(hotspotScreens.entries()).map(([id, screen]) => {
-    const hs = hotspots.find(h => h.id === id)
-    if (!hs || !screen.visible) return null
+  // --- Annotation overlay — markers rendered structurally by React,
+  //     screen positions updated directly in DOM for 60fps smoothness ---
+  const hotspotElements = hotspots.map((hs) => {
+    const screen = hotspotScreensRef.current.get(hs.id)
     return (
       <AnnotationMarker
-        key={id}
-        screenX={screen.x} screenY={screen.y}
+        key={hs.id}
+        hotspotId={hs.id}
+        screenX={screen?.x ?? 0} screenY={screen?.y ?? 0}
         number={hs.order || (hotspots.indexOf(hs) + 1)}
         title={lang === 'zh' ? hs.title : hs.titleEn || hs.title}
         note={hs.note || hs.description || (lang === 'zh' ? hs.description : hs.descriptionEn) || ''}
-        isSelected={selectedHotspot?.id === id}
-        scale={screen.scale}
+        isSelected={selectedHotspot?.id === hs.id}
+        scale={screen?.scale ?? 1}
         onSelect={() => { flyToHotspot(hs) }}
         onEdit={() => { setEditingHotspot(hs); setShowHotspotEditor(true) }}
       />
@@ -457,8 +368,8 @@ export default function Viewer3D({ modelUrl, modelName, modelId, readOnly }: Pro
     >
       <canvas ref={canvasRef} className="gsplat-canvas absolute inset-0" tabIndex={-1} />
 
-      <div className="absolute inset-0 pointer-events-none">
-        <AnimatePresence>{hotspotElements}</AnimatePresence>
+      <div ref={overlayRef} className="absolute inset-0 pointer-events-none">
+        {hotspotElements}
       </div>
 
       {/* Loading */}
@@ -535,44 +446,23 @@ export default function Viewer3D({ modelUrl, modelName, modelId, readOnly }: Pro
                       if (Math.abs(sx - x) < 3 && Math.abs(sy - y) < 3) { pos = { x: wx, y: wy, z: wz }; break }
                     }
                   }
-                  const ctrl = controlsRef.current
-                  let camTgt = { x: 0, y: 0, z: 0 }
-                  try { if (ctrl && (ctrl as any).target) camTgt = { x: (ctrl as any).target.x, y: (ctrl as any).target.y, z: (ctrl as any).target.z } } catch {}
+                  // Compute look-at target from camera forward (ctrl.target is private in gsplat)
+                  const camTgt = {
+                    x: cam.position.x + cam.forward.x * 3,
+                    y: cam.position.y + cam.forward.y * 3,
+                    z: cam.position.z + cam.forward.z * 3,
+                  }
                   const nextOrder = hotspots.length + 1
                   setEditingHotspot({ id: '', position: pos, title: '', titleEn: '', description: '', descriptionEn: '', note: '', order: nextOrder, cameraPosition: { x: cam.position.x, y: cam.position.y, z: cam.position.z }, cameraTarget: camTgt })
-                  setShowHotspotEditor(true); setShowPathEditor(false)
+                  setShowHotspotEditor(true)
                 }}
                 className="rounded-xl px-3 py-2.5 text-xs font-medium glass text-white/70 hover:text-white hover:bg-white/[0.06] transition-all cursor-pointer"
                 style={{ cursor: 'pointer' }}
               >📌 添加标注</button>
-              {/* Camera path button */}
-              <button
-                onClick={() => { setShowPathEditor(!showPathEditor); setShowHotspotEditor(false) }}
-                className={`rounded-xl px-3 py-2.5 text-xs font-medium transition-all ${showPathEditor ? 'bg-accent-2/15 border border-accent-2/30 text-accent-2' : 'glass text-white/50 hover:text-white/80'}`}
-              >🎬 相机路径</button>
-              {/* Import/Export */}
-              <button onClick={handleImport} className="rounded-xl px-3 py-2.5 text-xs font-medium glass text-white/40 hover:text-white/70 transition-colors">📥</button>
-              {hotspots.length > 0 && (
-                <button onClick={handleExport} className="rounded-xl px-3 py-2.5 text-xs font-medium glass text-white/40 hover:text-white/70 transition-colors">📤</button>
-              )}
             </>
           )}
         </motion.div>
       )}
-
-      {/* Camera path player (always visible when paths exist, not in edit mode) */}
-      <AnimatePresence>
-        {cameraPaths.length > 0 && (
-          <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 10 }}>
-            <CameraPathPlayer
-              paths={cameraPaths} activePathId={activePathId} isPlaying={isPlaying}
-              currentWaypoint={currentWaypoint} progress={playProgress}
-              onSelectPath={setActivePathId} onPlay={handlePlayPath} onStop={handleStopPath}
-              onToggleLoop={handleToggleLoop}
-            />
-          </motion.div>
-        )}
-      </AnimatePresence>
 
       <PerformancePanel fps={fps} splatCount={splatCount} isVisible={showPerf && !isLoading && !error} />
       {/* Perf toggle — tiny and unobtrusive */}
@@ -596,16 +486,6 @@ export default function Viewer3D({ modelUrl, modelName, modelId, readOnly }: Pro
           onSave={handleSaveHotspot}
           onDelete={editingHotspot?.id ? () => handleDeleteHotspot(editingHotspot!.id) : undefined}
           onClose={() => { setShowHotspotEditor(false); setEditingHotspot(null) }}
-        />
-      )}
-
-      {/* Camera path editor — only in edit pages */}
-      {!readOnly && (
-        <CameraPathEditor
-          isOpen={showPathEditor} paths={cameraPaths} activePathId={activePathId}
-          onSelectPath={setActivePathId} onAddPath={handleAddPath} onDeletePath={handleDeletePath}
-          onRecordWaypoint={handleRecordWaypoint} onDeleteWaypoint={handleDeleteWaypoint}
-          onClearWaypoints={handleClearWaypoints} onClose={() => setShowPathEditor(false)}
         />
       )}
 

@@ -18,7 +18,7 @@ export default function Navbar() {
   const links = [
     { to: '/', label: t.nav.home },
     { to: '/gallery', label: t.nav.gallery },
-    { to: '/upload', label: '上传' },
+    { to: '/upload', label: t.nav.upload },
     { to: '/admin', label: t.nav.admin },
   ]
 
@@ -96,7 +96,7 @@ export default function Navbar() {
                 >{link.label}</Link>
               ))}
               <button onClick={toggleLang} className="w-full text-left px-4 py-3 rounded-xl text-sm text-text-3 hover:text-text-2 transition-all font-mono">
-                {lang === 'zh' ? 'Switch to English' : '切换到中文'}
+                {t.lang.switchTo}
               </button>
             </nav>
           </motion.div>

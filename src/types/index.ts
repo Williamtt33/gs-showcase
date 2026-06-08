@@ -19,21 +19,6 @@ export interface Hotspot {
   cameraTarget: Vector3Like
 }
 
-export interface CameraWaypoint {
-  id: string
-  position: Vector3Like
-  target: Vector3Like
-  duration: number // seconds to reach this waypoint from previous
-}
-
-export interface CameraPath {
-  id: string
-  name: string
-  nameEn: string
-  waypoints: CameraWaypoint[]
-  loop: boolean
-}
-
 export interface ModelMeta {
   id: string
   name: string
@@ -47,10 +32,8 @@ export interface ModelMeta {
   size: string
   featured: boolean
   hotspots: Hotspot[]
-  cameraPaths: CameraPath[]
 }
 
 // localStorage keys
 export const STORAGE_KEY_HOTSPOTS = 'gs_hotspots_'
-export const STORAGE_KEY_CAMERA_PATHS = 'gs_camera_paths_'
 export const STORAGE_KEY_CUSTOM_MODELS = 'gs_custom_models'

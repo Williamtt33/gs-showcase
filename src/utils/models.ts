@@ -14,7 +14,6 @@ export async function getBuiltinModels(): Promise<ModelMeta[]> {
   if (!Array.isArray(models)) throw new Error('Invalid manifest format')
   models.forEach(m => {
     if (!m.hotspots) m.hotspots = []
-    if (!m.cameraPaths) m.cameraPaths = []
   })
   cachedManifest = models
   return cachedManifest!

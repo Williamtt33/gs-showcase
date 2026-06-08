@@ -1,6 +1,5 @@
-import { motion } from 'framer-motion'
-
 interface Props {
+  hotspotId: string
   screenX: number
   screenY: number
   number: number
@@ -12,23 +11,25 @@ interface Props {
   scale: number
 }
 
-export default function AnnotationMarker({ screenX, screenY, number, title, note, isSelected, onSelect, onEdit, scale }: Props) {
+export default function AnnotationMarker({ hotspotId, screenX, screenY, number, title, note, isSelected, onSelect, onEdit, scale }: Props) {
   const label = title || `标注点 ${number}`
 
   return (
-    <motion.div
-      data-hotspot
+    <div
+      data-hotspot={hotspotId}
       className="absolute pointer-events-auto"
-      style={{ left: screenX, top: screenY, transform: `translate(0, -50%) scale(${scale})`, zIndex: isSelected ? 40 : 30 }}
-      initial={{ scale: 0 }}
-      animate={{ scale: 1 }}
-      exit={{ scale: 0 }}
+      style={{
+        left: screenX,
+        top: screenY,
+        transform: `translate(0, -50%) scale(${scale})`,
+        zIndex: isSelected ? 40 : 30,
+      }}
     >
       <div className="flex items-center gap-2">
         {/* Numbered circle */}
         <button
           onClick={onSelect}
-          className="shrink-0 flex items-center justify-center rounded-full select-none cursor-pointer relative"
+          className="shrink-0 flex items-center justify-center rounded-full select-none cursor-pointer"
           style={{
             width: isSelected ? 34 : 26, height: isSelected ? 34 : 26,
             background: isSelected ? 'rgba(255,255,255,0.18)' : 'rgba(0,0,0,0.6)',
@@ -53,7 +54,7 @@ export default function AnnotationMarker({ screenX, screenY, number, title, note
 
         {/* Selected: expanded bubble */}
         {isSelected && (
-          <motion.div initial={{ opacity: 0, x: -4 }} animate={{ opacity: 1, x: 0 }} className="flex items-start gap-1">
+          <div className="flex items-start gap-1">
             <div onClick={onSelect} className="rounded-xl px-3 py-2 max-w-[220px] cursor-pointer"
               style={{
                 background: 'rgba(0,0,0,0.78)', border: '1px solid rgba(255,255,255,0.15)',
@@ -71,9 +72,9 @@ export default function AnnotationMarker({ screenX, screenY, number, title, note
               title="编辑" style={{ cursor: 'pointer' }}>
               <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
             </button>
-          </motion.div>
+          </div>
         )}
       </div>
-    </motion.div>
+    </div>
   )
 }
