@@ -107,7 +107,7 @@ export default function ModelForm({ isOpen, editingModel, onSaved, onClose }: Pr
 
   return (
     <div
-      className={`fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4 ${isOpen ? '' : 'hidden'}`}
+      className={`fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4 ${isOpen ? '' : 'hidden'}`}
       onClick={onClose}
     >
       <motion.div

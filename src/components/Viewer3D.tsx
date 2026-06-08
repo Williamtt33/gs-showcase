@@ -376,7 +376,7 @@ export default function Viewer3D({ modelUrl, modelName, modelId, readOnly, downl
 
       {/* Loading */}
       {isLoading && (
-        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="absolute inset-0 flex flex-col items-center justify-center bg-black/60 backdrop-blur-sm z-20">
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="absolute inset-0 flex flex-col items-center justify-center bg-black/60 z-20">
           <div className="w-16 h-16 border-2 border-white/10 border-t-accent-1 rounded-full animate-spin mb-6" />
           <p className="text-white/60 text-sm mb-3">
             {downloadProgress !== undefined && downloadProgress < 100 ? '正在下载模型...' : t.viewer.loading}
@@ -392,7 +392,7 @@ export default function Viewer3D({ modelUrl, modelName, modelId, readOnly, downl
 
       {/* Error */}
       {error && (
-        <div className="absolute inset-0 flex items-center justify-center bg-black/80 backdrop-blur-sm z-20">
+        <div className="absolute inset-0 flex items-center justify-center bg-black/80 z-20">
           <div className="text-center p-8"><div className="text-red-400 text-4xl mb-4">⚠</div><p className="text-red-300 mb-2 font-semibold">加载失败</p><p className="text-white/40 text-sm max-w-md">{error}</p></div>
         </div>
       )}

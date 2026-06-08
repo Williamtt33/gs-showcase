@@ -87,7 +87,7 @@ export default function EditModel() {
 
   if (loading) {
     return (
-      <div className="h-screen flex items-center justify-center bg-surface-0">
+      <div className="h-dyn flex items-center justify-center bg-surface-0">
         <div className="text-center">
           <div className="w-12 h-12 border-2 border-white/[0.06] border-t-accent-1 rounded-full animate-spin mx-auto mb-4" />
           <p className="text-text-3/60 text-sm">加载场景信息...</p>
@@ -108,7 +108,7 @@ export default function EditModel() {
   }
 
   return (
-    <div className="h-screen w-screen bg-black relative overflow-hidden">
+    <div className="h-dyn w-full bg-black relative overflow-hidden">
       {/* 3D Viewer in edit mode */}
       {modelUrl && (
         <Viewer3D
@@ -122,7 +122,7 @@ export default function EditModel() {
 
       {/* Download progress overlay */}
       {downloading && !modelUrl && (
-        <div className="absolute inset-0 flex items-center justify-center bg-black/70 backdrop-blur-sm z-30">
+        <div className="absolute inset-0 flex items-center justify-center bg-black/70 z-30">
           <div className="text-center">
             <div className="w-16 h-16 border-2 border-white/[0.06] border-t-accent-1 rounded-full animate-spin mx-auto mb-6" />
             <p className="text-white/60 text-sm mb-3">正在下载模型...</p>

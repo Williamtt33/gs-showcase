@@ -32,7 +32,7 @@ export default function App() {
 
   return (
     <I18nProvider>
-      <div className="min-h-screen flex flex-col">
+      <div className="min-h-dyn flex flex-col">
         {!isViewer && <Navbar />}
         <div className="flex-1">
           <AnimatedRoutes />

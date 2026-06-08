@@ -53,7 +53,7 @@ export default function Viewer() {
   }
 
   return (
-    <div className="h-screen w-screen bg-black relative overflow-hidden">
+    <div className="h-dyn w-full bg-black relative overflow-hidden">
       {model && modelUrl && (
         <Viewer3D
           modelUrl={modelUrl}

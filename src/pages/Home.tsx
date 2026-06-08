@@ -93,26 +93,29 @@ export default function Home() {
         {/* Manuscript grid */}
         <div className="absolute inset-0 bg-manuscript-grid opacity-40" />
 
-        {/* Floating ink orbs — parallax with scroll */}
+        {/* Floating ink orbs — viewport-relative sizing, capped at original px */ }
         <motion.div
-          className="absolute w-[600px] h-[600px] rounded-full blur-[140px]"
+          className="absolute rounded-full blur-[140px]"
           style={{
+            width: 'min(600px, 45vw)', height: 'min(600px, 45vw)',
             background: 'radial-gradient(circle, rgba(212,165,116,0.08) 0%, transparent 70%)',
             top: useTransform(scrollYProgress, [0, 1], ['10%', '50%']),
             left: '20%',
           }}
         />
         <motion.div
-          className="absolute w-[500px] h-[500px] rounded-full blur-[120px]"
+          className="absolute rounded-full blur-[120px]"
           style={{
+            width: 'min(500px, 38vw)', height: 'min(500px, 38vw)',
             background: 'radial-gradient(circle, rgba(163,181,166,0.06) 0%, transparent 70%)',
             top: useTransform(scrollYProgress, [0, 1], ['35%', '70%']),
             right: '10%',
           }}
         />
         <motion.div
-          className="absolute w-[400px] h-[400px] rounded-full blur-[100px]"
+          className="absolute rounded-full blur-[100px]"
           style={{
+            width: 'min(400px, 30vw)', height: 'min(400px, 30vw)',
             background: 'radial-gradient(circle, rgba(200,75,49,0.04) 0%, transparent 70%)',
             top: useTransform(scrollYProgress, [0, 1], ['55%', '85%']),
             left: '35%',

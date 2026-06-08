@@ -257,6 +257,11 @@ canvas.gsplat-canvas {
     rgba(10,9,8,0.9) 100%);
 }
 
+/* ── Dynamic viewport units (accounts for browser chrome / OS scaling) ── */
+.h-dyn { height: 100vh; height: 100dvh; }
+.min-h-dyn { min-height: 100vh; min-height: 100dvh; }
+.w-dyn { width: 100vw; width: 100dvw; }
+
 /* ── Story marker hover glow ── */
 .story-marker-glow {
   box-shadow: 0 0 20px rgba(212, 165, 116, 0.2),
