@@ -30,7 +30,7 @@ export default function Navbar() {
     >
       <div className={`mx-auto transition-all duration-500 ${
         scrolled
-          ? 'mx-4 sm:mx-8 lg:mx-auto lg:max-w-6xl mt-4 glass rounded-2xl'
+          ? 'mx-4 sm:mx-8 lg:mx-auto lg:max-w-6xl mt-4 px-4 sm:px-5 glass rounded-2xl'
           : 'max-w-7xl px-4 sm:px-6 lg:px-8'
       }`}>
         <div className="flex items-center justify-between h-16">

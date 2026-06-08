@@ -27,7 +27,7 @@ export default function HeritageTimeline({ events }: Props) {
               }`}
             >
               {/* Timeline dot */}
-              <div className="absolute left-4 md:left-1/2 -translate-x-1/2 top-1 w-3 h-3 rounded-full bg-accent-1/40 border-2 border-surface-0 shadow-[0_0_12px_rgba(212,165,116,0.25)] z-10" />
+              <div className="absolute left-4 md:left-1/2 md:-translate-x-1/2 top-1 w-3 h-3 rounded-full bg-accent-1/40 border-2 border-surface-0 shadow-[0_0_12px_rgba(212,165,116,0.25)] z-10" />
 
               {/* Content card */}
               <div

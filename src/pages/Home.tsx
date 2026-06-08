@@ -156,9 +156,13 @@ export default function Home() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.8, delay: 0.1 }}
             >
-              <div className="inline-flex items-center gap-3 px-5 py-2.5 rounded-full glass-light text-[13px] font-medium text-text-2 tracking-[0.06em] mb-12">
-                <span className="w-1.5 h-1.5 rounded-full bg-accent-3/70 shadow-[0_0_8px_rgba(200,75,49,0.4)] animate-pulse" />
-                历史文化街区 &nbsp;·&nbsp; 数字化保护 &nbsp;·&nbsp; 三维重建
+              <div className="inline-flex flex-wrap items-center justify-center gap-2 sm:gap-3 px-3.5 sm:px-5 py-2 sm:py-2.5 rounded-full glass-light text-[11px] sm:text-[13px] font-medium text-text-2 tracking-[0.04em] sm:tracking-[0.06em] mb-10 sm:mb-12 max-w-[92vw]">
+                <span className="w-1.5 h-1.5 rounded-full bg-accent-3/70 shadow-[0_0_8px_rgba(200,75,49,0.4)] animate-pulse shrink-0" />
+                <span className="whitespace-nowrap">历史文化街区</span>
+                <span className="text-text-3/25 select-none">·</span>
+                <span className="whitespace-nowrap">数字化保护</span>
+                <span className="text-text-3/25 select-none">·</span>
+                <span className="whitespace-nowrap">三维重建</span>
               </div>
             </motion.div>
 
@@ -167,7 +171,7 @@ export default function Home() {
               initial={{ opacity: 0, y: 40 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.9, delay: 0.2 }}
-              className="text-5xl sm:text-6xl md:text-7xl lg:text-[88px] font-display leading-[1.18] mb-10 tracking-tight"
+              className="text-4xl sm:text-5xl md:text-6xl lg:text-[88px] font-display leading-[1.25] sm:leading-[1.18] mb-8 sm:mb-10 tracking-tight"
             >
               <span className="gradient-text">让街区在数字中重生</span>
             </motion.h1>
@@ -176,7 +180,7 @@ export default function Home() {
               initial={{ opacity: 0, y: 30 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.9, delay: 0.35 }}
-              className="text-base sm:text-lg text-text-2 max-w-xl mx-auto mb-14 leading-[1.8] font-light"
+              className="text-sm sm:text-lg text-text-2 max-w-xl mx-auto mb-10 sm:mb-14 leading-[1.8] font-light"
             >
               高精度三维扫描与实时渲染，为历史建筑建立永恒的数字档案
             </motion.p>
@@ -486,7 +490,7 @@ export default function Home() {
                 </p>
               </div>
             ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 sm:gap-6">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
                 {models.map((model, i) => (
                   <motion.div
                     key={model.id}

@@ -122,7 +122,7 @@ export function StoryMarker({ story, isActive, onClick }: MarkerProps) {
         }`}
       />
       {/* Label */}
-      <span className="absolute top-full left-1/2 -translate-x-1/2 mt-1.5 text-[10px] text-text-3/40 whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none">
+      <span className="absolute top-full left-1/2 -translate-x-1/2 mt-1.5 text-[9px] sm:text-[10px] text-text-3/35 whitespace-nowrap opacity-60 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity duration-200 pointer-events-none">
         {story.title}
       </span>
     </button>

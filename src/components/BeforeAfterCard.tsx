@@ -20,7 +20,7 @@ export default function BeforeAfterCard({ building, index }: Props) {
       <p className="text-[13px] text-text-3/60 leading-[1.7] mb-5">{building.desc}</p>
 
       {/* Before / After comparison */}
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-2 gap-2 sm:gap-3">
         {/* Before */}
         <div className="space-y-2">
           <span className="inline-block text-[10px] font-semibold px-2 py-0.5 rounded-full bg-accent-3/10 border border-accent-3/20 text-accent-3/70 tracking-[0.06em]">
