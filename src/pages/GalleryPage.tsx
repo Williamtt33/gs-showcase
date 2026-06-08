@@ -20,49 +20,62 @@ export default function Gallery() {
 
   return (
     <main className="min-h-screen bg-surface-0">
-      <section className="pt-28 pb-12 sm:pt-36 sm:pb-16">
-        <div className="max-w-6xl mx-auto px-6">
+      {/* ── Header ── */}
+      <section className="pt-32 sm:pt-40 pb-16 sm:pb-20">
+        <div className="max-w-6xl mx-auto px-6 sm:px-8">
           <motion.div
-            initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6 }}
+            initial={{ opacity: 0, y: 24 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
             className="text-center"
           >
-            <h1 className="text-4xl sm:text-5xl lg:text-6xl font-display tracking-tight mb-4">
+            {/* Pill badge */}
+            <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full glass-light text-[11px] font-medium text-text-2 tracking-[0.05em] mb-8">
+              <span className="w-1.5 h-1.5 rounded-full bg-accent-2 shadow-[0_0_6px_rgba(163,181,166,0.4)]" />
+              三维场景
+            </div>
+
+            <h1 className="text-4xl sm:text-5xl lg:text-6xl font-display tracking-tight mb-6 leading-[1.22]">
               <span className="gradient-text">{t.gallery.title}</span>
             </h1>
-            <p className="text-text-3 text-base font-light max-w-lg mx-auto">{t.gallery.subtitle}</p>
+            <p className="text-text-3/70 text-base sm:text-lg font-light max-w-lg mx-auto leading-[1.8]">
+              {t.gallery.subtitle}
+            </p>
           </motion.div>
         </div>
       </section>
 
+      {/* ── Grid ── */}
       <section className="pb-24 sm:pb-32">
-        <div className="max-w-6xl mx-auto px-6">
+        <div className="max-w-6xl mx-auto px-6 sm:px-8">
           {loading ? (
-            <div className="flex items-center justify-center py-32">
-              <div className="flex flex-col items-center gap-4">
-                <div className="w-10 h-10 border-2 border-white/[0.06] border-t-accent-1 rounded-full animate-spin" />
-                <p className="text-[13px] text-text-3 font-mono">{t.gallery.loading}</p>
+            <div className="flex items-center justify-center py-40">
+              <div className="flex flex-col items-center gap-5">
+                <div className="w-8 h-8 border-2 border-white/[0.06] border-t-accent-1 rounded-full animate-spin" />
+                <p className="text-[13px] text-text-3/40">{t.gallery.loading}</p>
               </div>
             </div>
           ) : loadError ? (
-            <div className="text-center py-32">
-              <div className="text-5xl mb-6 opacity-60">⚠️</div>
-              <h2 className="text-xl font-semibold text-text-2 mb-2">加载失败</h2>
-              <p className="text-text-3 text-sm max-w-md mx-auto leading-relaxed mb-4">{loadError}</p>
-              <button onClick={() => { setLoadError(null); setLoading(true); getModels().then(m => setModels(m)).catch(err => setLoadError(err.message)).finally(() => setLoading(false)) }}
-                className="px-5 py-2.5 rounded-xl bg-white/[0.06] border border-white/[0.08] text-text-2 text-sm hover:bg-white/[0.1] transition-all">
+            <div className="text-center py-40">
+              <div className="text-5xl mb-6 opacity-40">—</div>
+              <h2 className="text-lg font-semibold text-text-2 mb-2">加载失败</h2>
+              <p className="text-text-3/50 text-sm max-w-md mx-auto leading-relaxed mb-5">{loadError}</p>
+              <button
+                onClick={() => { setLoadError(null); setLoading(true); getModels().then(m => setModels(m)).catch(err => setLoadError(err.message)).finally(() => setLoading(false)) }}
+                className="px-5 py-2.5 rounded-xl bg-white/[0.04] border border-white/[0.08] text-text-2 text-sm hover:bg-white/[0.08] transition-all cursor-pointer"
+                style={{ cursor: 'pointer' }}
+              >
                 重试
               </button>
             </div>
           ) : models.length === 0 ? (
-            <div className="text-center py-32">
-              <div className="text-5xl mb-6 opacity-60">📭</div>
-              <h2 className="text-xl font-semibold text-text-2 mb-2">暂无场景</h2>
-              <p className="text-text-3 text-sm max-w-md mx-auto leading-relaxed">
-                将 .splat 文件放入 public/models/ 目录，并在管理页面添加场景。
+            <div className="text-center py-40">
+              <p className="text-text-3/40 text-[15px] leading-relaxed">
+                暂无场景，请先在管理页面添加
               </p>
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 sm:gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8">
               {models.map((model, i) => (
                 <ModelCard key={model.id} model={model} index={i} />
               ))}
