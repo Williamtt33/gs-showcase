@@ -234,3 +234,17 @@ canvas.gsplat-canvas {
 .text-h1 { font-size: clamp(2.5rem, 6vw, 5rem); line-height: 1.12; }
 .text-h2 { font-size: clamp(1.75rem, 4vw, 3rem); line-height: 1.2; }
 .text-h3 { font-size: 1.25rem; line-height: 1.35; }
+
+/* ── Heritage page: timeline decoration ── */
+.heritage-overlay {
+  background: linear-gradient(to bottom,
+    rgba(10,9,8,0.3) 0%,
+    rgba(10,9,8,0.6) 60%,
+    rgba(10,9,8,0.9) 100%);
+}
+
+/* ── Story marker hover glow ── */
+.story-marker-glow {
+  box-shadow: 0 0 20px rgba(212, 165, 116, 0.2),
+              0 0 40px rgba(212, 165, 116, 0.08);
+}
