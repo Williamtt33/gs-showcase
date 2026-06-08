@@ -201,16 +201,18 @@ export default function Viewer3D({ modelUrl, modelName, modelId, readOnly, downl
               const rightY = rLen > 0.0001 ? ry / rLen : 0
               const rightZ = rLen > 0.0001 ? rz / rLen : 0
 
-              // Speed scales with distance to target (faster when far, precise when close)
+              // Estimate orbit target from camera forward (gsplat stores target in closure, not this._target)
               const cp = camera.position
-              const tgt = (controls as any)._target
-              const tgtX = tgt ? tgt.x : 0
-              const tgtY = tgt ? tgt.y : 0
-              const tgtZ = tgt ? tgt.z : 0
-              const dist = Math.sqrt(
+              const lookDist = 3 // reasonable estimate of orbit distance
+              const tgtX = cp.x + fwd.x * lookDist
+              const tgtY = cp.y + fwd.y * lookDist
+              const tgtZ = cp.z + fwd.z * lookDist
+
+              // Speed scales with orbit distance — faster when far, precise when close
+              const actualDist = Math.sqrt(
                 (cp.x - tgtX) ** 2 + (cp.y - tgtY) ** 2 + (cp.z - tgtZ) ** 2
               )
-              const speed = flightSpeedRef.current * Math.max(dist, 0.5) * dt
+              const speed = flightSpeedRef.current * Math.max(actualDist, 0.5) * dt
 
               let moveX = 0, moveY = 0, moveZ = 0
               if (keys.has('KeyW')) { moveX += fwd.x * speed; moveY += fwd.y * speed; moveZ += fwd.z * speed }
@@ -222,7 +224,7 @@ export default function Viewer3D({ modelUrl, modelName, modelId, readOnly, downl
 
               if (moveX !== 0 || moveY !== 0 || moveZ !== 0) {
                 const SPLAT = splatModuleRef.current
-                if (SPLAT && tgt) {
+                if (SPLAT) {
                   controls.setCameraTarget(new SPLAT.Vector3(
                     tgtX + moveX, tgtY + moveY, tgtZ + moveZ
                   ))
