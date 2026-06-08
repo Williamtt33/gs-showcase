@@ -19,6 +19,13 @@ export default function ControlsHelp({ isVisible, onClose }: Props) {
       ],
     },
     {
+      title: '⌨️ 飞行漫游',
+      items: [
+        { key: 'W A S D', action: '前后左右平移' },
+        { key: 'Q / E', action: '上升 / 下降' },
+      ],
+    },
+    {
       title: '⌨️ 快捷键',
       items: [
         { key: 'H', action: '切换帮助面板' },
@@ -34,7 +41,7 @@ export default function ControlsHelp({ isVisible, onClose }: Props) {
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0, y: 10 }}
-          className="absolute bottom-4 left-4 glass rounded-xl p-5 text-sm z-20 max-w-[280px]"
+          className="absolute bottom-4 left-4 glass rounded-xl p-5 text-sm z-20 max-w-[300px]"
         >
           <div className="flex items-center justify-between mb-3">
             <h3 className="font-semibold text-white/80 text-xs uppercase tracking-wider">

@@ -35,6 +35,11 @@ export default function Viewer3D({ modelUrl, modelName, modelId, readOnly, downl
   const splatModuleRef = useRef<any>(null)
   const intersectionTesterRef = useRef<any>(null)
 
+  // WASD flight control refs
+  const keysRef = useRef<Set<string>>(new Set())
+  const lastTimeRef = useRef<number>(0)
+  const flightSpeedRef = useRef(5) // base speed units/sec
+
   // View state
   const [isLoading, setIsLoading] = useState(true)
   const [progress, setProgress] = useState(0)
@@ -180,6 +185,53 @@ export default function Viewer3D({ modelUrl, modelName, modelId, readOnly, downl
         if (isFlyingRef.current) {
           // Camera driven by flyToHotspot rAF loop — just render
         } else {
+          // ── WASD flight movement ──
+          const keys = keysRef.current
+          if (keys.size > 0) {
+            const dt = Math.min((now - lastTimeRef.current) / 1000, 0.1)
+            if (lastTimeRef.current > 0 && dt > 0) {
+              const fwd = camera.forward
+              // Right vector = cross(forward, worldUp)
+              const wx = 0, wy = 1, wz = 0
+              const rx = wy * fwd.z - wz * fwd.y
+              const ry = wz * fwd.x - wx * fwd.z
+              const rz = wx * fwd.y - wy * fwd.x
+              const rLen = Math.sqrt(rx * rx + ry * ry + rz * rz)
+              const rightX = rLen > 0.0001 ? rx / rLen : 1
+              const rightY = rLen > 0.0001 ? ry / rLen : 0
+              const rightZ = rLen > 0.0001 ? rz / rLen : 0
+
+              // Speed scales with distance to target (faster when far, precise when close)
+              const cp = camera.position
+              const tgt = (controls as any)._target
+              const tgtX = tgt ? tgt.x : 0
+              const tgtY = tgt ? tgt.y : 0
+              const tgtZ = tgt ? tgt.z : 0
+              const dist = Math.sqrt(
+                (cp.x - tgtX) ** 2 + (cp.y - tgtY) ** 2 + (cp.z - tgtZ) ** 2
+              )
+              const speed = flightSpeedRef.current * Math.max(dist, 0.5) * dt
+
+              let moveX = 0, moveY = 0, moveZ = 0
+              if (keys.has('KeyW')) { moveX += fwd.x * speed; moveY += fwd.y * speed; moveZ += fwd.z * speed }
+              if (keys.has('KeyS')) { moveX -= fwd.x * speed; moveY -= fwd.y * speed; moveZ -= fwd.z * speed }
+              if (keys.has('KeyA')) { moveX -= rightX * speed; moveY -= rightY * speed; moveZ -= rightZ * speed }
+              if (keys.has('KeyD')) { moveX += rightX * speed; moveY += rightY * speed; moveZ += rightZ * speed }
+              if (keys.has('KeyQ')) { moveY -= speed }
+              if (keys.has('KeyE')) { moveY += speed }
+
+              if (moveX !== 0 || moveY !== 0 || moveZ !== 0) {
+                const SPLAT = splatModuleRef.current
+                if (SPLAT && tgt) {
+                  controls.setCameraTarget(new SPLAT.Vector3(
+                    tgtX + moveX, tgtY + moveY, tgtZ + moveZ
+                  ))
+                }
+              }
+            }
+          }
+          lastTimeRef.current = now
+
           controls.update()
         }
 
@@ -262,7 +314,11 @@ export default function Viewer3D({ modelUrl, modelName, modelId, readOnly, downl
 
       setIsLoading(false)
 
-      const onKey = (e: KeyboardEvent) => {
+      const onKeyDown = (e: KeyboardEvent) => {
+        // Track WASD/QE flight keys (always track, to avoid stuck keys)
+        if (['KeyW','KeyA','KeyS','KeyD','KeyQ','KeyE'].includes(e.code)) {
+          keysRef.current.add(e.code)
+        }
         // Don't handle keys if user is typing in an input
         if ((e.target as HTMLElement)?.tagName === 'INPUT' || (e.target as HTMLElement)?.tagName === 'TEXTAREA') return
         if (e.key === 'r' || e.key === 'R') {
@@ -290,12 +346,17 @@ export default function Viewer3D({ modelUrl, modelName, modelId, readOnly, downl
           }
         }
       }
-      window.addEventListener('keydown', onKey)
+      const onKeyUp = (e: KeyboardEvent) => {
+        keysRef.current.delete(e.code)
+      }
+      window.addEventListener('keydown', onKeyDown)
+      window.addEventListener('keyup', onKeyUp)
 
       return () => {
         cancelAnimationFrame(animRef.current)
         ro.disconnect()
-        window.removeEventListener('keydown', onKey)
+        window.removeEventListener('keydown', onKeyDown)
+        window.removeEventListener('keyup', onKeyUp)
         renderer.dispose()
       }
     } catch (err: any) {
