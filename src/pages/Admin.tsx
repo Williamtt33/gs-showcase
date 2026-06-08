@@ -204,16 +204,11 @@ export default function Admin() {
             </Link>
           </div>
           <div className="flex items-center gap-3">
-            <Link
-              to="/upload"
-              className="inline-flex items-center justify-center px-5 py-2.5 rounded-xl bg-white/[0.04] border border-white/[0.08] text-text-2 text-[13px] font-medium cursor-pointer hover:bg-white/[0.08] hover:text-text-1 transition-all"
-              style={{ cursor: 'pointer' }}
-            >+ 上传场景</Link>
             <button
               onClick={() => { setEditingModel(null); setShowForm(true) }}
-              className="inline-flex items-center justify-center px-5 py-2.5 rounded-xl bg-[#e8e0d5] text-[#0a0908] text-[13px] font-semibold cursor-pointer border-none outline-none hover:shadow-lg hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.985] transition-all duration-300"
+              className="inline-flex items-center justify-center px-6 py-3 rounded-xl bg-[#e8e0d5] text-[#0a0908] text-[14px] font-semibold cursor-pointer border-none outline-none hover:shadow-lg hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.985] transition-all duration-300"
               style={{ cursor: 'pointer' }}
-            >+ 添加场景</button>
+            >+ 上传场景</button>
           </div>
         </div>
 
