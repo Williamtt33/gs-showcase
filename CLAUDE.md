@@ -150,7 +150,11 @@ Hotspots are 3D world-space points rendered as CSS-positioned overlays. Each fra
 
 ### Camera path animation
 
-Waypoints are recorded from the current camera position. During playback, the render loop interpolates camera position and target using Catmull-Rom splines (`src/utils/math3d.ts`), bypassing OrbitControls updates. The `CameraPathPlayer` component shows playback controls; `CameraPathEditor` provides waypoint management.
+`useCameraPathPlayer` hook (`src/hooks/useCameraPathPlayer.ts`) manages playback state machine (idle→playing→paused→idle). The per-frame update function integrates into Viewer3D's main rAF loop (not a separate rAF), called via `playback.pathUpdateRef.current()` when `playback.isPathPlayingRef.current` is true. Camera position and look-at target are interpolated using Catmull-Rom splines (`catmullRomPoint()` in `src/utils/math3d.ts`), which uses boundary endpoint duplication for segments with fewer than 4 keyframes. `SPLAT.Quaternion.LookRotation(dir)` computes the camera quaternion. Playback speed is adjustable (0.5x/1x/2x). On stop, `controls.setCameraTarget()` + `controls.dampening = 0.2` restores OrbitControls.
+
+`CameraPathPanel` (`src/components/editor/CameraPathPanel.tsx`) provides a unified glass-overlay UI: path CRUD (create/rename/delete), keyframe list with reorder/delete buttons, "Capture Current View" button (reads `camera.position` and `camera.forward * 3` as look-at target), and playback controls with speed selector.
+
+Camera path data persists in localStorage keyed by model ID (`gs_camera_paths_{modelId}`), with 5 CRUD functions in `src/store/modelStore.ts` matching the hotspot pattern. `deleteCustomModel()` cleans up path data alongside hotspots.
 
 ### Key patterns to preserve
 
