@@ -34,6 +34,25 @@ export interface ModelMeta {
   hotspots: Hotspot[]
 }
 
+// --- Camera Paths ---
+
+export interface Keyframe {
+  id: string
+  /** Camera position at this keyframe */
+  position: Vector3Like
+  /** Look-at target at this keyframe */
+  target: Vector3Like
+}
+
+export interface CameraPath {
+  id: string
+  name: string
+  nameEn: string
+  /** Ordered keyframes (waypoints) */
+  keyframes: Keyframe[]
+}
+
 // localStorage keys
 export const STORAGE_KEY_HOTSPOTS = 'gs_hotspots_'
+export const STORAGE_KEY_CAMERA_PATHS = 'gs_camera_paths_'
 export const STORAGE_KEY_CUSTOM_MODELS = 'gs_custom_models'

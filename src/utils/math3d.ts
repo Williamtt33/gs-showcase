@@ -62,3 +62,37 @@ export function worldToScreen(
 
   return { x: screenX, y: screenY, visible }
 }
+
+// --- Interpolation ---
+
+/** Ease-in-out cubic: 0→0, 1→1, smooth start and end */
+export function easeInOutCubic(t: number): number {
+  return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2
+}
+
+/** Catmull-Rom spline interpolation for a single float component */
+function catmullRom1D(p0: number, p1: number, p2: number, p3: number, t: number): number {
+  const t2 = t * t
+  const t3 = t2 * t
+  return 0.5 * (
+    2 * p1 +
+    (-p0 + p2) * t +
+    (2 * p0 - 5 * p1 + 4 * p2 - p3) * t2 +
+    (-p0 + 3 * p1 - 3 * p2 + p3) * t3
+  )
+}
+
+/** Catmull-Rom spline interpolation over Vector3Like points */
+export function catmullRomPoint(
+  p0: Vector3Like,
+  p1: Vector3Like,
+  p2: Vector3Like,
+  p3: Vector3Like,
+  t: number,
+): Vector3Like {
+  return {
+    x: catmullRom1D(p0.x, p1.x, p2.x, p3.x, t),
+    y: catmullRom1D(p0.y, p1.y, p2.y, p3.y, t),
+    z: catmullRom1D(p0.z, p1.z, p2.z, p3.z, t),
+  }
+}

@@ -6,13 +6,15 @@ import PerformancePanel from './PerformancePanel'
 import ControlsHelp from './ControlsHelp'
 import AnnotationMarker from './viewer/AnnotationMarker'
 import HotspotEditor from './editor/HotspotEditor'
+import CameraPathPanel from './editor/CameraPathPanel'
 import SplatLoadingScreen from './viewer/SplatLoadingScreen'
-import { worldToScreen } from '../utils/math3d'
+import { worldToScreen, easeInOutCubic } from '../utils/math3d'
 import {
   getHotspots, addHotspot, updateHotspot, deleteHotspot,
 } from '../store/modelStore'
-import type { Hotspot } from '../types'
+import type { Hotspot, CameraPath } from '../types'
 import type { Scene, Camera, WebGLRenderer, OrbitControls, IntersectionTester } from 'gsplat'
+import { useCameraPathPlayer } from '../hooks/useCameraPathPlayer'
 
 interface Props {
   modelUrl: string
@@ -55,6 +57,16 @@ export default function Viewer3D({ modelUrl, modelName, modelId, readOnly, downl
   const [showHotspotEditor, setShowHotspotEditor] = useState(false)
   const [selectedHotspot, setSelectedHotspot] = useState<Hotspot | null>(null)
   const [editingHotspot, setEditingHotspot] = useState<Hotspot | null>(null)
+
+  // Camera path state
+  const [activePathId, setActivePathId] = useState<string | null>(null)
+  const [activePath, setActivePath] = useState<CameraPath | null>(null)
+  const [showCameraPathPanel, setShowCameraPathPanel] = useState(false)
+  const playback = useCameraPathPlayer(activePath, cameraRef, controlsRef, splatModuleRef)
+  const handleSelectPath = useCallback((path: CameraPath | null) => {
+    setActivePathId(path?.id ?? null)
+    setActivePath(path)
+  }, [])
 
   // Data state
   const [hotspots, setHotspots] = useState<Hotspot[]>([])
@@ -108,8 +120,7 @@ export default function Viewer3D({ modelUrl, modelName, modelId, readOnly, downl
     const tick = () => {
       const elapsed = (performance.now() - startTime) / 1000
       const t = Math.min(elapsed / duration, 1)
-      // easeInOutCubic
-      const ease = t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2
+      const ease = easeInOutCubic(t)
 
       const px = startPos.x + (endPos.x - startPos.x) * ease
       const py = startPos.y + (endPos.y - startPos.y) * ease
@@ -188,9 +199,12 @@ export default function Viewer3D({ modelUrl, modelName, modelId, readOnly, downl
       const animate = () => {
         const now = performance.now()
 
-        // Skip controls.update() during fly animation
+        // Skip controls.update() during fly animation or path playback
         if (isFlyingRef.current) {
           // Camera driven by flyToHotspot rAF loop — just render
+        } else if (playback.isPathPlayingRef.current) {
+          // Camera driven by path playback engine — update then render
+          playback.pathUpdateRef.current?.()
         } else {
           // ── WASD direct camera flight ──
           const keys = keysRef.current
@@ -379,7 +393,7 @@ export default function Viewer3D({ modelUrl, modelName, modelId, readOnly, downl
       setIsLoading(false)
       return () => { cancelAnimationFrame(animRef.current); rendererRef.current?.dispose() }
     }
-  }, [modelUrl, flyToHotspot])
+  }, [modelUrl, flyToHotspot, playback.isPathPlayingRef, playback.pathUpdateRef])
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect -- init external WebGL system
@@ -530,6 +544,18 @@ export default function Viewer3D({ modelUrl, modelName, modelId, readOnly, downl
                 className="rounded-xl px-3 py-2.5 text-xs font-medium glass text-white/70 hover:text-white hover:bg-white/[0.06] transition-all cursor-pointer"
                 style={{ cursor: 'pointer' }}
               >📌 添加标注</button>
+
+              <div className="w-px h-6 bg-white/10" />
+              {/* Camera path button */}
+              <button
+                onClick={() => setShowCameraPathPanel(prev => !prev)}
+                className={`rounded-xl px-3 py-2.5 text-xs font-medium transition-all cursor-pointer ${
+                  showCameraPathPanel
+                    ? 'bg-accent-1/20 text-accent-1 border border-accent-1/30'
+                    : 'glass text-white/70 hover:text-white hover:bg-white/[0.06]'
+                }`}
+                style={{ cursor: 'pointer' }}
+              >🎥 {lang === 'zh' ? '相机路径' : 'Cam Path'}</button>
             </>
           )}
         </motion.div>
@@ -558,6 +584,21 @@ export default function Viewer3D({ modelUrl, modelName, modelId, readOnly, downl
           onSave={handleSaveHotspot}
           onDelete={editingHotspot?.id ? () => handleDeleteHotspot(editingHotspot!.id) : undefined}
           onClose={() => { setShowHotspotEditor(false); setEditingHotspot(null) }}
+        />
+      )}
+
+      {/* Camera path panel — only in edit pages */}
+      {!readOnly && (
+        <CameraPathPanel
+          modelId={modelId}
+          cameraRef={cameraRef}
+          controlsRef={controlsRef}
+          splatModuleRef={splatModuleRef}
+          playback={playback}
+          activePathId={activePathId}
+          onSelectPath={handleSelectPath}
+          visible={showCameraPathPanel}
+          onClose={() => setShowCameraPathPanel(false)}
         />
       )}
 

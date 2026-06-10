@@ -1,5 +1,5 @@
-import type { ModelMeta, Hotspot } from '../types'
-import { STORAGE_KEY_HOTSPOTS, STORAGE_KEY_CUSTOM_MODELS } from '../types'
+import type { ModelMeta, Hotspot, CameraPath } from '../types'
+import { STORAGE_KEY_HOTSPOTS, STORAGE_KEY_CAMERA_PATHS, STORAGE_KEY_CUSTOM_MODELS } from '../types'
 
 export function generateId(): string {
   return Date.now().toString(36) + Math.random().toString(36).slice(2, 8)
@@ -42,6 +42,43 @@ export function deleteHotspot(modelId: string, id: string): void {
   saveHotspots(modelId, hotspots)
 }
 
+// --- Camera Paths ---
+
+export function getCameraPaths(modelId: string): CameraPath[] {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY_CAMERA_PATHS + modelId)
+    return raw ? JSON.parse(raw) : []
+  } catch {
+    return []
+  }
+}
+
+export function saveCameraPaths(modelId: string, paths: CameraPath[]): void {
+  localStorage.setItem(STORAGE_KEY_CAMERA_PATHS + modelId, JSON.stringify(paths))
+}
+
+export function addCameraPath(modelId: string, path: Omit<CameraPath, 'id'>): CameraPath {
+  const paths = getCameraPaths(modelId)
+  const newPath: CameraPath = { ...path, id: generateId() }
+  paths.push(newPath)
+  saveCameraPaths(modelId, paths)
+  return newPath
+}
+
+export function updateCameraPath(modelId: string, id: string, updates: Partial<CameraPath>): void {
+  const paths = getCameraPaths(modelId)
+  const idx = paths.findIndex(p => p.id === id)
+  if (idx >= 0) {
+    paths[idx] = { ...paths[idx], ...updates }
+    saveCameraPaths(modelId, paths)
+  }
+}
+
+export function deleteCameraPath(modelId: string, id: string): void {
+  const paths = getCameraPaths(modelId).filter(p => p.id !== id)
+  saveCameraPaths(modelId, paths)
+}
+
 // --- Custom Models ---
 
 export function getCustomModels(): ModelMeta[] {
@@ -79,4 +116,5 @@ export function deleteCustomModel(id: string): void {
   saveCustomModels(models)
   // Also clean up associated data
   localStorage.removeItem(STORAGE_KEY_HOTSPOTS + id)
+  localStorage.removeItem(STORAGE_KEY_CAMERA_PATHS + id)
 }
