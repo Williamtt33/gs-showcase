@@ -58,14 +58,13 @@ export default function Viewer3D({ modelUrl, modelName, modelId, readOnly, downl
   const [selectedHotspot, setSelectedHotspot] = useState<Hotspot | null>(null)
   const [editingHotspot, setEditingHotspot] = useState<Hotspot | null>(null)
 
-  // Camera path state
+  // Camera path state — refs owned by Viewer3D so render loop reads them directly
   const [activePathId, setActivePathId] = useState<string | null>(null)
   const [activePath, setActivePath] = useState<CameraPath | null>(null)
   const [showCameraPathPanel, setShowCameraPathPanel] = useState(false)
-  const playback = useCameraPathPlayer(activePath, cameraRef, controlsRef, splatModuleRef)
-  // Store playback in a ref so the render loop closure always reads the latest object
-  const playbackRef = useRef(playback)
-  useEffect(() => { playbackRef.current = playback }, [playback])
+  const isPathPlayingRef = useRef(false)
+  const pathUpdateRef = useRef<(() => void) | null>(null)
+  const playback = useCameraPathPlayer(activePath, cameraRef, controlsRef, splatModuleRef, isPathPlayingRef, pathUpdateRef)
   const handleSelectPath = useCallback((path: CameraPath | null) => {
     setActivePathId(path?.id ?? null)
     setActivePath(path)
@@ -205,9 +204,9 @@ export default function Viewer3D({ modelUrl, modelName, modelId, readOnly, downl
         // Skip controls.update() during fly animation or path playback
         if (isFlyingRef.current) {
           // Camera driven by flyToHotspot rAF loop — just render
-        } else if (playbackRef.current.isPathPlayingRef.current) {
+        } else if (isPathPlayingRef.current) {
           // Camera driven by path playback engine — update then render
-          playbackRef.current.pathUpdateRef.current?.()
+          pathUpdateRef.current?.()
         } else {
           // ── WASD direct camera flight ──
           const keys = keysRef.current
