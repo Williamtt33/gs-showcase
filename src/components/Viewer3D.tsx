@@ -63,6 +63,9 @@ export default function Viewer3D({ modelUrl, modelName, modelId, readOnly, downl
   const [activePath, setActivePath] = useState<CameraPath | null>(null)
   const [showCameraPathPanel, setShowCameraPathPanel] = useState(false)
   const playback = useCameraPathPlayer(activePath, cameraRef, controlsRef, splatModuleRef)
+  // Store playback in a ref so the render loop closure always reads the latest object
+  const playbackRef = useRef(playback)
+  useEffect(() => { playbackRef.current = playback }, [playback])
   const handleSelectPath = useCallback((path: CameraPath | null) => {
     setActivePathId(path?.id ?? null)
     setActivePath(path)
@@ -202,9 +205,9 @@ export default function Viewer3D({ modelUrl, modelName, modelId, readOnly, downl
         // Skip controls.update() during fly animation or path playback
         if (isFlyingRef.current) {
           // Camera driven by flyToHotspot rAF loop — just render
-        } else if (playback.isPathPlayingRef.current) {
+        } else if (playbackRef.current.isPathPlayingRef.current) {
           // Camera driven by path playback engine — update then render
-          playback.pathUpdateRef.current?.()
+          playbackRef.current.pathUpdateRef.current?.()
         } else {
           // ── WASD direct camera flight ──
           const keys = keysRef.current
@@ -393,7 +396,7 @@ export default function Viewer3D({ modelUrl, modelName, modelId, readOnly, downl
       setIsLoading(false)
       return () => { cancelAnimationFrame(animRef.current); rendererRef.current?.dispose() }
     }
-  }, [modelUrl, flyToHotspot, playback.isPathPlayingRef, playback.pathUpdateRef])
+  }, [modelUrl, flyToHotspot])
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect -- init external WebGL system
