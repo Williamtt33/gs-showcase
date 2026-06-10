@@ -104,15 +104,19 @@ export default function CameraPathPanel({
 
     const updatedKfs = [...(activePath?.keyframes || []), newKf]
     updateCameraPath(modelId, activePathId, { keyframes: updatedKfs })
-    setPaths(getCameraPaths(modelId))
-  }, [modelId, activePathId, activePath, cameraRef, splatModuleRef])
+    const reloaded = getCameraPaths(modelId)
+    setPaths(reloaded)
+    onSelectPath(reloaded.find(p => p.id === activePathId) || null)
+  }, [modelId, activePathId, activePath, cameraRef, splatModuleRef, onSelectPath])
 
   const handleDeleteKeyframe = useCallback((kfId: string) => {
     if (!activePathId || !activePath) return
     const updatedKfs = activePath.keyframes.filter(k => k.id !== kfId)
     updateCameraPath(modelId, activePathId, { keyframes: updatedKfs })
-    setPaths(getCameraPaths(modelId))
-  }, [modelId, activePathId, activePath])
+    const reloaded = getCameraPaths(modelId)
+    setPaths(reloaded)
+    onSelectPath(reloaded.find(p => p.id === activePathId) || null)
+  }, [modelId, activePathId, activePath, onSelectPath])
 
   const handleMoveKeyframe = useCallback((kfId: string, direction: -1 | 1) => {
     if (!activePathId || !activePath) return
@@ -124,8 +128,10 @@ export default function CameraPathPanel({
     // Swap
     ;[kfs[idx], kfs[newIdx]] = [kfs[newIdx], kfs[idx]]
     updateCameraPath(modelId, activePathId, { keyframes: kfs })
-    setPaths(getCameraPaths(modelId))
-  }, [modelId, activePathId, activePath])
+    const reloaded = getCameraPaths(modelId)
+    setPaths(reloaded)
+    onSelectPath(reloaded.find(p => p.id === activePathId) || null)
+  }, [modelId, activePathId, activePath, onSelectPath])
 
   // ── Escape key ──
   useEffect(() => {
