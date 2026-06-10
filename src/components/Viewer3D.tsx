@@ -6,6 +6,7 @@ import PerformancePanel from './PerformancePanel'
 import ControlsHelp from './ControlsHelp'
 import AnnotationMarker from './viewer/AnnotationMarker'
 import HotspotEditor from './editor/HotspotEditor'
+import SplatLoadingScreen from './viewer/SplatLoadingScreen'
 import { worldToScreen } from '../utils/math3d'
 import {
   getHotspots, addHotspot, updateHotspot, deleteHotspot,
@@ -22,7 +23,7 @@ interface Props {
 }
 
 export default function Viewer3D({ modelUrl, modelName, modelId, readOnly, downloadProgress }: Props) {
-  const { t, lang } = useI18n()
+  const { lang } = useI18n()
   const containerRef = useRef<HTMLDivElement>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const animRef = useRef<number>(0)
@@ -438,20 +439,12 @@ export default function Viewer3D({ modelUrl, modelName, modelId, readOnly, downl
         {hotspotElements}
       </div>
 
-      {/* Loading */}
+      {/* Loading — Gaussian point-cloud skeleton */}
       {isLoading && (
-        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="absolute inset-0 flex flex-col items-center justify-center bg-black/60 z-20">
-          <div className="w-16 h-16 border-2 border-white/10 border-t-accent-1 rounded-full animate-spin mb-6" />
-          <p className="text-white/60 text-sm mb-3">
-            {downloadProgress !== undefined && downloadProgress < 100 ? '正在下载模型...' : t.viewer.loading}
-          </p>
-          <div className="w-64 h-1 bg-white/10 rounded-full overflow-hidden">
-            <motion.div className="h-full bg-gradient-to-r from-accent-1 to-accent-2"
-              animate={{ width: `${downloadProgress !== undefined ? Math.max(progress, downloadProgress) : progress}%` }}
-              transition={{ duration: 0.3 }} />
-          </div>
-          <p className="text-white/30 text-xs mt-2">{downloadProgress !== undefined ? Math.max(progress, downloadProgress) : progress}%</p>
-        </motion.div>
+        <SplatLoadingScreen
+          progress={downloadProgress !== undefined ? Math.max(progress, downloadProgress) : progress}
+          isDownloading={downloadProgress !== undefined && downloadProgress < 100}
+        />
       )}
 
       {/* Error */}
@@ -535,6 +528,7 @@ export default function Viewer3D({ modelUrl, modelName, modelId, readOnly, downl
       )}
 
       <PerformancePanel fps={fps} splatCount={splatCount} isVisible={showPerf && !isLoading && !error} />
+
       {/* Perf toggle — tiny and unobtrusive */}
       {!isLoading && !error && (
         <button

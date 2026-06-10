@@ -1,63 +1,64 @@
-import { useState, useRef } from 'react'
+import { useState, useRef, useCallback } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { addCustomModel, generateId } from '../store/modelStore'
-import { storeSplatFile, storeThumbnail } from '../utils/fileStorage'
+import { storeSplatFileWithProgress, storeThumbnail } from '../utils/fileStorage'
+import { validateModelFile } from '../utils/fileValidation'
+import { showToast } from '../components/Toast'
+import { addUploadRecord } from '../utils/uploadHistory'
 import type { ModelMeta } from '../types'
-
-const ALLOWED_EXTENSIONS = ['.ply', '.sog', '.splat']
-
-function formatSize(bytes: number): string {
-  if (bytes >= 1_000_000) return `${(bytes / 1_000_000).toFixed(1)} MB`
-  if (bytes >= 1_000) return `${(bytes / 1_000).toFixed(0)} KB`
-  return `${bytes} B`
-}
-
-function checkExtension(name: string): boolean {
-  const lower = name.toLowerCase()
-  return ALLOWED_EXTENSIONS.some(ext => lower.endsWith(ext))
-}
+import FileDropZone from '../components/FileDropZone'
 
 export default function UploadModel() {
   const navigate = useNavigate()
-  const fileInputRef = useRef<HTMLInputElement>(null)
 
   const [name, setName] = useState('')
   const [description, setDescription] = useState('')
   const [modelFile, setModelFile] = useState<File | null>(null)
   const [coverPreview, setCoverPreview] = useState<string | null>(null)
-  const [dragOver, setDragOver] = useState(false)
   const [error, setError] = useState('')
   const [saving, setSaving] = useState(false)
+  const [uploadProgress, setUploadProgress] = useState(0)
+  const [validating, setValidating] = useState(false)
+  const [dropZoneKey, setDropZoneKey] = useState(0)
+  const abortRef = useRef<AbortController | null>(null)
 
   // ── Model file handling ──
-  const handleModelFile = (file: File) => {
-    if (!checkExtension(file.name)) {
-      setError(`不支持的文件格式: ${file.name}。仅支持 ${ALLOWED_EXTENSIONS.join(', ')}`)
-      return
-    }
-    setModelFile(file)
+  const handleModelFile = useCallback(async (file: File) => {
     setError('')
+    setUploadProgress(0)
+    setValidating(true)
+
     // Auto-fill name from filename
     if (!name) {
       const base = file.name.replace(/\.(ply|sog|splat)$/i, '')
       setName(base.replace(/[-_]/g, ' ').replace(/\b\w/g, c => c.toUpperCase()))
     }
-  }
 
-  const onDrop = (e: React.DragEvent) => {
-    e.preventDefault()
-    setDragOver(false)
-    const file = e.dataTransfer.files[0]
-    if (file) handleModelFile(file)
-  }
+    try {
+      // Async header validation
+      const result = await validateModelFile(file)
 
-  const onFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (file) handleModelFile(file)
-    // Reset input so the same file can be re-selected
-    e.target.value = ''
-  }
+      if (!result.valid) {
+        setError(result.error!)
+        setModelFile(null)
+        return
+      }
+
+      setModelFile(file)
+      setDropZoneKey(k => k + 1) // reset drop zone — file info now in summary card below
+
+      // Show format info via toast for confirmation
+      if (result.format) {
+        showToast(`已识别: ${result.format}`, 'info')
+      }
+    } catch (err: any) {
+      setError('文件读取失败: ' + (err.message || '未知错误'))
+      setModelFile(null)
+    } finally {
+      setValidating(false)
+    }
+  }, [name])
 
   // ── Cover image handling ──
   const handleCoverFile = (file: File) => {
@@ -77,20 +78,29 @@ export default function UploadModel() {
     e.target.value = ''
   }
 
-  const removeCover = () => { setCoverPreview(null) }
+  const removeCover = () => setCoverPreview(null)
 
-  // ── Save ──
+  // ── Save with progress + cancel support ──
   const handleSave = async () => {
     setError('')
     if (!name.trim()) { setError('请输入作品名称'); return }
     if (!modelFile) { setError('请上传模型文件'); return }
 
     setSaving(true)
+    setUploadProgress(0)
     const modelId = generateId()
+    const controller = new AbortController()
+    abortRef.current = controller
 
     try {
-      const buffer = await modelFile.arrayBuffer()
-      await storeSplatFile(modelId, buffer, modelFile.name)
+      // Store splat file with progress
+      await storeSplatFileWithProgress(
+        modelId,
+        modelFile,
+        modelFile.name,
+        (pct) => setUploadProgress(pct),
+        controller.signal,
+      )
 
       if (coverPreview) {
         await storeThumbnail(modelId, coverPreview)
@@ -111,12 +121,31 @@ export default function UploadModel() {
       }
 
       addCustomModel(model, modelId)
+      addUploadRecord({ id: modelId, name: name.trim(), filename: modelFile.name, size: modelFile.size })
+
+      showToast(`「${name.trim()}」上传成功`, 'success')
       navigate('/gallery')
     } catch (e: any) {
-      setError('保存失败: ' + e.message)
+      if (e.name === 'AbortError' || e.message?.includes('cancelled')) {
+        showToast('上传已取消', 'info')
+      } else {
+        setError('保存失败: ' + (e.message || '未知错误'))
+      }
     } finally {
       setSaving(false)
+      abortRef.current = null
     }
+  }
+
+  const handleCancel = () => {
+    abortRef.current?.abort()
+  }
+
+  const formatSizeDisplay = (bytes: number) => {
+    if (bytes >= 1_000_000_000) return `${(bytes / 1_000_000_000).toFixed(1)} GB`
+    if (bytes >= 1_000_000) return `${(bytes / 1_000_000).toFixed(1)} MB`
+    if (bytes >= 1_000) return `${(bytes / 1_000).toFixed(0)} KB`
+    return `${bytes} B`
   }
 
   return (
@@ -143,44 +172,51 @@ export default function UploadModel() {
             <label className="block text-[14px] font-semibold text-text-1 mb-3">
               模型文件 <span className="text-accent-3">*</span>
             </label>
-            {/* Drop zone */}
-            <div
-              onDrop={onDrop}
-              onDragOver={e => { e.preventDefault(); setDragOver(true) }}
-              onDragLeave={() => setDragOver(false)}
-              onClick={() => fileInputRef.current?.click()}
-              className={`relative rounded-2xl border-2 border-dashed p-10 text-center cursor-pointer transition-all duration-300 ${
-                dragOver
-                  ? 'border-accent-1/50 bg-accent-1/[0.06] scale-[1.01]'
-                  : modelFile
-                    ? 'border-accent-2/40 bg-accent-2/[0.04]'
-                    : 'border-border-1 hover:border-border-2 bg-surface-2/30 hover:bg-surface-2/50'
-              }`}
-            >
-              {modelFile ? (
-                <div className="space-y-2">
-                  <div className="text-4xl mb-2">✅</div>
-                  <p className="text-[14px] font-medium text-text-1">{modelFile.name}</p>
-                  <p className="text-[12px] text-text-3/60">{formatSize(modelFile.size)}</p>
-                  <p className="text-[11px] text-text-3/40 mt-2">点击或拖拽以替换文件</p>
-                </div>
-              ) : (
-                <div className="space-y-3">
-                  <div className="text-4xl mb-2 opacity-50">{dragOver ? '📂' : '☁️'}</div>
-                  <p className="text-[14px] font-medium text-text-2">
-                    {dragOver ? '松开以上传' : '拖拽文件到此处，或点击选择'}
-                  </p>
-                  <p className="text-[12px] text-text-3/40">支持 .ply · .sog · .splat</p>
+
+            {/* Drop zone with validating overlay */}
+            <div className="relative">
+              <FileDropZone
+                key={dropZoneKey}
+                onFile={handleModelFile}
+                requireConfirm
+                hint="拖拽 .splat 或 .ply 文件到此处"
+              />
+
+              {/* Validating overlay — covers drop zone during async check */}
+              {validating && (
+                <div className="absolute inset-0 rounded-2xl bg-surface-0/80 flex items-center justify-center z-10">
+                  <div className="text-center">
+                    <div className="w-8 h-8 border-2 border-white/[0.06] border-t-accent-1 rounded-full animate-spin mx-auto mb-3" />
+                    <p className="text-[13px] text-text-3/60">正在校验文件...</p>
+                  </div>
                 </div>
               )}
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept=".ply,.sog,.splat"
-                onChange={onFileSelect}
-                className="hidden"
-              />
             </div>
+
+            {/* File info summary after confirmation */}
+            {modelFile && !validating && (
+              <motion.div
+                initial={{ opacity: 0, y: 4 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="mt-3 ink-card-light rounded-xl px-4 py-3 flex items-center gap-3"
+              >
+                <div className="w-9 h-9 rounded-lg bg-accent-2/10 border border-accent-2/15 flex items-center justify-center text-xs font-mono text-accent-2/70 shrink-0">
+                  {modelFile.name.split('.').pop()?.toUpperCase()}
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="text-[13px] font-medium text-text-1 truncate">{modelFile.name}</p>
+                  <p className="text-[11px] text-text-3/50">{formatSizeDisplay(modelFile.size)}</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => { setModelFile(null); setUploadProgress(0) }}
+                  className="text-[11px] text-text-3/40 hover:text-accent-3/60 transition-colors cursor-pointer shrink-0"
+                  style={{ cursor: 'pointer' }}
+                >
+                  移除
+                </button>
+              </motion.div>
+            )}
           </section>
 
           {/* ── Scene name ── */}
@@ -202,7 +238,6 @@ export default function UploadModel() {
           <section>
             <label className="block text-[14px] font-semibold text-text-1 mb-3">封面图片</label>
             <div className="flex items-start gap-5">
-              {/* Preview area */}
               <div
                 onClick={() => document.getElementById('upload-cover')?.click()}
                 className="w-32 h-20 rounded-xl border border-border-1 bg-surface-2 flex items-center justify-center shrink-0 overflow-hidden cursor-pointer hover:border-border-2 transition-colors"
@@ -252,6 +287,50 @@ export default function UploadModel() {
             />
           </section>
 
+          {/* ── Upload progress (visible during save) ── */}
+          {saving && (
+            <motion.div
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="rounded-2xl border border-border-1 bg-surface-2/40 p-5 space-y-4"
+            >
+              <div className="flex items-center justify-between">
+                <span className="text-[13px] font-medium text-text-2">
+                  {uploadProgress < 100 ? '正在上传...' : '处理中...'}
+                </span>
+                <span className="text-[11px] font-mono text-text-3/60">{uploadProgress}%</span>
+              </div>
+
+              {/* Progress bar */}
+              <div className="h-2 bg-white/[0.04] rounded-full overflow-hidden">
+                <motion.div
+                  className="h-full rounded-full bg-gradient-to-r from-accent-1 via-accent-1/80 to-accent-2"
+                  animate={{ width: `${uploadProgress}%` }}
+                  transition={{ duration: 0.15, ease: 'easeOut' }}
+                />
+              </div>
+
+              {/* Size indicator */}
+              {modelFile && (
+                <p className="text-[11px] text-text-3/40 text-center">
+                  {formatSizeDisplay(modelFile.size * uploadProgress / 100)} / {formatSizeDisplay(modelFile.size)}
+                </p>
+              )}
+
+              {/* Cancel button */}
+              <div className="flex justify-center">
+                <button
+                  type="button"
+                  onClick={handleCancel}
+                  className="px-4 py-2 rounded-lg text-[12px] text-text-3/50 hover:text-accent-3 hover:bg-accent-3/[0.06] transition-all cursor-pointer"
+                  style={{ cursor: 'pointer' }}
+                >
+                  取消上传
+                </button>
+              </div>
+            </motion.div>
+          )}
+
           {/* ── Error ── */}
           {error && (
             <motion.p initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }}
@@ -261,21 +340,23 @@ export default function UploadModel() {
           )}
 
           {/* ── Actions ── */}
-          <div className="flex items-center gap-3 pt-2">
-            <button
-              onClick={handleSave}
-              disabled={saving}
-              className="flex-1 py-3.5 px-6 rounded-xl bg-[#e8e0d5] text-[#0a0908] text-[15px] font-semibold cursor-pointer border-none outline-none hover:shadow-lg hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.985] transition-all duration-300 disabled:opacity-35 disabled:cursor-not-allowed"
-              style={{ cursor: saving ? 'not-allowed' : 'pointer' }}
-            >
-              {saving ? '上传中...' : '上传场景'}
-            </button>
-            <Link
-              to="/gallery"
-              className="px-6 py-3.5 rounded-xl bg-white/[0.03] border border-white/[0.06] text-text-2 text-[15px] font-medium hover:bg-white/[0.06] hover:text-text-1 transition-all cursor-pointer"
-              style={{ cursor: 'pointer' }}
-            >取消</Link>
-          </div>
+          {!saving && (
+            <div className="flex items-center gap-3 pt-8 pb-4">
+              <button
+                onClick={handleSave}
+                disabled={!modelFile || validating}
+                className="flex-1 py-3.5 px-6 rounded-xl bg-[#e8e0d5] text-[#0a0908] text-[15px] font-semibold cursor-pointer border-none outline-none hover:shadow-lg hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.985] transition-all duration-300 disabled:opacity-35 disabled:cursor-not-allowed"
+                style={{ cursor: !modelFile || validating ? 'not-allowed' : 'pointer' }}
+              >
+                上传场景
+              </button>
+              <Link
+                to="/gallery"
+                className="px-6 py-3.5 rounded-xl bg-white/[0.03] border border-white/[0.06] text-text-2 text-[15px] font-medium hover:bg-white/[0.06] hover:text-text-1 transition-all cursor-pointer"
+                style={{ cursor: 'pointer' }}
+              >取消</Link>
+            </div>
+          )}
         </motion.div>
       </div>
     </main>

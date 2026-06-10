@@ -1,5 +1,6 @@
 import { Routes, Route, useLocation } from 'react-router-dom'
 import { I18nProvider } from './i18n/I18nContext'
+import { ToastProvider } from './components/Toast'
 import Navbar from './components/Navbar'
 import Footer from './components/Footer'
 import Home from './pages/Home'
@@ -32,13 +33,15 @@ export default function App() {
 
   return (
     <I18nProvider>
-      <div className="min-h-dyn flex flex-col">
-        {!isViewer && <Navbar />}
-        <div className="flex-1">
-          <AnimatedRoutes />
+      <ToastProvider>
+        <div className="min-h-dyn flex flex-col">
+          {!isViewer && <Navbar />}
+          <div className="flex-1">
+            <AnimatedRoutes />
+          </div>
+          {!isViewer && <Footer />}
         </div>
-        {!isViewer && <Footer />}
-      </div>
+      </ToastProvider>
     </I18nProvider>
   )
 }

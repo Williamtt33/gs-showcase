@@ -14,14 +14,6 @@ export interface PreservationBuilding {
   afterDesc: string
 }
 
-export interface StreetStory {
-  id: string
-  title: string
-  image: string
-  text: string
-  position: { x: number; y: number } // percentage position on the illustration
-}
-
 /** ── 历史溯源：街区年表 ── */
 export const TIMELINE_EVENTS: TimelineEvent[] = [
   {
@@ -95,45 +87,6 @@ export const PRESERVATION_BUILDINGS: PreservationBuilding[] = [
     desc: '横跨内河的单孔石拱桥，桥身青石砌筑，栏板浮雕荷花、水鸟等纹样。桥拱正中央嵌有"清波永镇"石匾，是街区水路交通的咽喉。',
     beforeDesc: '修缮前：拱券石多处松动错位，栏板浮雕残缺约 40%，桥面石板碎裂，桥墩基础局部掏空。',
     afterDesc: '修缮后：加固桥墩基础，归安拱券石，按原样补配栏板浮雕。桥面重新铺砌旧石板，恢复了步行通行与景观功能。',
-  },
-]
-
-/** ── 街巷故事：可点击标记点 ── */
-export const STREET_STORIES: StreetStory[] = [
-  {
-    id: 'story-tea',
-    title: '三代茶客',
-    image: '',
-    text: '老陈今年八十三岁，从祖父那辈起就在万利茶楼喝茶。"小时候跟爷爷来，一壶碧螺春两分钱。现在还是一壶碧螺春，坐在修复后的回廊上，看着街巷来来往往的年轻人，觉得这条街没有老，只是换了一种方式活着。"',
-    position: { x: 22, y: 35 },
-  },
-  {
-    id: 'story-artisan',
-    title: '砖雕传人',
-    image: '',
-    text: '周师傅是街区最后一位掌握"通雕"技法的砖雕匠人。修缮协和堂时，他带着三个徒弟花了七个月复原正厅墀头的砖雕。"我父亲年轻时也在这条街上做活，用的是一样的青砖、一样的錾子。这门手艺不能断在我手里。"',
-    position: { x: 48, y: 28 },
-  },
-  {
-    id: 'story-market',
-    title: '早市的记忆',
-    image: '',
-    text: '八十年代以前，洪文牌坊下的早市是整座城市的清晨心跳。天不亮就有人挑着担子来占位，卖菜的、卖鱼的、卖手工豆腐的。住在街巷深处的居民说，每天是被"豆腐——热豆腐——"的吆喝声叫醒的。',
-    position: { x: 35, y: 60 },
-  },
-  {
-    id: 'story-bridge',
-    title: '桥下的月光',
-    image: '',
-    text: '清波桥在街区老居民的集体记忆中占据着特殊位置。每逢中秋，人们聚集在桥上和两岸赏月。"站在桥顶往河面看，月亮正好倒映在拱洞正中央。几百年来都是这样。就算周围什么都变了，这轮月亮总是一样的。"',
-    position: { x: 70, y: 50 },
-  },
-  {
-    id: 'story-calligraphy',
-    title: '洪文毓秀',
-    image: '',
-    text: '"洪文毓秀"四个字出自明代本地进士陈仕贤之手。传说他中进士后回乡省亲，应乡绅之请题写坊额。落笔前在牌坊下站立了整整一个时辰，说是在"与石头对话"。这四个字历经四百余年风雨，依然是街区最骄傲的文化地标。',
-    position: { x: 15, y: 75 },
   },
 ]
 

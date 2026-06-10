@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import type { ModelMeta } from '../types'
 import { getThumbnail } from '../utils/fileStorage'
+import { LatticeFrameHover } from './decor/LatticeFrame'
 
 interface Props { model: ModelMeta; index: number }
 
@@ -26,51 +27,52 @@ export default function ModelCard({ model, index }: Props) {
       transition={{ duration: 0.55, delay: index * 0.07, ease: [0.22, 1, 0.36, 1] }}
     >
       <Link to={`/viewer/${model.id}`} className="block group/card">
-        {/* ── Thumbnail zone ── */}
-        <div className="relative aspect-[4/3] rounded-2xl overflow-hidden border border-border-1 group-hover/card:border-white/[0.1] transition-colors duration-500 bg-surface-2">
-          {thumb && !imgError ? (
-            <img
-              src={thumb}
-              alt={model.name}
-              onError={() => setImgError(true)}
-              className="absolute inset-0 w-full h-full object-cover group-hover/card:scale-105 transition-transform duration-700"
-            />
-          ) : (
-            /* Decorative placeholder — soft abstract shapes */
-            <div className="absolute inset-0 flex items-center justify-center">
-              <div className="absolute inset-0 bg-ink-wash opacity-60" />
-              <div className="relative z-10 flex flex-col items-center gap-3">
-                {/* Abstract gaussian-like ellipses */}
-                <div className="w-20 h-12 rounded-full bg-accent-1/[0.06] blur-xl" />
-                <div className="w-28 h-4 rounded-full bg-accent-2/[0.04] blur-md" />
-                <div className="w-16 h-3 rounded-full bg-text-1/[0.03] blur-sm" />
+        {/* ── Thumbnail through the lattice window ── */}
+        <LatticeFrameHover>
+          <div className="relative aspect-[4/3] bg-surface-2 overflow-hidden">
+            {thumb && !imgError ? (
+              <img
+                src={thumb}
+                alt={model.name}
+                onError={() => setImgError(true)}
+                className="absolute inset-0 w-full h-full object-cover group-hover/card:scale-105 transition-transform duration-700"
+              />
+            ) : (
+              /* Decorative placeholder — soft abstract shapes */
+              <div className="absolute inset-0 flex items-center justify-center">
+                <div className="absolute inset-0 bg-ink-wash opacity-60" />
+                <div className="relative z-10 flex flex-col items-center gap-3">
+                  <div className="w-20 h-12 rounded-full bg-accent-1/[0.06] blur-xl" />
+                  <div className="w-28 h-4 rounded-full bg-accent-2/[0.04] blur-md" />
+                  <div className="w-16 h-3 rounded-full bg-text-1/[0.03] blur-sm" />
+                </div>
               </div>
+            )}
+
+            {/* Subtle gradient overlay */}
+            <div className="absolute inset-0 bg-gradient-to-t from-surface-2/60 via-transparent to-transparent opacity-50 group-hover/card:opacity-30 transition-opacity duration-500" />
+
+            {/* Play button — centered */}
+            <div className="absolute inset-0 flex items-center justify-center">
+              <motion.div
+                whileHover={{ scale: 1.06 }}
+                className="w-12 h-12 rounded-full bg-black/20 backdrop-blur-sm border border-white/[0.06] flex items-center justify-center group-hover/card:bg-black/30 group-hover/card:border-white/[0.1] transition-all duration-500"
+              >
+                <svg className="w-4 h-4 text-white/40 group-hover/card:text-white/60 transition-colors duration-500 ml-0.5" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M8 5.14v14l11-7-11-7z" />
+                </svg>
+              </motion.div>
             </div>
-          )}
-
-          {/* Subtle gradient overlay — lighter, preserves thumbnail visibility */}
-          <div className="absolute inset-0 bg-gradient-to-t from-surface-2/70 via-transparent to-transparent opacity-60 group-hover/card:opacity-40 transition-opacity duration-500" />
-
-          {/* Play button — centered, elegant */}
-          <div className="absolute inset-0 flex items-center justify-center">
-            <motion.div
-              whileHover={{ scale: 1.06 }}
-              className="w-14 h-14 rounded-2xl bg-white/[0.06] backdrop-blur-sm border border-white/[0.06] flex items-center justify-center group-hover/card:bg-white/[0.12] group-hover/card:border-white/[0.12] group-hover/card:shadow-[0_0_24px_rgba(255,255,255,0.04)] transition-all duration-500"
-            >
-              <svg className="w-5 h-5 text-white/35 group-hover/card:text-white/60 transition-colors duration-500 ml-0.5" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M8 5.14v14l11-7-11-7z" />
-              </svg>
-            </motion.div>
           </div>
-        </div>
+        </LatticeFrameHover>
 
-        {/* ── Text zone — separated from thumbnail ── */}
-        <div className="mt-4 px-1">
-          <h3 className="text-[15px] font-semibold text-text-1 group-hover/card:text-white transition-colors leading-snug">
+        {/* ── Title plaque — like a carved wooden nameplate below the window ── */}
+        <div className="mt-3 px-1">
+          <h3 className="text-[15px] font-semibold text-text-1 group-hover/card:text-[#e8d5c4] transition-colors leading-snug tracking-[0.02em]">
             {model.name}
           </h3>
           {model.description && (
-            <p className="text-[13px] text-text-3/55 mt-1.5 line-clamp-2 leading-[1.65] group-hover/card:text-text-3/70 transition-colors">
+            <p className="text-[12px] text-text-3/45 mt-1 line-clamp-2 leading-[1.65] group-hover/card:text-text-3/60 transition-colors">
               {model.description}
             </p>
           )}

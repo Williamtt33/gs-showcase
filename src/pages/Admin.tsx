@@ -4,6 +4,8 @@ import { useI18n } from '../i18n/I18nContext'
 import { motion, AnimatePresence } from 'framer-motion'
 import { getBuiltinModels } from '../utils/models'
 import { getCustomModels, deleteCustomModel } from '../store/modelStore'
+import { getUploadHistory, clearUploadHistory } from '../utils/uploadHistory'
+import type { UploadRecord } from '../utils/uploadHistory'
 import ModelForm from '../components/editor/ModelForm'
 import type { ModelMeta } from '../types'
 
@@ -152,6 +154,7 @@ export default function Admin() {
   const [showForm, setShowForm] = useState(false)
   const [editingModel, setEditingModel] = useState<ModelMeta | null>(null)
   const [loadingBuiltin, setLoadingBuiltin] = useState(true)
+  const [uploadHistory, setUploadHistory] = useState<UploadRecord[]>([])
   const [loginKey, setLoginKey] = useState(0) // force LoginScreen remount on logout
 
   const load = useCallback(async () => {
@@ -164,6 +167,7 @@ export default function Admin() {
       setLoadingBuiltin(false)
     }
     setCustomModels(getCustomModels())
+    setUploadHistory(getUploadHistory())
   }, [])
 
   useEffect(() => { if (authenticated) load() }, [authenticated, load])
@@ -184,6 +188,31 @@ export default function Admin() {
       deleteCustomModel(id)
       setCustomModels(getCustomModels())
     }
+  }
+
+  const handleClearHistory = () => {
+    clearUploadHistory()
+    setUploadHistory([])
+  }
+
+  const formatUpTime = (iso: string) => {
+    const d = new Date(iso)
+    const now = new Date()
+    const diff = now.getTime() - d.getTime()
+    const mins = Math.floor(diff / 60000)
+    if (mins < 1) return '刚刚'
+    if (mins < 60) return `${mins} 分钟前`
+    const hours = Math.floor(mins / 60)
+    if (hours < 24) return `${hours} 小时前`
+    const days = Math.floor(hours / 24)
+    if (days < 30) return `${days} 天前`
+    return d.toLocaleDateString('zh-CN')
+  }
+
+  const formatUpSize = (bytes: number) => {
+    if (bytes >= 1_000_000) return `${(bytes / 1_000_000).toFixed(1)} MB`
+    if (bytes >= 1_000) return `${(bytes / 1_000).toFixed(0)} KB`
+    return `${bytes} B`
   }
 
   /* ── CSS hidden pattern: both screens always mounted to keep ModelForm stable ── */
@@ -246,8 +275,52 @@ export default function Admin() {
             )}
           </section>
 
-          {/* Export + logout footer */}
+          {/* Export + Upload + Logout footer */}
           <section className="space-y-3">
+            {/* Upload scene — prominent CTA */}
+            <div className="rounded-2xl border border-dashed border-accent-1/15 bg-accent-1/[0.02] p-5 text-center">
+              <p className="text-[12px] text-text-3/50 mb-3">上传新的 3D 高斯泼溅场景</p>
+              <button
+                type="button"
+                onClick={(e) => { e.preventDefault(); setEditingModel(null); setShowForm(true) }}
+                className="inline-flex items-center justify-center px-6 py-3 rounded-xl bg-[#e8e0d5] text-[#0a0908] text-[14px] font-semibold cursor-pointer border-none outline-none hover:shadow-lg hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.985] transition-all duration-300"
+                style={{ cursor: 'pointer' }}
+              >+ 上传场景</button>
+            </div>
+
+            {/* ── Upload history ── */}
+            {uploadHistory.length > 0 && (
+              <div className="rounded-2xl border border-border-1 bg-surface-2/40 overflow-hidden">
+                <div className="flex items-center justify-between px-5 py-3 border-b border-border-1">
+                  <h3 className="text-[11px] font-semibold text-text-3/50 uppercase tracking-[0.12em]">上传记录</h3>
+                  <button
+                    onClick={() => { if (window.confirm('清除所有上传记录？')) handleClearHistory() }}
+                    className="text-[10px] text-text-3/30 hover:text-accent-3/50 transition-colors cursor-pointer"
+                    style={{ cursor: 'pointer' }}
+                  >清除记录</button>
+                </div>
+                <div className="divide-y divide-border-1">
+                  {uploadHistory.map((rec) => (
+                    <div key={rec.id} className="flex items-center gap-3 px-5 py-2.5 hover:bg-white/[0.01] transition-colors">
+                      {/* File type badge */}
+                      <span className="text-[10px] font-mono text-text-3/30 w-10 shrink-0">
+                        {rec.filename.split('.').pop()?.toUpperCase()}
+                      </span>
+                      {/* Name + filename */}
+                      <div className="min-w-0 flex-1">
+                        <p className="text-[12px] text-text-2 truncate">{rec.name}</p>
+                        <p className="text-[10px] text-text-3/35 truncate">{rec.filename}</p>
+                      </div>
+                      {/* Size */}
+                      <span className="text-[10px] text-text-3/30 font-mono shrink-0">{formatUpSize(rec.size)}</span>
+                      {/* Time */}
+                      <span className="text-[10px] text-text-3/25 shrink-0 w-16 text-right">{formatUpTime(rec.uploadedAt)}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
             {customModels.length > 0 && (
               <div className="rounded-2xl border border-border-1 bg-surface-2/40 p-5 flex items-center justify-between">
                 <p className="text-[12px] text-text-3/60">数据存储在浏览器中，建议定期导出备份</p>

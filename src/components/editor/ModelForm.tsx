@@ -14,6 +14,7 @@ interface Props {
 
 export default function ModelForm({ isOpen, editingModel, onSaved, onClose }: Props) {
   const [name, setName] = useState(editingModel?.name || '')
+  const [description, setDescription] = useState(editingModel?.description || '')
   const [file, setFile] = useState(editingModel?.file || '')
   const [error, setError] = useState('')
   const [uploading, setUploading] = useState(false)
@@ -26,13 +27,14 @@ export default function ModelForm({ isOpen, editingModel, onSaved, onClose }: Pr
     if (editingModel) {
       // Edit mode: pre-fill from existing model
       setName(editingModel.name || '')
+      setDescription(editingModel.description || '')
       setFile(editingModel.file || '')
       setSplatFile(null)
       setCoverPreview(null)
       setError('')
     } else {
       // Add mode: reset to empty
-      setName(''); setFile(''); setSplatFile(null); setCoverPreview(null); setError('')
+      setName(''); setDescription(''); setFile(''); setSplatFile(null); setCoverPreview(null); setError('')
     }
   }, [isOpen, editingModel])
 
@@ -79,7 +81,7 @@ export default function ModelForm({ isOpen, editingModel, onSaved, onClose }: Pr
 
       const base: Omit<ModelMeta, 'id'> = {
         name: name.trim(), nameEn: name.trim(),
-        description: '', descriptionEn: '',
+        description: description.trim(), descriptionEn: description.trim(),
         file: splatFile ? `[local]${splatFile.name}` : file.trim(),
         thumbnail: coverPreview ? '[local]' : '',
         tags: [], pointCount: '', size: '',
@@ -134,6 +136,19 @@ export default function ModelForm({ isOpen, editingModel, onSaved, onClose }: Pr
                 placeholder="例如：春日花园、城市街景..."
                 className="w-full bg-surface-2/80 border border-border-1 rounded-xl px-4 py-3 text-[14px] text-text-1 placeholder:text-text-3/40 focus:outline-none focus:border-accent-1/40 transition-colors"
                 autoFocus
+              />
+            </div>
+
+            {/* Description */}
+            <div>
+              <label htmlFor="scene-desc" className="block text-[12px] font-medium text-text-2 mb-2">场景描述（选填）</label>
+              <textarea
+                id="scene-desc" name="scene-desc"
+                value={description}
+                onChange={e => setDescription(e.target.value)}
+                placeholder="简要描述场景内容..."
+                rows={3}
+                className="w-full bg-surface-2/80 border border-border-1 rounded-xl px-4 py-3 text-[13px] text-text-1 placeholder:text-text-3/40 focus:outline-none focus:border-accent-1/40 transition-colors resize-none"
               />
             </div>
 

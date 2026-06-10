@@ -36,6 +36,60 @@ export async function storeSplatFile(modelId: string, buffer: ArrayBuffer, filen
   })
 }
 
+/**
+ * Store a splat file from a File object with progress callback.
+ * Reads the file via stream to track progress (does not speed up I/O,
+ * but gives real feedback for large files).
+ *
+ * @param onProgress 0–100
+ * @param signal AbortSignal to cancel mid-read
+ */
+export async function storeSplatFileWithProgress(
+  modelId: string,
+  file: File,
+  filename: string,
+  onProgress: (pct: number) => void,
+  signal?: AbortSignal,
+): Promise<void> {
+  // Check abort before starting
+  if (signal?.aborted) throw new DOMException('Upload cancelled', 'AbortError')
+
+  const stream = file.stream()
+  const reader = stream.getReader()
+  const chunks: Uint8Array[] = []
+  let loaded = 0
+  const total = file.size
+
+  try {
+    while (true) {
+      if (signal?.aborted) {
+        reader.cancel()
+        throw new DOMException('Upload cancelled', 'AbortError')
+      }
+      const { done, value } = await reader.read()
+      if (done) break
+      if (value) {
+        chunks.push(value)
+        loaded += value.byteLength
+        onProgress(Math.round((loaded / total) * 100))
+      }
+    }
+  } catch (err) {
+    reader.cancel()
+    throw err
+  }
+
+  // Concatenate chunks into a single ArrayBuffer
+  const buffer = new Uint8Array(loaded)
+  let offset = 0
+  for (const chunk of chunks) {
+    buffer.set(chunk, offset)
+    offset += chunk.byteLength
+  }
+
+  await storeSplatFile(modelId, buffer.buffer, filename)
+}
+
 /** Get a splat file URL (blob URL) for a model */
 export async function getSplatFileUrl(modelId: string): Promise<string | null> {
   const db = await openDB()

@@ -47,7 +47,7 @@ export default function HeritageTimeline({ events }: Props) {
                   {ev.title}
                 </h3>
 
-                <p className="text-[13px] text-text-3/70 leading-[1.75] max-w-md">
+                <p className="text-[13px] text-text-3/70 leading-[1.75] max-w-md lg:max-w-lg">
                   {ev.desc}
                 </p>
               </div>
