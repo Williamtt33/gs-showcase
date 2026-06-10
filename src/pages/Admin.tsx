@@ -170,6 +170,7 @@ export default function Admin() {
     setUploadHistory(getUploadHistory())
   }, [])
 
+  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => { if (authenticated) load() }, [authenticated, load])
 
   const handleLogin = () => {

@@ -12,6 +12,7 @@ import {
   getHotspots, addHotspot, updateHotspot, deleteHotspot,
 } from '../store/modelStore'
 import type { Hotspot } from '../types'
+import type { Scene, Camera, WebGLRenderer, OrbitControls, IntersectionTester } from 'gsplat'
 
 interface Props {
   modelUrl: string
@@ -29,12 +30,12 @@ export default function Viewer3D({ modelUrl, modelName, modelId, readOnly, downl
   const animRef = useRef<number>(0)
 
   // GSplat refs
-  const rendererRef = useRef<any>(null)
-  const sceneRef = useRef<any>(null)
-  const cameraRef = useRef<any>(null)
-  const controlsRef = useRef<any>(null)
-  const splatModuleRef = useRef<any>(null)
-  const intersectionTesterRef = useRef<any>(null)
+  const rendererRef = useRef<WebGLRenderer | null>(null)
+  const sceneRef = useRef<Scene | null>(null)
+  const cameraRef = useRef<Camera | null>(null)
+  const controlsRef = useRef<OrbitControls | null>(null)
+  const splatModuleRef = useRef<typeof import('gsplat') | null>(null)
+  const intersectionTesterRef = useRef<IntersectionTester | null>(null)
 
   // WASD flight control refs
   const keysRef = useRef<Set<string>>(new Set())
@@ -58,6 +59,8 @@ export default function Viewer3D({ modelUrl, modelName, modelId, readOnly, downl
   // Data state
   const [hotspots, setHotspots] = useState<Hotspot[]>([])
   const hotspotsRef = useRef<Hotspot[]>([])
+  const isLoadingRef = useRef(true)
+  const selectedHotspotRef = useRef<Hotspot | null>(null)
   const [showPerf, setShowPerf] = useState(false)
 
   // Fly-to animation refs
@@ -134,16 +137,19 @@ export default function Viewer3D({ modelUrl, modelName, modelId, readOnly, downl
   const hotspotScreensRef = useRef<Map<string, { x: number; y: number; visible: boolean; scale: number }>>(new Map())
   const overlayRef = useRef<HTMLDivElement>(null)
 
-  // Load data
+  // Load hotspots from store when switching models
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- loading data on model change
     setHotspots(getHotspots(modelId))
     setSelectedHotspot(null)
     setEditingHotspot(null)
     setShowHotspotEditor(false)
   }, [modelId])
 
-  // Keep refs in sync with state for render loop closure
+  // Keep refs in sync with state for render loop / event handler closure
   useEffect(() => { hotspotsRef.current = hotspots }, [hotspots])
+  useEffect(() => { isLoadingRef.current = isLoading }, [isLoading])
+  useEffect(() => { selectedHotspotRef.current = selectedHotspot }, [selectedHotspot])
 
   // --- Init & Load ---
   const initAndLoad = useCallback(async () => {
@@ -250,15 +256,16 @@ export default function Viewer3D({ modelUrl, modelName, modelId, readOnly, downl
         if (currentHotspots.length > 0) {
           const newScreens = new Map<string, { x: number; y: number; visible: boolean; scale: number }>()
           const camPos = camera.position
-          const vp = (camera as any).data?.viewProj
-          const vpBuffer: number[] = vp?.buffer
+          const vp = camera.data?.viewProj
+          const vpBuffer: number[] | undefined = vp?.buffer
           const rect = container.getBoundingClientRect()
           const sw = rect.width; const sh = rect.height
           for (const hs of currentHotspots) {
             if (!vpBuffer) {
               // Fallback to simple projection
               const fwd = camera.forward
-              const fov = (camera as any).data?.fovY ?? 50
+              const cd = camera.data
+              const fov = cd ? 2 * Math.atan(cd.height / (2 * cd.fy)) * (180 / Math.PI) : 50
               const screen = worldToScreen(hs.position, camPos, fwd, fov, sw, sh)
               if (screen) {
                 const dist = Math.sqrt((hs.position.x - camPos.x) ** 2 + (hs.position.y - camPos.y) ** 2 + (hs.position.z - camPos.z) ** 2)
@@ -335,17 +342,20 @@ export default function Viewer3D({ modelUrl, modelName, modelId, readOnly, downl
         }
         if (e.key === 'h' || e.key === 'H') setShowControls(prev => !prev)
         // Arrow key hotspot navigation (guided tour)
-        if (!isLoading && hotspots.length > 0) {
+        const currentHotspots = hotspotsRef.current
+        if (!isLoadingRef.current && currentHotspots.length > 0) {
           if (e.key === 'ArrowLeft') {
             e.preventDefault()
-            const idx = selectedHotspot ? hotspots.findIndex(h => h.id === selectedHotspot.id) : -1
-            const prev = idx > 0 ? hotspots[idx - 1] : hotspots[hotspots.length - 1]
+            const sel = selectedHotspotRef.current
+            const idx = sel ? currentHotspots.findIndex(h => h.id === sel.id) : -1
+            const prev = idx > 0 ? currentHotspots[idx - 1] : currentHotspots[currentHotspots.length - 1]
             flyToHotspot(prev)
           }
           if (e.key === 'ArrowRight') {
             e.preventDefault()
-            const idx = selectedHotspot ? hotspots.findIndex(h => h.id === selectedHotspot.id) : -1
-            const next = idx < hotspots.length - 1 ? hotspots[idx + 1] : hotspots[0]
+            const sel = selectedHotspotRef.current
+            const idx = sel ? currentHotspots.findIndex(h => h.id === sel.id) : -1
+            const next = idx < currentHotspots.length - 1 ? currentHotspots[idx + 1] : currentHotspots[0]
             flyToHotspot(next)
           }
         }
@@ -363,17 +373,18 @@ export default function Viewer3D({ modelUrl, modelName, modelId, readOnly, downl
         window.removeEventListener('keyup', onKeyUp)
         renderer.dispose()
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Viewer error:', err)
-      setError(err.message || 'Failed to load model')
+      setError(err instanceof Error ? err.message : 'Failed to load model')
       setIsLoading(false)
       return () => { cancelAnimationFrame(animRef.current); rendererRef.current?.dispose() }
     }
-  }, [modelUrl])
+  }, [modelUrl, flyToHotspot])
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- init external WebGL system
     const cleanup = initAndLoad()
-    return () => { cleanup.then((fn: any) => fn?.()) }
+    return () => { cleanup.then((fn) => { if (typeof fn === 'function') fn() }) }
   }, [initAndLoad])
 
 
@@ -396,7 +407,7 @@ export default function Viewer3D({ modelUrl, modelName, modelId, readOnly, downl
     }
     setHotspots(getHotspots(modelId))
     setShowHotspotEditor(false); setEditingHotspot(null)
-  }, [modelId, editingHotspot])
+  }, [modelId, editingHotspot, hotspots.length])
 
   const handleDeleteHotspot = useCallback((id: string) => {
     deleteHotspot(modelId, id)
@@ -404,25 +415,22 @@ export default function Viewer3D({ modelUrl, modelName, modelId, readOnly, downl
     setSelectedHotspot(null); setEditingHotspot(null); setShowHotspotEditor(false)
   }, [modelId])
 
-  // --- Annotation overlay — markers rendered structurally by React,
-  //     screen positions updated directly in DOM for 60fps smoothness ---
-  const hotspotElements = hotspots.map((hs) => {
-    const screen = hotspotScreensRef.current.get(hs.id)
-    return (
-      <AnnotationMarker
-        key={hs.id}
-        hotspotId={hs.id}
-        screenX={screen?.x ?? 0} screenY={screen?.y ?? 0}
-        number={hs.order || (hotspots.indexOf(hs) + 1)}
-        title={lang === 'zh' ? hs.title : hs.titleEn || hs.title}
-        note={hs.note || hs.description || (lang === 'zh' ? hs.description : hs.descriptionEn) || ''}
-        isSelected={selectedHotspot?.id === hs.id}
-        scale={screen?.scale ?? 1}
-        onSelect={() => { flyToHotspot(hs) }}
-        onEdit={() => { setEditingHotspot(hs); setShowHotspotEditor(true) }}
-      />
-    )
-  })
+  // --- Annotation overlay — markers positioned by React, screen positions
+  //     updated directly in DOM via rAF loop for 60fps smoothness ---
+  const hotspotElements = hotspots.map((hs, idx) => (
+    <AnnotationMarker
+      key={hs.id}
+      hotspotId={hs.id}
+      screenX={0} screenY={0}
+      number={hs.order || idx + 1}
+      title={lang === 'zh' ? hs.title : hs.titleEn || hs.title}
+      note={hs.note || hs.description || (lang === 'zh' ? hs.description : hs.descriptionEn) || ''}
+      isSelected={selectedHotspot?.id === hs.id}
+      scale={1}
+      onSelect={() => { flyToHotspot(hs) }}
+      onEdit={() => { setEditingHotspot(hs); setShowHotspotEditor(true) }}
+    />
+  ))
 
   return (
     <div ref={containerRef} className="relative w-full h-full bg-black overflow-hidden"

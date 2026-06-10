@@ -1,4 +1,5 @@
 import { useRef, useCallback, useState } from 'react'
+import type { Scene, Camera, WebGLRenderer, OrbitControls } from 'gsplat'
 
 export interface ViewerState {
   isLoading: boolean
@@ -12,10 +13,10 @@ export interface ViewerState {
 export function useGaussianViewer() {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const containerRef = useRef<HTMLDivElement>(null)
-  const sceneRef = useRef<any>(null)
-  const cameraRef = useRef<any>(null)
-  const rendererRef = useRef<any>(null)
-  const controlsRef = useRef<any>(null)
+  const sceneRef = useRef<Scene | null>(null)
+  const cameraRef = useRef<Camera | null>(null)
+  const rendererRef = useRef<WebGLRenderer | null>(null)
+  const controlsRef = useRef<OrbitControls | null>(null)
   const animFrameRef = useRef<number>(0)
   const fpsFrames = useRef<number[]>([])
 
@@ -28,7 +29,7 @@ export function useGaussianViewer() {
     fps: 0,
   })
 
-  const splatModuleRef = useRef<any>(null)
+  const splatModuleRef = useRef<typeof import('gsplat') | null>(null)
 
   const initViewer = useCallback(async () => {
     const canvas = canvasRef.current
@@ -85,8 +86,8 @@ export function useGaussianViewer() {
         window.removeEventListener('resize', resize)
         cancelAnimationFrame(animFrameRef.current)
       }
-    } catch (err: any) {
-      setState(prev => ({ ...prev, error: err.message || 'Failed to initialize viewer' }))
+    } catch (err: unknown) {
+      setState(prev => ({ ...prev, error: err instanceof Error ? err.message : 'Failed to initialize viewer' }))
     }
   }, [])
 
@@ -112,11 +113,11 @@ export function useGaussianViewer() {
         progress: 100,
         splatCount: splat?.data?.vertexCount ?? 0,
       }))
-    } catch (err: any) {
+    } catch (err: unknown) {
       setState(prev => ({
         ...prev,
         isLoading: false,
-        error: err.message || 'Failed to load model',
+        error: err instanceof Error ? err.message : 'Failed to load model',
       }))
     }
   }, [])

@@ -19,6 +19,7 @@ export default function Viewer() {
     if (!modelId) return
     genRef.current++
     const currentGen = genRef.current
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setModelUrl(null); setLoadError(null); setNotFound(false)
     getModelById(modelId).then(async (m) => {
       if (currentGen !== genRef.current) return // Stale request
@@ -30,9 +31,9 @@ export default function Viewer() {
         })
         if (currentGen !== genRef.current) return // Stale request
         setModelUrl(url)
-      } catch (e: any) {
+      } catch (e: unknown) {
         if (currentGen !== genRef.current) return // Stale request
-        setLoadError(e.message)
+        setLoadError(e instanceof Error ? e.message : '加载失败')
       }
     })
   }, [modelId])

@@ -18,9 +18,11 @@ export default function HotspotEditor({ isOpen, mode, position, editingHotspot, 
   const [desc, setDesc] = useState(editingHotspot?.description || '')
   const [descEn, setDescEn] = useState(editingHotspot?.descriptionEn || '')
 
+  // Sync form fields from editing hotspot when modal opens
   useEffect(() => {
     if (!isOpen) return
     if (editingHotspot) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setTitle(editingHotspot.title || '')
       setTitleEn(editingHotspot.titleEn || '')
       setDesc(editingHotspot.description || '')

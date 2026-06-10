@@ -15,6 +15,7 @@ export default function ModelCard({ model, index }: Props) {
     if (model.thumbnail === '[local]') {
       getThumbnail(model.id).then(setThumb)
     } else if (model.thumbnail && model.thumbnail.startsWith('/')) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- resolve relative path from props
       setThumb(model.thumbnail)
     }
   }, [model.id, model.thumbnail])

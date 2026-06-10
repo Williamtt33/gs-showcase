@@ -13,6 +13,7 @@ interface ToastCtx {
 
 const ToastContext = createContext<ToastCtx>({ toast: () => {} })
 
+// eslint-disable-next-line react-refresh/only-export-components
 export function useToast() {
   return useContext(ToastContext)
 }
@@ -21,6 +22,7 @@ let _nextId = 0
 let _globalToast: ToastCtx['toast'] = () => {}
 
 /** Imperative API — call from anywhere (outside React tree) */
+// eslint-disable-next-line react-refresh/only-export-components
 export function showToast(message: string, type: ToastItem['type'] = 'info') {
   _globalToast(message, type)
 }

@@ -52,8 +52,8 @@ export default function UploadModel() {
       if (result.format) {
         showToast(`已识别: ${result.format}`, 'info')
       }
-    } catch (err: any) {
-      setError('文件读取失败: ' + (err.message || '未知错误'))
+    } catch (err: unknown) {
+      setError('文件读取失败: ' + (err instanceof Error ? err.message : '未知错误'))
       setModelFile(null)
     } finally {
       setValidating(false)
@@ -125,11 +125,11 @@ export default function UploadModel() {
 
       showToast(`「${name.trim()}」上传成功`, 'success')
       navigate('/gallery')
-    } catch (e: any) {
-      if (e.name === 'AbortError' || e.message?.includes('cancelled')) {
+    } catch (e: unknown) {
+      if (e instanceof Error && (e.name === 'AbortError' || e.message?.includes('cancelled'))) {
         showToast('上传已取消', 'info')
       } else {
-        setError('保存失败: ' + (e.message || '未知错误'))
+        setError('保存失败: ' + (e instanceof Error ? e.message : '未知错误'))
       }
     } finally {
       setSaving(false)

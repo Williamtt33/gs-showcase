@@ -26,6 +26,7 @@ export default function ModelForm({ isOpen, editingModel, onSaved, onClose }: Pr
     if (!isOpen) return
     if (editingModel) {
       // Edit mode: pre-fill from existing model
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setName(editingModel.name || '')
       setDescription(editingModel.description || '')
       setFile(editingModel.file || '')
@@ -100,8 +101,8 @@ export default function ModelForm({ isOpen, editingModel, onSaved, onClose }: Pr
 
       onSaved()
       onClose()
-    } catch (e: any) {
-      setError('保存失败: ' + e.message)
+    } catch (e: unknown) {
+      setError('保存失败: ' + (e instanceof Error ? e.message : '未知错误'))
     } finally {
       setUploading(false)
     }

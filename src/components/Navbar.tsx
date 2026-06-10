@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { useI18n } from '../i18n/I18nContext'
-import { motion, AnimatePresence, useMotionValue, useTransform, useSpring } from 'framer-motion'
+import { motion, AnimatePresence, useMotionValue, useTransform, useSpring, type MotionValue } from 'framer-motion'
 
 /* ── Easing constants ── */
 const CUBIC = [0.22, 1, 0.36, 1] as const
@@ -292,7 +292,7 @@ export default function Navbar() {
 }
 
 /** Right axle cap that reads from a MotionValue */
-function RightAxleCap({ open }: { open: any }) {
+function RightAxleCap({ open }: { open: MotionValue<number> }) {
   const rotate = useTransform(open, [0, 1], [0, 120])
   const glow = useTransform(open, [0, 1], [0.04, 0.16])
   return (

@@ -21,7 +21,7 @@ export function I18nProvider({ children }: { children: React.ReactNode }) {
   const toggleLang = useCallback(() => {
     setLang(prev => {
       const next = prev === 'zh' ? 'en' : 'zh'
-      try { localStorage.setItem('gs-lang', next) } catch {}
+      try { localStorage.setItem('gs-lang', next) } catch { /* storage unavailable */ }
       return next
     })
   }, [])
@@ -31,6 +31,7 @@ export function I18nProvider({ children }: { children: React.ReactNode }) {
   return <I18nContext.Provider value={{ lang, t, toggleLang }}>{children}</I18nContext.Provider>
 }
 
+// eslint-disable-next-line react-refresh/only-export-components
 export function useI18n() {
   const ctx = useContext(I18nContext)
   if (!ctx) throw new Error('useI18n must be used within I18nProvider')

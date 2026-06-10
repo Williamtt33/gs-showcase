@@ -26,6 +26,7 @@ export default function EditModel() {
 
   useEffect(() => {
     if (!modelId) return
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setLoading(true)
     setDownloading(false)
     getModelById(modelId).then(async (m) => {
@@ -38,7 +39,7 @@ export default function EditModel() {
       try {
         const url = await resolveModelUrl(m, setDownloadProgress)
         setModelUrl(url)
-      } catch {}
+      } catch { /* resolveModelUrl may fail for [local] files */ }
       setDownloading(false)
     })
   }, [modelId])
@@ -51,6 +52,7 @@ export default function EditModel() {
         getThumbnail(model.id).then(data => { if (data) setCoverPreview(data) })
       })
     } else if (model.thumbnail && model.thumbnail.startsWith('/')) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setCoverPreview(model.thumbnail)
     }
   }, [model])
@@ -78,7 +80,7 @@ export default function EditModel() {
       })
       setSaved(true)
       setTimeout(() => setSaved(false), 2000)
-    } catch (e: any) {
+    } catch (e: unknown) {
       console.error('Save failed:', e)
     } finally {
       setSaving(false)
