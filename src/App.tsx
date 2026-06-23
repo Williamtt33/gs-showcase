@@ -36,7 +36,7 @@ export default function App() {
       <ToastProvider>
         <div className="min-h-dyn flex flex-col">
           {!isViewer && <Navbar />}
-          <div className="flex-1">
+          <div className={`flex-1 ${!isViewer ? 'pt-[72px]' : ''}`}>
             <AnimatedRoutes />
           </div>
           {!isViewer && <Footer />}
