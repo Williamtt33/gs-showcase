@@ -289,16 +289,16 @@ canvas.gsplat-canvas {
 
 /* ── Frosted navbar ── */
 .navbar-glass {
-  background: rgba(26, 24, 21, 0.55);
+  background: rgba(26, 24, 21, 0.85);
   backdrop-filter: blur(20px) saturate(120%);
   -webkit-backdrop-filter: blur(20px) saturate(120%);
-  border-bottom: 1px solid rgba(232, 224, 213, 0.06);
+  border-bottom: 1px solid rgba(232, 224, 213, 0.08);
   transition: background 0.6s ease, border-color 0.6s ease;
 }
 .navbar-glass:hover,
 .navbar-glass:focus-within {
-  background: rgba(26, 24, 21, 0.85);
-  border-bottom-color: rgba(232, 224, 213, 0.12);
+  background: rgba(26, 24, 21, 0.92);
+  border-bottom-color: rgba(232, 224, 213, 0.16);
 }
 
 /* ── Gold outline button — primary CTA ── */
