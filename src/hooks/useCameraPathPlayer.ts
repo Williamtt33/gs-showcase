@@ -77,7 +77,23 @@ export function useCameraPathPlayer(
     setOverallProgress(0)
     isPathPlayingRef.current = false
     internalRef.current = { segmentIndex: 0, segmentT: 0, lastTime: 0 }
-    if (controlsRef.current) controlsRef.current.dampening = 0.2
+
+    // Sync orbit controls target to current camera position so the camera
+    // doesn't jump back to pre-playback position when controls.update() resumes.
+    const ctrl = controlsRef.current
+    const cam = cameraRef.current
+    const SPLAT = splatModuleRef.current
+    if (ctrl && cam && SPLAT) {
+      const fwd = cam.forward
+      ctrl.setCameraTarget(new SPLAT.Vector3(
+        cam.position.x + fwd.x * 3,
+        cam.position.y + fwd.y * 3,
+        cam.position.z + fwd.z * 3,
+      ))
+      ctrl.dampening = 0.2
+    } else if (ctrl) {
+      ctrl.dampening = 0.2
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
@@ -91,19 +107,37 @@ export function useCameraPathPlayer(
   }, [])
 
   // ── The per-frame update function, called from Viewer3D render loop ──
+  const frameCounterRef = useRef(0)
+
   const updatePath = useCallback(() => {
     const path = activePathRef.current
     const cam = cameraRef.current
     const SPLAT = splatModuleRef.current
     if (!path || !cam || !SPLAT) return
+    if (!cam.data) {
+      console.warn('[CameraPath] updatePath aborted: cam.data is null')
+      return
+    }
 
     const kfs = path.keyframes
     if (kfs.length === 0) return
 
+    // Log first few frames for debugging
+    if (frameCounterRef.current < 5) {
+      console.log('[CameraPath] frame', frameCounterRef.current,
+        'state:', stateRef.current,
+        'segIdx:', internalRef.current.segmentIndex,
+        'segT:', internalRef.current.segmentT.toFixed(4),
+        'camPos(before):', cam.position.x.toFixed(3), cam.position.y.toFixed(3), cam.position.z.toFixed(3))
+    }
+
     if (kfs.length === 1) {
       const p = kfs[0].position
       const t = kfs[0].target
-      const dir = new SPLAT.Vector3(t.x - p.x, t.y - p.y, t.z - p.z)
+      const dx = t.x - p.x; const dy = t.y - p.y; const dz = t.z - p.z
+      const dirLen = Math.sqrt(dx * dx + dy * dy + dz * dz)
+      if (dirLen < 0.0001) return
+      const dir = new SPLAT.Vector3(dx, dy, dz)
       const rot = SPLAT.Quaternion.LookRotation(dir)
       cam.data.update(new SPLAT.Vector3(p.x, p.y, p.z), rot)
       setOverallProgress(1)
@@ -166,12 +200,23 @@ export function useCameraPathPlayer(
     const dirX = tgt.x - pos.x
     const dirY = tgt.y - pos.y
     const dirZ = tgt.z - pos.z
+    const dirLen = Math.sqrt(dirX * dirX + dirY * dirY + dirZ * dirZ)
+    if (dirLen < 0.0001) return
     const rot = SPLAT.Quaternion.LookRotation(new SPLAT.Vector3(dirX, dirY, dirZ))
 
     cam.data.update(
       new SPLAT.Vector3(pos.x, pos.y, pos.z),
       rot,
     )
+
+    // Post-update debug: did cam.position change after data.update()?
+    if (frameCounterRef.current < 5) {
+      console.log('[CameraPath] frame', frameCounterRef.current,
+        'computed:', pos.x.toFixed(3), pos.y.toFixed(3), pos.z.toFixed(3),
+        '| camPos(after):', cam.position.x.toFixed(3), cam.position.y.toFixed(3), cam.position.z.toFixed(3),
+        '| segT:', intern.segmentT.toFixed(4))
+      frameCounterRef.current++
+    }
 
     const overall = (i + t) / totalSegments
     setOverallProgress(overall)
@@ -184,8 +229,18 @@ export function useCameraPathPlayer(
 
   const play = useCallback(() => {
     const path = activePathRef.current
-    if (!path || path.keyframes.length === 0) return
-    if (!splatModuleRef.current) return
+    if (!path) {
+      console.warn('[CameraPath] play() aborted: no active path selected')
+      return
+    }
+    if (path.keyframes.length === 0) {
+      console.warn('[CameraPath] play() aborted: active path has no keyframes (path:', path.name, ')')
+      return
+    }
+    if (!splatModuleRef.current) {
+      console.warn('[CameraPath] play() aborted: splat module not loaded yet')
+      return
+    }
 
     const ctrl = controlsRef.current
     if (ctrl) ctrl.dampening = 0
@@ -196,8 +251,10 @@ export function useCameraPathPlayer(
     }
 
     internalRef.current.lastTime = 0
+    frameCounterRef.current = 0
     setState('playing')
     isPathPlayingRef.current = true
+    console.log('[CameraPath] play() started — keyframes:', path.keyframes.length, 'speed:', speedRef.current)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [splatModuleRef, controlsRef])
 

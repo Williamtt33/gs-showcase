@@ -238,24 +238,35 @@ export default function Viewer3D({ modelUrl, modelName, modelId, readOnly, downl
               if (moveX !== 0 || moveY !== 0 || moveZ !== 0) {
                 const SPLAT = splatModuleRef.current
                 if (SPLAT) {
-                  // Directly move camera position
-                  camera.position = new SPLAT.Vector3(
-                    cp.x + moveX, cp.y + moveY, cp.z + moveZ
-                  )
-                  // Sync orbit target so controls.update() works correctly after release
-                  const newFwd = camera.forward
-                  controls.setCameraTarget(new SPLAT.Vector3(
-                    cp.x + moveX + newFwd.x * 3,
-                    cp.y + moveY + newFwd.y * 3,
-                    cp.z + moveZ + newFwd.z * 3,
-                  ))
+                  // Compute new camera position and orbit target
+                  const newX = cp.x + moveX
+                  const newY = cp.y + moveY
+                  const newZ = cp.z + moveZ
+                  const lookDist = 3
+                  const newTx = newX + fwd.x * lookDist
+                  const newTy = newY + fwd.y * lookDist
+                  const newTz = newZ + fwd.z * lookDist
+
+                  // Update orbit target FIRST so controls.update() uses the
+                  // synced target, not a stale dampened one
+                  controls.setCameraTarget(new SPLAT.Vector3(newTx, newTy, newTz))
+
+                  // Call controls.update() with zero dampening to force-sync
+                  // internal spherical coords and camera position in one shot.
+                  // Since camera→target offset is preserved across WASD frames,
+                  // the computed position matches the desired one exactly, and
+                  // spherical coords stay in sync — no bounce on release.
+                  const savedDamp = controls.dampening
+                  controls.dampening = 0
+                  controls.update()
+                  controls.dampening = savedDamp
                 }
               }
             }
           }
           lastTimeRef.current = now
 
-          // Only run orbit controls when not actively flying with WASD
+          // Normal orbit controls (no WASD active)
           if (!hasFlightKeys) {
             controls.update()
           }
