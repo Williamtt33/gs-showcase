@@ -44,6 +44,7 @@ export default function Viewer3D({ modelUrl, modelName, modelId, readOnly, downl
   const keysRef = useRef<Set<string>>(new Set())
   const lastTimeRef = useRef<number>(0)
   const flightSpeedRef = useRef(5) // base speed units/sec
+  const wasFlightActiveRef = useRef(false)
 
   // View state
   const [isLoading, setIsLoading] = useState(true)
@@ -263,22 +264,28 @@ export default function Viewer3D({ modelUrl, modelName, modelId, readOnly, downl
                     camera.rotation = SPLAT.Quaternion.LookRotation(lookDir)
                   }
 
-                  // Sync controls internal state with zero dampening
+                  // Sync controls target for post-flight recovery
                   controls.setCameraTarget(
                     new SPLAT.Vector3(newTx, newTy, newTz))
-                  const savedDamp = controls.dampening
-                  controls.dampening = 0
-                  controls.update()
-                  controls.dampening = savedDamp
                 }
               }
             }
+            wasFlightActiveRef.current = true
           }
           lastTimeRef.current = now
 
           // Normal orbit controls (no WASD active)
           if (!hasFlightKeys) {
-            controls.update()
+            if (wasFlightActiveRef.current) {
+              // Just released all flight keys — single zero-dampening sync
+              wasFlightActiveRef.current = false
+              const savedDamp = controls.dampening
+              controls.dampening = 0
+              controls.update()
+              controls.dampening = savedDamp
+            } else {
+              controls.update()
+            }
           }
         }
 
