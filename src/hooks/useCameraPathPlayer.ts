@@ -90,8 +90,12 @@ export function useCameraPathPlayer(
         cam.position.y + fwd.y * 3,
         cam.position.z + fwd.z * 3,
       ))
+      ctrl.dampening = 0
+      ctrl.update()
       ctrl.dampening = 0.2
     } else if (ctrl) {
+      ctrl.dampening = 0
+      ctrl.update()
       ctrl.dampening = 0.2
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
