@@ -1,18 +1,45 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { useI18n } from '../i18n/I18nContext'
 import { motion, AnimatePresence } from 'framer-motion'
 
 const CUBIC = [0.22, 1, 0.36, 1] as const
+const SCROLL_THRESHOLD = 10 // px — prevent flicker from tiny scroll deltas
 
 export default function Navbar() {
   const { t, lang, toggleLang } = useI18n()
   const location = useLocation()
   const [scrolled, setScrolled] = useState(false)
+  const [hidden, setHidden] = useState(false)
   const [mobileOpen, setMobileOpen] = useState(false)
 
+  const lastScrollRef = useRef(0)
+
   const handleScroll = useCallback(() => {
-    setScrolled(window.scrollY > 20)
+    const y = window.scrollY || document.documentElement.scrollTop
+
+    // Scrolled state for compact height
+    setScrolled(y > 20)
+
+    // At very top — always reveal
+    if (y <= 0) {
+      setHidden(false)
+      lastScrollRef.current = y
+      return
+    }
+
+    // Ignore tiny scroll changes (touchpad inertia etc.)
+    const delta = Math.abs(lastScrollRef.current - y)
+    if (delta <= SCROLL_THRESHOLD) return
+
+    // Direction-aware hide/reveal
+    if (y > lastScrollRef.current) {
+      setHidden(true)   // scrolling down → hide
+    } else {
+      setHidden(false)  // scrolling up → show
+    }
+
+    lastScrollRef.current = y
   }, [])
 
   useEffect(() => {
@@ -28,8 +55,14 @@ export default function Navbar() {
   return (
     <motion.header
       initial={{ y: -80, opacity: 0 }}
-      animate={{ y: 0, opacity: 1 }}
-      transition={{ duration: 0.7, ease: CUBIC }}
+      animate={{
+        y: hidden ? '-100%' : 0,
+        opacity: 1,
+      }}
+      transition={{
+        y: { duration: 0.35, ease: [0.4, 0, 0.2, 1] },
+        opacity: { duration: 0.7, ease: CUBIC },
+      }}
       className="fixed top-0 left-0 right-0 z-50"
     >
       {/* Single-row nav: flex-nowrap prevents vertical stacking */}
