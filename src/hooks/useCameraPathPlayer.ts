@@ -134,7 +134,9 @@ export function useCameraPathPlayer(
       if (dirLen < 0.0001) return
       const dir = new SPLAT.Vector3(dx, dy, dz)
       const rot = SPLAT.Quaternion.LookRotation(dir)
-      cam.position = new SPLAT.Vector3(p.x, p.y, p.z)
+      const vPos = new SPLAT.Vector3(p.x, p.y, p.z)
+      cam.data.update(vPos, rot)
+      cam.position = vPos
       cam.rotation = rot
       setOverallProgress(1)
       return
@@ -175,7 +177,9 @@ export function useCameraPathPlayer(
         last.target.z - last.position.z,
       )
       const rot = SPLAT.Quaternion.LookRotation(dir)
-      cam.position = new SPLAT.Vector3(last.position.x, last.position.y, last.position.z)
+      const vLast = new SPLAT.Vector3(last.position.x, last.position.y, last.position.z)
+      cam.data.update(vLast, rot)
+      cam.position = vLast
       cam.rotation = rot
       setOverallProgress(1)
       stopInternal()
@@ -198,10 +202,12 @@ export function useCameraPathPlayer(
     if (dirLen < 0.0001) return
     const rot = SPLAT.Quaternion.LookRotation(new SPLAT.Vector3(dirX, dirY, dirZ))
 
-    cam.position = new SPLAT.Vector3(pos.x, pos.y, pos.z)
+    const vPos = new SPLAT.Vector3(pos.x, pos.y, pos.z)
+    cam.data.update(vPos, rot)
+    cam.position = vPos
     cam.rotation = rot
 
-    // Post-update debug: did cam.position change after direct assignment?
+    // Post-update debug: did cam.position change after update?
     if (frameCounterRef.current < 5) {
       console.log('[CameraPath] frame', frameCounterRef.current,
         'computed:', pos.x.toFixed(3), pos.y.toFixed(3), pos.z.toFixed(3),
