@@ -45,9 +45,9 @@ export default function Gallery() {
         />
       </div>
 
-      <div className="relative z-10">
+      <div className="relative z-10" style={{ paddingTop: '90px' }}>
         {/* ── Header ── */}
-        <section className="pt-32 sm:pt-40 pb-16 sm:pb-20">
+        <section className="pt-20 sm:pt-28 pb-16 sm:pb-20">
           <div className="max-w-6xl lg:max-w-7xl mx-auto px-6 sm:px-8 lg:px-10">
             {/* Top scroll roller */}
             <motion.div
