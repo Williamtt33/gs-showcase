@@ -1,11 +1,11 @@
 @import "tailwindcss";
 
 @theme {
-  /* ── Ink-wash backgrounds — warm, not cold ── */
-  --color-surface-0: #0a0908;
-  --color-surface-1: #0e0d0b;
-  --color-surface-2: #12110f;
-  --color-surface-3: #181714;
+  /* ── Ink-wash backgrounds — warm stone, not cold ── */
+  --color-surface-0: #1A1815;
+  --color-surface-1: #1e1c19;
+  --color-surface-2: #22201c;
+  --color-surface-3: #282621;
 
   /* ── Subtle warm borders ── */
   --color-border-1: #1c1a17;
@@ -26,7 +26,7 @@
 
 html {
   scroll-behavior: smooth;
-  background: #0a0908;
+  background: #1A1815;
   color: #e8e0d5;
 }
 
@@ -270,4 +270,88 @@ canvas.gsplat-canvas {
 .h-dyn { height: 100vh; height: 100dvh; }
 .min-h-dyn { min-height: 100vh; min-height: 100dvh; }
 .w-dyn { width: 100vw; width: 100dvw; }
+
+/* ── Atmosphere: slow-drifting fog particles ── */
+@keyframes drift-fog {
+  0% { transform: translate(0, 0) scale(1); opacity: 0; }
+  15% { opacity: 0.7; }
+  50% { opacity: 0.4; }
+  85% { opacity: 0.7; }
+  100% { transform: translate(var(--drift-x, 10px), var(--drift-y, -5px)) scale(1.05); opacity: 0; }
+}
+.fog-particle {
+  position: absolute;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(212,165,116,0.06) 0%, transparent 70%);
+  animation: drift-fog 30s ease-in-out infinite;
+  pointer-events: none;
+}
+
+/* ── Frosted navbar ── */
+.navbar-glass {
+  background: rgba(26, 24, 21, 0.55);
+  backdrop-filter: blur(20px) saturate(120%);
+  -webkit-backdrop-filter: blur(20px) saturate(120%);
+  border-bottom: 1px solid rgba(232, 224, 213, 0.06);
+  transition: background 0.6s ease, border-color 0.6s ease;
+}
+.navbar-glass:hover,
+.navbar-glass:focus-within {
+  background: rgba(26, 24, 21, 0.85);
+  border-bottom-color: rgba(232, 224, 213, 0.12);
+}
+
+/* ── Gold outline button — primary CTA ── */
+.btn-outline-gold {
+  display: inline-flex; align-items: center; justify-content: center;
+  padding: 0.75rem 2.5rem;
+  border-radius: 0.75rem;
+  background: transparent;
+  border: 1px solid rgba(212, 165, 116, 0.45);
+  color: #d4a574;
+  font-size: 0.9375rem; font-weight: 500;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+  transition: all 0.5s cubic-bezier(0.22, 1, 0.36, 1);
+  position: relative; overflow: hidden;
+}
+.btn-outline-gold::before {
+  content: '';
+  position: absolute; inset: 0;
+  background: linear-gradient(90deg,
+    transparent 0%, rgba(212,165,116,0.08) 50%, transparent 100%);
+  transform: translateX(-100%);
+  transition: transform 0.6s ease;
+}
+.btn-outline-gold:hover::before {
+  transform: translateX(100%);
+}
+.btn-outline-gold:hover {
+  border-color: rgba(212, 165, 116, 0.8);
+  box-shadow: 0 0 40px -10px rgba(212,165,116,0.15), inset 0 0 30px -10px rgba(212,165,116,0.04);
+  transform: translateY(-1px);
+}
+.btn-outline-gold:active {
+  transform: translateY(0) scale(0.985);
+}
+
+/* ── Ghost text button — secondary CTA ── */
+.btn-text-ghost {
+  display: inline-flex; align-items: center; justify-content: center;
+  padding: 0.75rem 2.5rem;
+  border-radius: 0.75rem;
+  background: transparent; border: none;
+  color: #a09888;
+  font-size: 0.9375rem; font-weight: 400;
+  letter-spacing: 0.03em;
+  cursor: pointer;
+  transition: all 0.35s ease;
+}
+.btn-text-ghost:hover {
+  color: #e8e0d5;
+  transform: translateY(-1px);
+}
+.btn-text-ghost:active {
+  transform: translateY(0) scale(0.985);
+}
 

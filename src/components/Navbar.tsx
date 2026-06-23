@@ -39,13 +39,13 @@ export default function Navbar() {
       transition={{ duration: 0.7, ease: CUBIC }}
       className="fixed top-0 left-0 right-0 z-50 flex justify-center"
     >
-      <div className={`
-        mx-auto transition-all duration-500 ease-out
-        ${scrolled
-          ? 'mx-3 sm:mx-6 lg:mx-auto lg:max-w-6xl xl:max-w-7xl mt-3 glass rounded-xl'
-          : 'max-w-2xl lg:max-w-3xl mt-4 sm:mt-6 bg-surface-0/60 backdrop-blur-md rounded-xl'
-        }
-      `}>
+      <div
+        className="navbar-glass rounded-xl mx-auto mt-3 sm:mt-4 transition-all duration-700 ease-out"
+        style={{
+          width: scrolled ? 'calc(100% - 1.5rem)' : 'auto',
+          maxWidth: scrolled ? 'min(1280px, 100% - 3rem)' : 'min(800px, 100% - 2rem)',
+        }}
+      >
         <div className={`
           relative flex items-center justify-between transition-all duration-500 ease-out
           ${scrolled ? 'h-12 sm:h-14 px-3 sm:px-5' : 'h-14 sm:h-16 px-4 sm:px-6'}

@@ -13,6 +13,40 @@ import {
 } from '../data/heritage'
 import type { ModelMeta } from '../types'
 
+/* ── Fog particles — ultra-slow drifting atmosphere ── */
+
+const FOG_SEEDS = [
+  { x: '15%', y: '25%', s: 180, dx: 30, dy: -20, d: 28 },
+  { x: '72%', y: '35%', s: 220, dx: -25, dy: 15, d: 32 },
+  { x: '40%', y: '60%', s: 160, dx: 20, dy: -10, d: 35 },
+  { x: '85%', y: '18%', s: 140, dx: -15, dy: 25, d: 30 },
+  { x: '55%', y: '75%', s: 200, dx: 35, dy: -15, d: 26 },
+  { x: '28%', y: '48%', s: 120, dx: -20, dy: 10, d: 33 },
+  { x: '65%', y: '80%', s: 170, dx: 25, dy: -25, d: 29 },
+  { x: '8%', y: '70%', s: 150, dx: 15, dy: -30, d: 31 },
+]
+
+function FogAtmosphere() {
+  return (
+    <div className="absolute inset-0 overflow-hidden pointer-events-none">
+      {FOG_SEEDS.map((s, i) => (
+        <div
+          key={i}
+          className="fog-particle"
+          style={{
+            left: s.x, top: s.y,
+            width: s.s, height: s.s,
+            '--drift-x': `${s.dx}px`,
+            '--drift-y': `${s.dy}px`,
+            animationDuration: `${s.d}s`,
+            animationDelay: `${i * 3.5}s`,
+          } as React.CSSProperties}
+        />
+      ))}
+    </div>
+  )
+}
+
 /* ── Scroll painting decorations ── */
 
 function ScrollRoller({ className = '' }: { className?: string }) {
@@ -82,41 +116,35 @@ export default function Home() {
 
       {/* ── Fixed background decorations ── */}
       <div className="fixed inset-0 pointer-events-none z-0">
-        {/* Ambient ink wash */}
-        <div className="absolute inset-0 bg-ink-wash opacity-60" />
-        {/* Manuscript grid */}
-        <div className="absolute inset-0 bg-manuscript-grid opacity-40" />
+        {/* Manuscript grid — subtle */}
+        <div className="absolute inset-0 bg-manuscript-grid opacity-30" />
         {/* Architectural linework — 界画线描 */}
-        <DriftingLinework className="absolute inset-0" />
+        <DriftingLinework className="absolute inset-0 opacity-50" />
+        {/* Fog atmosphere */}
+        <FogAtmosphere />
 
-        {/* Floating ink orbs — viewport-relative sizing, capped at original px */ }
+        {/* Warm gold light halos — cinematic glow */}
         <motion.div
-          className="absolute rounded-full blur-[80px]"
+          className="absolute rounded-full blur-[120px]"
+          animate={{ opacity: [0.12, 0.18, 0.12] }}
+          transition={{ duration: 8, repeat: Infinity, ease: 'easeInOut' }}
           style={{
-            width: 'min(600px, 45vw)', height: 'min(600px, 45vw)',
-            background: 'radial-gradient(circle, rgba(212,165,116,0.08) 0%, transparent 70%)',
-            top: useTransform(scrollYProgress, [0, 1], ['10%', '50%']),
-            left: '20%',
+            width: 'min(700px, 55vw)', height: 'min(700px, 55vw)',
+            background: 'radial-gradient(circle, rgba(212,165,116,0.15) 0%, rgba(163,181,166,0.05) 30%, transparent 70%)',
+            top: useTransform(scrollYProgress, [0, 1], ['-15%', '20%']),
+            left: '25%',
             willChange: 'transform',
           }}
         />
         <motion.div
-          className="absolute rounded-full blur-[70px]"
+          className="absolute rounded-full blur-[100px]"
+          animate={{ opacity: [0.08, 0.14, 0.08] }}
+          transition={{ duration: 10, repeat: Infinity, ease: 'easeInOut', delay: 3 }}
           style={{
             width: 'min(500px, 38vw)', height: 'min(500px, 38vw)',
-            background: 'radial-gradient(circle, rgba(163,181,166,0.06) 0%, transparent 70%)',
-            top: useTransform(scrollYProgress, [0, 1], ['35%', '70%']),
-            right: '10%',
-            willChange: 'transform',
-          }}
-        />
-        <motion.div
-          className="absolute rounded-full blur-[60px]"
-          style={{
-            width: 'min(400px, 30vw)', height: 'min(400px, 30vw)',
-            background: 'radial-gradient(circle, rgba(200,75,49,0.04) 0%, transparent 70%)',
-            top: useTransform(scrollYProgress, [0, 1], ['55%', '85%']),
-            left: '35%',
+            background: 'radial-gradient(circle, rgba(200,75,49,0.06) 0%, rgba(212,165,116,0.04) 40%, transparent 70%)',
+            top: useTransform(scrollYProgress, [0, 1], ['45%', '70%']),
+            right: '12%',
             willChange: 'transform',
           }}
         />
@@ -194,20 +222,19 @@ export default function Home() {
               initial={{ opacity: 0, y: 30 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.9, delay: 0.5 }}
-              className="flex flex-col sm:flex-row items-center justify-center gap-4"
+              className="flex flex-col sm:flex-row items-center justify-center gap-6 sm:gap-10"
             >
-              <button
-                onClick={() =>
-                  document.getElementById('gallery-section')?.scrollIntoView({ behavior: 'smooth' })
-                }
-                className="inline-flex items-center justify-center px-10 py-4 rounded-xl bg-[#e8e0d5] text-[#0a0908] text-[15px] font-semibold cursor-pointer border-none outline-none hover:shadow-lg hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.985] transition-all duration-300"
+              <Link
+                to="/viewer/shamian"
+                className="btn-outline-gold"
                 style={{ cursor: 'pointer' }}
               >
+                <span className="mr-2">◇</span>
                 探索场景
-              </button>
+              </Link>
               <Link
                 to="/upload"
-                className="inline-flex items-center justify-center px-10 py-4 rounded-xl bg-white/[0.04] border border-white/[0.08] text-text-2 text-[15px] font-medium cursor-pointer hover:bg-white/[0.08] hover:text-text-1 hover:-translate-y-0.5 active:translate-y-0 transition-all duration-300"
+                className="btn-text-ghost"
                 style={{ cursor: 'pointer' }}
               >
                 上传场景
