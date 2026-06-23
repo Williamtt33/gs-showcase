@@ -207,6 +207,14 @@ export default function Viewer3D({ modelUrl, modelName, modelId, readOnly, downl
         } else if (isPathPlayingRef.current) {
           // Camera driven by path playback engine — update then render
           pathUpdateRef.current?.()
+          // Diagnostic: log camera position right after updatePath to see if it changed
+          if (isPathPlayingRef.current) {
+            const cam = cameraRef.current
+            if (cam) {
+              console.log('[rAF] after updatePath — cam.pos:',
+                cam.position.x.toFixed(3), cam.position.y.toFixed(3), cam.position.z.toFixed(3))
+            }
+          }
         } else {
           // ── WASD direct camera flight ──
           const keys = keysRef.current

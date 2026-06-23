@@ -114,11 +114,6 @@ export function useCameraPathPlayer(
     const cam = cameraRef.current
     const SPLAT = splatModuleRef.current
     if (!path || !cam || !SPLAT) return
-    if (!cam.data) {
-      console.warn('[CameraPath] updatePath aborted: cam.data is null')
-      return
-    }
-
     const kfs = path.keyframes
     if (kfs.length === 0) return
 
@@ -139,7 +134,8 @@ export function useCameraPathPlayer(
       if (dirLen < 0.0001) return
       const dir = new SPLAT.Vector3(dx, dy, dz)
       const rot = SPLAT.Quaternion.LookRotation(dir)
-      cam.data.update(new SPLAT.Vector3(p.x, p.y, p.z), rot)
+      cam.position = new SPLAT.Vector3(p.x, p.y, p.z)
+      cam.rotation = rot
       setOverallProgress(1)
       return
     }
@@ -179,10 +175,8 @@ export function useCameraPathPlayer(
         last.target.z - last.position.z,
       )
       const rot = SPLAT.Quaternion.LookRotation(dir)
-      cam.data.update(
-        new SPLAT.Vector3(last.position.x, last.position.y, last.position.z),
-        rot,
-      )
+      cam.position = new SPLAT.Vector3(last.position.x, last.position.y, last.position.z)
+      cam.rotation = rot
       setOverallProgress(1)
       stopInternal()
       return
@@ -204,12 +198,10 @@ export function useCameraPathPlayer(
     if (dirLen < 0.0001) return
     const rot = SPLAT.Quaternion.LookRotation(new SPLAT.Vector3(dirX, dirY, dirZ))
 
-    cam.data.update(
-      new SPLAT.Vector3(pos.x, pos.y, pos.z),
-      rot,
-    )
+    cam.position = new SPLAT.Vector3(pos.x, pos.y, pos.z)
+    cam.rotation = rot
 
-    // Post-update debug: did cam.position change after data.update()?
+    // Post-update debug: did cam.position change after direct assignment?
     if (frameCounterRef.current < 5) {
       console.log('[CameraPath] frame', frameCounterRef.current,
         'computed:', pos.x.toFixed(3), pos.y.toFixed(3), pos.z.toFixed(3),
