@@ -132,7 +132,8 @@ export default function Viewer3D({ modelUrl, modelName, modelId, readOnly, downl
       const dirVec = new SPLAT.Vector3(endLookAt.x - px, endLookAt.y - py, endLookAt.z - pz)
       const rot = SPLAT.Quaternion.LookRotation(dirVec)
       const pos = new SPLAT.Vector3(px, py, pz)
-      cam.data.update(pos, rot)
+      cam.position = pos
+      cam.rotation = rot
 
       if (t < 1) {
         flyAnimIdRef.current = requestAnimationFrame(tick)
@@ -140,7 +141,9 @@ export default function Viewer3D({ modelUrl, modelName, modelId, readOnly, downl
         // Animation complete — sync OrbitControls and resume
         isFlyingRef.current = false
         ctrl.setCameraTarget(new SPLAT.Vector3(endLookAt.x, endLookAt.y, endLookAt.z))
-        ctrl.dampening = 0.2 // Restore default damping
+        ctrl.dampening = 0
+        ctrl.update()
+        ctrl.dampening = 0.2
       }
     }
     flyAnimIdRef.current = requestAnimationFrame(tick)
