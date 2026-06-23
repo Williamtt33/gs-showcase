@@ -8,6 +8,7 @@ import AnnotationMarker from './viewer/AnnotationMarker'
 import HotspotEditor from './editor/HotspotEditor'
 import CameraPathPanel from './editor/CameraPathPanel'
 import SplatLoadingScreen from './viewer/SplatLoadingScreen'
+import ShamianLoadingScreen from './viewer/ShamianLoadingScreen'
 import { worldToScreen, easeInOutCubic } from '../utils/math3d'
 import {
   getHotspots, addHotspot, updateHotspot, deleteHotspot,
@@ -482,12 +483,19 @@ export default function Viewer3D({ modelUrl, modelName, modelId, readOnly, downl
         {hotspotElements}
       </div>
 
-      {/* Loading — Gaussian point-cloud skeleton */}
+      {/* Loading — model-specific loading screens */}
       {isLoading && (
-        <SplatLoadingScreen
-          progress={downloadProgress !== undefined ? Math.max(progress, downloadProgress) : progress}
-          isDownloading={downloadProgress !== undefined && downloadProgress < 100}
-        />
+        modelId === 'shamian' || modelName.includes('沙面') ? (
+          <ShamianLoadingScreen
+            progress={downloadProgress !== undefined ? Math.max(progress, downloadProgress) : progress}
+            isDownloading={downloadProgress !== undefined && downloadProgress < 100}
+          />
+        ) : (
+          <SplatLoadingScreen
+            progress={downloadProgress !== undefined ? Math.max(progress, downloadProgress) : progress}
+            isDownloading={downloadProgress !== undefined && downloadProgress < 100}
+          />
+        )
       )}
 
       {/* Error */}
