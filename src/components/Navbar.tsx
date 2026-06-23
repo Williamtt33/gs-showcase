@@ -5,12 +5,6 @@ import { motion, AnimatePresence } from 'framer-motion'
 
 const CUBIC = [0.22, 1, 0.36, 1] as const
 
-function LinkSep() {
-  return (
-    <span className="w-[1px] h-3.5 bg-gradient-to-b from-transparent via-text-3/20 to-transparent shrink-0" />
-  )
-}
-
 export default function Navbar() {
   const { t, lang, toggleLang } = useI18n()
   const location = useLocation()
@@ -26,10 +20,9 @@ export default function Navbar() {
     return () => window.removeEventListener('scroll', handleScroll)
   }, [handleScroll])
 
-  const links = [
+  const contentLinks = [
     { to: '/', label: t.nav.home },
     { to: '/gallery', label: t.nav.gallery },
-    { to: '/admin', label: t.nav.admin },
   ]
 
   return (
@@ -39,86 +32,127 @@ export default function Navbar() {
       transition={{ duration: 0.7, ease: CUBIC }}
       className="fixed top-0 left-0 right-0 z-50 flex justify-center"
     >
-      <div
-        className="navbar-glass rounded-xl mx-auto mt-3 sm:mt-4 transition-all duration-700 ease-out"
-        style={{
-          width: scrolled ? 'calc(100% - 1.5rem)' : 'auto',
-          maxWidth: scrolled ? 'min(1280px, 100% - 3rem)' : 'min(800px, 100% - 2rem)',
-        }}
-      >
-        <div className={`
-          relative flex items-center justify-between transition-all duration-500 ease-out
-          ${scrolled ? 'h-12 sm:h-14 px-3 sm:px-5' : 'h-14 sm:h-16 px-4 sm:px-6'}
-        `}>
-          {/* Logo + site name */}
-          <Link to="/" className="flex items-center gap-2.5 sm:gap-3 group shrink-0">
-            <motion.div
-              whileHover={{ scale: 1.05, rotate: -3 }}
-              className="w-8 h-8 sm:w-9 sm:h-9 rounded-lg bg-gradient-to-br from-accent-1 via-accent-1/70 to-accent-2 flex items-center justify-center text-[10px] sm:text-xs font-bold text-black shadow-md shadow-accent-1/12 group-hover:shadow-accent-1/25 transition-shadow duration-500"
-            >
-              3D
-            </motion.div>
-            <span className={`
-              font-semibold tracking-[0.03em] transition-all duration-500
-              ${scrolled ? 'text-[13px]' : 'text-[15px]'}
-              text-text-1/85 group-hover:text-text-1 hidden sm:inline
-            `}>
-              墨韵三维
-            </span>
-          </Link>
+      <div className="w-full flex justify-center px-3 sm:px-6 mt-3 sm:mt-4">
+        <div
+          className="navbar-glass rounded-2xl transition-all duration-700 ease-out relative"
+          style={{
+            width: scrolled ? '100%' : 'auto',
+            maxWidth: scrolled ? 'min(1280px, 100%)' : 'min(720px, 100%)',
+          }}
+        >
+          <div
+            className={`relative flex items-center transition-all duration-500 ease-out ${
+              scrolled ? 'h-11 sm:h-12 px-3 sm:px-5' : 'h-14 sm:h-16 px-4 sm:px-6'
+            }`}
+          >
+            {/* ═══ Left: Brand ═══ */}
+            <Link to="/" className="flex items-center gap-2 sm:gap-2.5 group shrink-0 mr-4 sm:mr-6">
+              {/* Minimalist architectural silhouette icon */}
+              <svg
+                className="w-6 h-6 sm:w-7 sm:h-7 transition-colors duration-500"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                style={{ color: 'rgba(212,165,116,0.7)' }}
+              >
+                {/* Arch + pillar silhouette */}
+                <path d="M4 20 L4 10 Q8 4 12 10 L12 20" />
+                <path d="M20 20 L20 10 Q16 4 12 10" />
+                <path d="M7 20 L7 12 Q9 8 12 12 L12 20" />
+                <path d="M17 20 L17 12 Q15 8 12 12" />
+              </svg>
+              <span
+                className={`font-medium tracking-[0.05em] transition-all duration-500 ${
+                  scrolled ? 'text-[12px]' : 'text-[14px]'
+                }`}
+                style={{ color: 'rgba(232,224,213,0.8)' }}
+              >
+                墨韵
+              </span>
+            </Link>
 
-          {/* Desktop nav */}
-          <nav className="hidden md:flex items-center gap-0">
-            {links.map((link, idx) => {
-              const isActive = location.pathname === link.to
-              return (
-                <div key={link.to} className="flex items-center">
-                  {idx > 0 && <LinkSep />}
+            {/* ═══ Center: Content navigation ═══ */}
+            <nav className="hidden md:flex items-center justify-center gap-1 flex-1">
+              {contentLinks.map((link) => {
+                const isActive = location.pathname === link.to
+                return (
                   <Link
+                    key={link.to}
                     to={link.to}
-                    className={`relative px-3.5 py-2 text-[13px] font-medium tracking-[0.03em] transition-all duration-300 ${
+                    className={`relative px-4 sm:px-5 py-2 text-[13px] font-medium tracking-[0.04em] transition-all duration-400 ${
                       isActive
-                        ? 'text-accent-1/90'
-                        : 'text-text-3/70 hover:text-text-2'
+                        ? 'text-text-1'
+                        : 'text-text-3/40 hover:text-text-3/70'
                     }`}
                   >
+                    {/* Active indicator: glowing dot above */}
                     {isActive && (
-                      <motion.div
-                        layoutId="nav-underline"
-                        className="absolute bottom-0.5 left-1/2 -translate-x-1/2 h-[1.5px] rounded-full bg-accent-1/40"
-                        style={{ width: '60%' }}
-                        transition={{ type: 'spring', stiffness: 380, damping: 30 }}
+                      <motion.span
+                        layoutId="nav-active-dot"
+                        className="absolute top-0.5 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full"
+                        style={{
+                          background: '#d4a574',
+                          boxShadow: '0 0 6px rgba(212,165,116,0.5), 0 0 12px rgba(212,165,116,0.2)',
+                        }}
+                        transition={{ type: 'spring', stiffness: 400, damping: 28 }}
                       />
                     )}
                     <span className="relative z-10">{link.label}</span>
                   </Link>
-                </div>
-              )
-            })}
+                )
+              })}
+            </nav>
 
-            <LinkSep />
+            {/* ═══ Right: System functions ═══ */}
+            <div className="hidden md:flex items-center gap-1 ml-4 sm:ml-6">
+              <Link
+                to="/admin"
+                className={`px-3 py-1.5 text-[11px] font-medium tracking-[0.04em] transition-all duration-300 ${
+                  location.pathname === '/admin'
+                    ? 'text-text-2'
+                    : 'text-text-3/30 hover:text-text-3/55'
+                }`}
+              >
+                {t.nav.admin}
+              </Link>
 
+              {/* Separator */}
+              <span className="w-px h-3 bg-text-3/10 mx-1" />
+
+              <button
+                onClick={toggleLang}
+                className="px-2 py-1.5 text-[10px] font-medium tracking-[0.08em] uppercase transition-all duration-300 text-text-3/30 hover:text-text-3/55 font-mono"
+              >
+                {lang === 'zh' ? 'EN' : '中'}
+              </button>
+            </div>
+
+            {/* Mobile toggle */}
             <button
-              onClick={toggleLang}
-              className="px-3 py-1.5 text-[11px] font-medium text-text-3/50 hover:text-text-2 transition-all duration-200 font-mono tracking-wider uppercase"
+              className="md:hidden p-2 -mr-2 text-text-3/40 hover:text-text-1 transition-colors ml-auto"
+              onClick={() => setMobileOpen(!mobileOpen)}
+              aria-label={mobileOpen ? '关闭菜单' : '打开菜单'}
             >
-              {lang === 'zh' ? 'EN' : '中'}
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
+                {mobileOpen
+                  ? <><path d="M18 6L6 18" /><path d="M6 6l12 12" /></>
+                  : <><path d="M4 7h16" /><path d="M4 12h16" /><path d="M4 17h16" /></>
+                }
+              </svg>
             </button>
-          </nav>
+          </div>
 
-          {/* Mobile toggle */}
-          <button
-            className="md:hidden p-2 -mr-2 text-text-3/60 hover:text-text-1 transition-colors"
-            onClick={() => setMobileOpen(!mobileOpen)}
-            aria-label={mobileOpen ? '关闭菜单' : '打开菜单'}
-          >
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
-              {mobileOpen
-                ? <><path d="M18 6L6 18" /><path d="M6 6l12 12" /></>
-                : <><path d="M4 7h16" /><path d="M4 12h16" /><path d="M4 17h16" /></>
-              }
-            </svg>
-          </button>
+          {/* Bottom glow separator line */}
+          <div
+            className="absolute bottom-0 left-1/2 -translate-x-1/2 h-px rounded-full opacity-30"
+            style={{
+              width: '75%',
+              background: 'linear-gradient(90deg, transparent 0%, rgba(212,165,116,0.3) 20%, rgba(212,165,116,0.5) 50%, rgba(212,165,116,0.3) 80%, transparent 100%)',
+            }}
+          />
         </div>
       </div>
 
@@ -131,7 +165,8 @@ export default function Navbar() {
             className="md:hidden fixed top-[72px] left-3 right-3 max-w-lg mx-auto glass rounded-2xl overflow-hidden"
           >
             <nav className="px-1.5 py-2 space-y-0.5">
-              {links.map(link => {
+              {/* Content links */}
+              {contentLinks.map(link => {
                 const isActive = location.pathname === link.to
                 return (
                   <Link key={link.to} to={link.to} onClick={() => setMobileOpen(false)}
@@ -139,15 +174,25 @@ export default function Navbar() {
                       isActive ? 'bg-white/[0.06] text-text-1' : 'text-text-3/70 hover:text-text-2 hover:bg-white/[0.02]'
                     }`}
                   >
-                    {isActive && <span className="w-1.5 h-1.5 rounded-full bg-accent-1/60 shadow-[0_0_6px_rgba(212,165,116,0.4)]" />}
+                    {isActive && (
+                      <span className="w-1.5 h-1.5 rounded-full bg-accent-1/60 shadow-[0_0_6px_rgba(212,165,116,0.4)]" />
+                    )}
                     <span>{link.label}</span>
                   </Link>
                 )
               })}
               <div className="h-px bg-border-1 mx-4 my-2" />
+              {/* Admin link */}
+              <Link to="/admin" onClick={() => setMobileOpen(false)}
+                className={`flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all ${
+                  location.pathname === '/admin' ? 'bg-white/[0.06] text-text-2' : 'text-text-3/50 hover:text-text-2 hover:bg-white/[0.02]'
+                }`}
+              >
+                <span>{t.nav.admin}</span>
+              </Link>
               <button
                 onClick={() => { toggleLang(); setMobileOpen(false) }}
-                className="w-full text-left px-4 py-3 rounded-xl text-sm text-text-3/60 hover:text-text-2 hover:bg-white/[0.02] transition-all font-mono tracking-wider"
+                className="w-full text-left px-4 py-3 rounded-xl text-sm text-text-3/50 hover:text-text-2 hover:bg-white/[0.02] transition-all font-mono tracking-wider"
               >
                 {t.lang.switchTo}
               </button>
