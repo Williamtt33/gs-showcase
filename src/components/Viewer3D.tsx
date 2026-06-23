@@ -45,7 +45,6 @@ export default function Viewer3D({ modelUrl, modelName, modelId, readOnly, downl
   const keysRef = useRef<Set<string>>(new Set())
   const lastTimeRef = useRef<number>(0)
   const flightSpeedRef = useRef(25) // base speed units/sec
-  const wasFlightActiveRef = useRef(false)
 
   // View state
   const [isLoading, setIsLoading] = useState(true)
@@ -251,29 +250,24 @@ export default function Viewer3D({ modelUrl, modelName, modelId, readOnly, downl
                   const newTy = newY + fwd.y * lookDist
                   const newTz = newZ + fwd.z * lookDist
 
-                  // Set position directly; skip controls.update() to avoid
-                  // its internal keyboard handler double-processing input
-                  camera.position = new SPLAT.Vector3(newX, newY, newZ)
+                  // Let controls.update() handle rotation (prevents ghosting),
+                  // then override position with our direct computation
                   controls.setCameraTarget(
                     new SPLAT.Vector3(newTx, newTy, newTz))
+                  const savedDamp = controls.dampening
+                  controls.dampening = 0
+                  controls.update()
+                  controls.dampening = savedDamp
+                  camera.position = new SPLAT.Vector3(newX, newY, newZ)
                 }
               }
             }
-            wasFlightActiveRef.current = true
           }
           lastTimeRef.current = now
 
           // Normal orbit controls (no WASD active)
           if (!hasFlightKeys) {
-            if (wasFlightActiveRef.current) {
-              wasFlightActiveRef.current = false
-              const savedDamp = controls.dampening
-              controls.dampening = 0
-              controls.update()
-              controls.dampening = savedDamp
-            } else {
-              controls.update()
-            }
+            controls.update()
           }
         }
 
