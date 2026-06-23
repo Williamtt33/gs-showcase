@@ -211,14 +211,6 @@ export default function Viewer3D({ modelUrl, modelName, modelId, readOnly, downl
         } else if (isPathPlayingRef.current) {
           // Camera driven by path playback engine — update then render
           pathUpdateRef.current?.()
-          // Diagnostic: log camera position right after updatePath to see if it changed
-          if (isPathPlayingRef.current) {
-            const cam = cameraRef.current
-            if (cam) {
-              console.log('[rAF] after updatePath — cam.pos:',
-                cam.position.x.toFixed(3), cam.position.y.toFixed(3), cam.position.z.toFixed(3))
-            }
-          }
         } else {
           // ── WASD direct camera flight ──
           const keys = keysRef.current
@@ -250,7 +242,7 @@ export default function Viewer3D({ modelUrl, modelName, modelId, readOnly, downl
               if (moveX !== 0 || moveY !== 0 || moveZ !== 0) {
                 const SPLAT = splatModuleRef.current
                 if (SPLAT) {
-                  // Compute new camera position and orbit target
+                  // Compute new camera position and look-at target
                   const newX = cp.x + moveX
                   const newY = cp.y + moveY
                   const newZ = cp.z + moveZ
@@ -259,15 +251,21 @@ export default function Viewer3D({ modelUrl, modelName, modelId, readOnly, downl
                   const newTy = newY + fwd.y * lookDist
                   const newTz = newZ + fwd.z * lookDist
 
-                  // Update orbit target FIRST so controls.update() uses the
-                  // synced target, not a stale dampened one
-                  controls.setCameraTarget(new SPLAT.Vector3(newTx, newTy, newTz))
+                  // Directly set camera position and rotation —
+                  // bypass controls' internal spherical coords
+                  camera.position = new SPLAT.Vector3(newX, newY, newZ)
+                  const lookDir = new SPLAT.Vector3(
+                    newTx - newX, newTy - newY, newTz - newZ,
+                  )
+                  const lookLen = Math.sqrt(
+                    lookDir.x ** 2 + lookDir.y ** 2 + lookDir.z ** 2)
+                  if (lookLen > 0.0001) {
+                    camera.rotation = SPLAT.Quaternion.LookRotation(lookDir)
+                  }
 
-                  // Call controls.update() with zero dampening to force-sync
-                  // internal spherical coords and camera position in one shot.
-                  // Since camera→target offset is preserved across WASD frames,
-                  // the computed position matches the desired one exactly, and
-                  // spherical coords stay in sync — no bounce on release.
+                  // Sync controls internal state with zero dampening
+                  controls.setCameraTarget(
+                    new SPLAT.Vector3(newTx, newTy, newTz))
                   const savedDamp = controls.dampening
                   controls.dampening = 0
                   controls.update()
