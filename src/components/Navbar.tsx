@@ -41,15 +41,15 @@ export default function Navbar() {
           }}
         >
           <div
-            className={`relative flex items-center transition-all duration-500 ease-out ${
+            className={`relative flex items-center justify-between transition-all duration-500 ease-out ${
               scrolled ? 'h-11 sm:h-12 px-3 sm:px-5' : 'h-14 sm:h-16 px-4 sm:px-6'
             }`}
           >
-            {/* ═══ Left: Brand ═══ */}
-            <Link to="/" className="flex items-center gap-2 sm:gap-2.5 group shrink-0 mr-4 sm:mr-6">
+            {/* ═══ Left: Brand — fixed width zone ═══ */}
+            <Link to="/" className="flex items-center gap-2 sm:gap-2.5 group shrink-0">
               {/* Minimalist architectural silhouette icon */}
               <svg
-                className="w-6 h-6 sm:w-7 sm:h-7 transition-colors duration-500"
+                className="w-6 h-6 sm:w-7 sm:h-7 transition-colors duration-500 shrink-0"
                 viewBox="0 0 24 24"
                 fill="none"
                 stroke="currentColor"
@@ -65,7 +65,7 @@ export default function Navbar() {
                 <path d="M17 20 L17 12 Q15 8 12 12" />
               </svg>
               <span
-                className={`font-medium tracking-[0.05em] transition-all duration-500 ${
+                className={`font-medium tracking-[0.05em] transition-all duration-500 leading-none ${
                   scrolled ? 'text-[12px]' : 'text-[14px]'
                 }`}
                 style={{ color: 'rgba(232,224,213,0.8)' }}
@@ -74,8 +74,8 @@ export default function Navbar() {
               </span>
             </Link>
 
-            {/* ═══ Center: Content navigation ═══ */}
-            <nav className="hidden md:flex items-center justify-center gap-1 flex-1">
+            {/* ═══ Center: Content nav — absolutely centered ═══ */}
+            <nav className="hidden md:flex items-center gap-1 absolute left-1/2 -translate-x-1/2">
               {contentLinks.map((link) => {
                 const isActive = location.pathname === link.to
                 return (
@@ -106,11 +106,11 @@ export default function Navbar() {
               })}
             </nav>
 
-            {/* ═══ Right: System functions ═══ */}
-            <div className="hidden md:flex items-center gap-1 ml-4 sm:ml-6">
+            {/* ═══ Right: System functions — flush right ═══ */}
+            <div className="hidden md:flex items-center gap-4 sm:gap-5">
               <Link
                 to="/admin"
-                className={`px-3 py-1.5 text-[11px] font-medium tracking-[0.04em] transition-all duration-300 ${
+                className={`text-[11px] font-medium tracking-[0.04em] transition-all duration-300 ${
                   location.pathname === '/admin'
                     ? 'text-text-2'
                     : 'text-text-3/30 hover:text-text-3/55'
@@ -118,13 +118,9 @@ export default function Navbar() {
               >
                 {t.nav.admin}
               </Link>
-
-              {/* Separator */}
-              <span className="w-px h-3 bg-text-3/10 mx-1" />
-
               <button
                 onClick={toggleLang}
-                className="px-2 py-1.5 text-[10px] font-medium tracking-[0.08em] uppercase transition-all duration-300 text-text-3/30 hover:text-text-3/55 font-mono"
+                className="text-[10px] font-medium tracking-[0.08em] uppercase transition-all duration-300 text-text-3/30 hover:text-text-3/55 font-mono"
               >
                 {lang === 'zh' ? 'EN' : '中'}
               </button>
