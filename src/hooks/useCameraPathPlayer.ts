@@ -1,5 +1,6 @@
 import { useRef, useState, useCallback, useEffect } from 'react'
 import { catmullRomPoint, easeInOutCubic } from '../utils/math3d'
+import { syncOrbitControls } from '../utils/orbitSync'
 import type { Vector3Like, CameraPath, Keyframe } from '../types'
 import type { Camera, OrbitControls } from 'gsplat'
 
@@ -85,17 +86,12 @@ export function useCameraPathPlayer(
     const SPLAT = splatModuleRef.current
     if (ctrl && cam && SPLAT) {
       const fwd = cam.forward
-      ctrl.setCameraTarget(new SPLAT.Vector3(
+      syncOrbitControls(ctrl, SPLAT,
         cam.position.x + fwd.x * 3,
         cam.position.y + fwd.y * 3,
         cam.position.z + fwd.z * 3,
-      ))
-      ctrl.dampening = 0
-      ctrl.update()
-      ctrl.dampening = 0.2
+      )
     } else if (ctrl) {
-      ctrl.dampening = 0
-      ctrl.update()
       ctrl.dampening = 0.2
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -111,8 +107,6 @@ export function useCameraPathPlayer(
   }, [])
 
   // ── The per-frame update function, called from Viewer3D render loop ──
-  const frameCounterRef = useRef(0)
-
   const updatePath = useCallback(() => {
     const path = activePathRef.current
     const cam = cameraRef.current
@@ -120,15 +114,6 @@ export function useCameraPathPlayer(
     if (!path || !cam || !SPLAT) return
     const kfs = path.keyframes
     if (kfs.length === 0) return
-
-    // Log first few frames for debugging
-    if (frameCounterRef.current < 5) {
-      console.log('[CameraPath] frame', frameCounterRef.current,
-        'state:', stateRef.current,
-        'segIdx:', internalRef.current.segmentIndex,
-        'segT:', internalRef.current.segmentT.toFixed(4),
-        'camPos(before):', cam.position.x.toFixed(3), cam.position.y.toFixed(3), cam.position.z.toFixed(3))
-    }
 
     if (kfs.length === 1) {
       const p = kfs[0].position
@@ -205,15 +190,6 @@ export function useCameraPathPlayer(
     cam.position = new SPLAT.Vector3(pos.x, pos.y, pos.z)
     cam.rotation = rot
 
-    // Post-update debug: did cam.position change after setter?
-    if (frameCounterRef.current < 5) {
-      console.log('[CameraPath] frame', frameCounterRef.current,
-        'computed:', pos.x.toFixed(3), pos.y.toFixed(3), pos.z.toFixed(3),
-        '| camPos(after):', cam.position.x.toFixed(3), cam.position.y.toFixed(3), cam.position.z.toFixed(3),
-        '| segT:', intern.segmentT.toFixed(4))
-      frameCounterRef.current++
-    }
-
     const overall = (i + t) / totalSegments
     setOverallProgress(overall)
   }, [cameraRef, splatModuleRef, stopInternal])
@@ -247,7 +223,6 @@ export function useCameraPathPlayer(
     }
 
     internalRef.current.lastTime = 0
-    frameCounterRef.current = 0
     setState('playing')
     isPathPlayingRef.current = true
     console.log('[CameraPath] play() started — keyframes:', path.keyframes.length, 'speed:', speedRef.current)

@@ -10,6 +10,7 @@ import CameraPathPanel from './editor/CameraPathPanel'
 import SplatLoadingScreen from './viewer/SplatLoadingScreen'
 import ShamianLoadingScreen from './viewer/ShamianLoadingScreen'
 import { worldToScreen, easeInOutCubic } from '../utils/math3d'
+import { syncOrbitControls } from '../utils/orbitSync'
 import {
   getHotspots, addHotspot, updateHotspot, deleteHotspot,
 } from '../store/modelStore'
@@ -140,10 +141,8 @@ export default function Viewer3D({ modelUrl, modelName, modelId, readOnly, downl
       } else {
         // Animation complete — sync OrbitControls and resume
         isFlyingRef.current = false
-        ctrl.setCameraTarget(new SPLAT.Vector3(endLookAt.x, endLookAt.y, endLookAt.z))
-        ctrl.dampening = 0
-        ctrl.update()
-        ctrl.dampening = 0.2
+        syncOrbitControls(ctrl, SPLAT,
+          endLookAt.x, endLookAt.y, endLookAt.z)
       }
     }
     flyAnimIdRef.current = requestAnimationFrame(tick)
@@ -253,14 +252,9 @@ export default function Viewer3D({ modelUrl, modelName, modelId, readOnly, downl
 
                   // Set position directly, let controls.update() handle rotation
                   camera.position = new SPLAT.Vector3(newX, newY, newZ)
-                  controls.setCameraTarget(
-                    new SPLAT.Vector3(newTx, newTy, newTz))
-
-                  // Zero-dampening update to sync internal spherical coords
                   const savedDamp = controls.dampening
-                  controls.dampening = 0
-                  controls.update()
-                  controls.dampening = savedDamp
+                  syncOrbitControls(controls, SPLAT,
+                    newTx, newTy, newTz, savedDamp)
                 }
               }
             }
