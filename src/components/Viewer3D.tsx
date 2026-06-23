@@ -44,7 +44,6 @@ export default function Viewer3D({ modelUrl, modelName, modelId, readOnly, downl
   const keysRef = useRef<Set<string>>(new Set())
   const lastTimeRef = useRef<number>(0)
   const flightSpeedRef = useRef(5) // base speed units/sec
-  const wasFlightActiveRef = useRef(false)
 
   // View state
   const [isLoading, setIsLoading] = useState(true)
@@ -252,40 +251,25 @@ export default function Viewer3D({ modelUrl, modelName, modelId, readOnly, downl
                   const newTy = newY + fwd.y * lookDist
                   const newTz = newZ + fwd.z * lookDist
 
-                  // Directly set camera position and rotation —
-                  // bypass controls' internal spherical coords
+                  // Set position directly, let controls.update() handle rotation
                   camera.position = new SPLAT.Vector3(newX, newY, newZ)
-                  const lookDir = new SPLAT.Vector3(
-                    newTx - newX, newTy - newY, newTz - newZ,
-                  )
-                  const lookLen = Math.sqrt(
-                    lookDir.x ** 2 + lookDir.y ** 2 + lookDir.z ** 2)
-                  if (lookLen > 0.0001) {
-                    camera.rotation = SPLAT.Quaternion.LookRotation(lookDir)
-                  }
-
-                  // Sync controls target for post-flight recovery
                   controls.setCameraTarget(
                     new SPLAT.Vector3(newTx, newTy, newTz))
+
+                  // Zero-dampening update to sync internal spherical coords
+                  const savedDamp = controls.dampening
+                  controls.dampening = 0
+                  controls.update()
+                  controls.dampening = savedDamp
                 }
               }
             }
-            wasFlightActiveRef.current = true
           }
           lastTimeRef.current = now
 
           // Normal orbit controls (no WASD active)
           if (!hasFlightKeys) {
-            if (wasFlightActiveRef.current) {
-              // Just released all flight keys — single zero-dampening sync
-              wasFlightActiveRef.current = false
-              const savedDamp = controls.dampening
-              controls.dampening = 0
-              controls.update()
-              controls.dampening = savedDamp
-            } else {
-              controls.update()
-            }
+            controls.update()
           }
         }
 
