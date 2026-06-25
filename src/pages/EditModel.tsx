@@ -4,6 +4,7 @@ import { motion } from 'framer-motion'
 import { getModelById, resolveModelUrl } from '../utils/models'
 import { updateCustomModel } from '../store/modelStore'
 import { storeThumbnail } from '../utils/fileStorage'
+import { showToast } from '../components/Toast'
 import Viewer3D from '../components/Viewer3D'
 import type { ModelMeta } from '../types'
 
@@ -14,6 +15,7 @@ export default function EditModel() {
   const [modelUrl, setModelUrl] = useState<string | null>(null)
   const [downloadProgress, setDownloadProgress] = useState(0)
   const [notFound, setNotFound] = useState(false)
+  const [loadError, setLoadError] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   const [downloading, setDownloading] = useState(false)
 
@@ -29,6 +31,7 @@ export default function EditModel() {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setLoading(true)
     setDownloading(false)
+    setLoadError(null)
     getModelById(modelId).then(async (m) => {
       if (!m) { setNotFound(true); setLoading(false); return }
       setModel(m)
@@ -39,8 +42,13 @@ export default function EditModel() {
       try {
         const url = await resolveModelUrl(m, setDownloadProgress)
         setModelUrl(url)
-      } catch { /* resolveModelUrl may fail for [local] files */ }
+      } catch (e: unknown) {
+        setLoadError(e instanceof Error ? e.message : '模型文件加载失败')
+      }
       setDownloading(false)
+    }).catch((e: unknown) => {
+      setLoadError(e instanceof Error ? e.message : '加载场景信息失败')
+      setLoading(false)
     })
   }, [modelId])
 
@@ -82,6 +90,7 @@ export default function EditModel() {
       setTimeout(() => setSaved(false), 2000)
     } catch (e: unknown) {
       console.error('Save failed:', e)
+      showToast('保存失败，请重试', 'error')
     } finally {
       setSaving(false)
     }
@@ -98,11 +107,14 @@ export default function EditModel() {
     )
   }
 
-  if (notFound || !model) {
+  if (notFound || loadError || !model) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-surface-0">
         <div className="text-center">
-          <h1 className="text-xl font-semibold text-text-2 mb-2">场景未找到</h1>
+          <h1 className="text-xl font-semibold text-text-2 mb-2">{notFound ? '场景未找到' : '加载失败'}</h1>
+          <p className="text-text-3/60 mb-6 max-w-sm mx-auto text-sm">
+            {notFound ? `未找到该场景` : loadError}
+          </p>
           <Link to="/admin" className="text-text-3/60 hover:text-text-2 transition-colors text-sm">← 返回管理</Link>
         </div>
       </div>

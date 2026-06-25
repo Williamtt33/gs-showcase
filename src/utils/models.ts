@@ -70,7 +70,7 @@ export async function resolveModelUrl(
 
   const buffer = await new Blob(chunks as BlobPart[]).arrayBuffer()
   // Cache in background — don't block loading
-  cacheModelFile(path, buffer).catch(() => {})
+  cacheModelFile(path, buffer).catch((e: unknown) => { console.warn('Failed to cache model file:', e) })
   return URL.createObjectURL(new Blob([buffer]))
 }
 

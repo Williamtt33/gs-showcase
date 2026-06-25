@@ -97,8 +97,11 @@ export default function Home() {
   // Gallery data
   const [models, setModels] = useState<ModelMeta[]>([])
   const [modelsLoading, setModelsLoading] = useState(true)
+  const [modelsError, setModelsError] = useState(false)
 
-  useEffect(() => {
+  const loadModels = () => {
+    setModelsError(false)
+    setModelsLoading(true)
     getModels()
       .then((all) => {
         // Filter for heritage-tagged or featured models; fallback to all
@@ -107,8 +110,14 @@ export default function Home() {
         )
         setModels(heritage.length > 0 ? heritage : all)
       })
-      .catch(() => {})
+      .catch(() => {
+        setModelsError(true)
+      })
       .finally(() => setModelsLoading(false))
+  }
+
+  useEffect(() => {
+    loadModels()
   }, [])
 
   return (
@@ -403,6 +412,15 @@ export default function Home() {
             {modelsLoading ? (
               <div className="flex items-center justify-center py-20">
                 <div className="w-8 h-8 border-2 border-white/[0.06] border-t-accent-1 rounded-full animate-spin" />
+              </div>
+            ) : modelsError ? (
+              <div className="text-center py-20">
+                <p className="text-text-3/50 text-sm mb-3">场景加载失败</p>
+                <button
+                  onClick={loadModels}
+                  className="px-5 py-2 rounded-xl border border-white/[0.08] text-text-3/60 hover:text-text-1 hover:bg-white/[0.04] transition-all text-sm cursor-pointer"
+                  style={{ cursor: 'pointer' }}
+                >重试</button>
               </div>
             ) : models.length === 0 ? (
               <div className="text-center py-20">

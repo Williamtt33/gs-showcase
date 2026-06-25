@@ -17,7 +17,8 @@ export function syncOrbitControls(
   controls.setCameraTarget(
     new splatModule.Vector3(targetX, targetY, targetZ),
   )
-  controls.dampening = 0
+  // dampening=1 means immediate sync (0 means "never update")
+  controls.dampening = 1
   controls.update()
   controls.dampening = restoreDampening
 }

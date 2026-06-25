@@ -250,23 +250,26 @@ export default function Viewer3D({ modelUrl, modelName, modelId, readOnly, downl
                   const newTy = newY + fwd.y * lookDist
                   const newTz = newZ + fwd.z * lookDist
 
-                  // Let controls.update() handle rotation (prevents ghosting),
-                  // then override position with our direct computation
+                  // Set position FIRST so setCameraTarget computes
+                  // correct spherical state from the actual position,
+                  // then controls.update() processes mouse rotation
+                  // in sync with the new position.
+                  camera.position = new SPLAT.Vector3(newX, newY, newZ)
                   controls.setCameraTarget(
                     new SPLAT.Vector3(newTx, newTy, newTz))
-                  const savedDamp = controls.dampening
-                  controls.dampening = 0
-                  controls.update()
-                  controls.dampening = savedDamp
-                  camera.position = new SPLAT.Vector3(newX, newY, newZ)
                 }
               }
             }
-          }
-          lastTimeRef.current = now
+            lastTimeRef.current = now
 
-          // Normal orbit controls (no WASD active)
-          if (!hasFlightKeys) {
+            // Always process mouse rotation during WASD flight.
+            // dampening=1 means immediate sync (0 means "never update").
+            const savedDamp = controls.dampening
+            controls.dampening = 1
+            controls.update()
+            controls.dampening = savedDamp
+          } else {
+            // Normal orbit controls (no WASD active)
             controls.update()
           }
         }
@@ -509,16 +512,34 @@ export default function Viewer3D({ modelUrl, modelName, modelId, readOnly, downl
             onClick={() => {
               const canvas = canvasRef.current
               if (!canvas) return
-              const dataUrl = canvas.toDataURL('image/jpeg', 0.85)
-              import('../utils/fileStorage').then(({ storeThumbnail }) => {
-                storeThumbnail(modelId, dataUrl).then(() => {
-                  const el = document.createElement('div')
-                  el.className = 'fixed top-4 left-1/2 -translate-x-1/2 glass rounded-xl px-4 py-2 text-xs text-accent-2 z-[100] animate-fade-in'
-                  el.textContent = '✅ 封面已保存'
-                  document.body.appendChild(el)
-                  setTimeout(() => el.remove(), 2000)
+              try {
+                const dataUrl = canvas.toDataURL('image/jpeg', 0.85)
+                import('../utils/fileStorage').then(({ storeThumbnail }) => {
+                  storeThumbnail(modelId, dataUrl).then(() => {
+                    const el = document.createElement('div')
+                    el.className = 'fixed top-4 left-1/2 -translate-x-1/2 glass rounded-xl px-4 py-2 text-xs text-accent-2 z-[100] animate-fade-in'
+                    el.textContent = '✅ 封面已保存'
+                    document.body.appendChild(el)
+                    setTimeout(() => el.remove(), 2000)
+                  }).catch((e: unknown) => {
+                    console.error('Screenshot save failed:', e)
+                    const el = document.createElement('div')
+                    el.className = 'fixed top-4 left-1/2 -translate-x-1/2 glass rounded-xl px-4 py-2 text-xs text-red-400 z-[100] animate-fade-in'
+                    el.textContent = '✕ 封面保存失败'
+                    document.body.appendChild(el)
+                    setTimeout(() => el.remove(), 2000)
+                  })
+                }).catch((e: unknown) => {
+                  console.error('Screenshot import failed:', e)
                 })
-              })
+              } catch (e: unknown) {
+                console.error('Screenshot capture failed:', e)
+                const el = document.createElement('div')
+                el.className = 'fixed top-4 left-1/2 -translate-x-1/2 glass rounded-xl px-4 py-2 text-xs text-red-400 z-[100] animate-fade-in'
+                el.textContent = '✕ 截图失败'
+                document.body.appendChild(el)
+                setTimeout(() => el.remove(), 2000)
+              }
             }}
             className="glass rounded-xl px-3 py-2.5 text-sm text-white/40 hover:text-white/70 transition-colors"
             title="截取当前画面作为封面"
