@@ -20,7 +20,7 @@ export default function NotFound() {
             className="px-6 py-3 rounded-xl bg-white/[0.04] border border-white/[0.08] text-text-2 text-sm hover:bg-white/[0.08] transition-all"
           >首页</Link>
           <Link to="/gallery"
-            className="px-6 py-3 rounded-xl bg-white text-black font-semibold text-sm hover:shadow-lg hover:shadow-white/10 transition-all"
+            className="px-6 py-3 rounded-xl btn-primary font-semibold text-sm"
           >场景画廊</Link>
         </div>
       </motion.div>

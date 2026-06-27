@@ -5,6 +5,7 @@ import Navbar from './components/Navbar'
 import Footer from './components/Footer'
 import Home from './pages/Home'
 import Gallery from './pages/GalleryPage'
+import About from './pages/AboutPage'
 import Viewer from './pages/Viewer'
 import Admin from './pages/Admin'
 import UploadModel from './pages/UploadModel'
@@ -18,6 +19,7 @@ function AnimatedRoutes() {
     <Routes location={location}>
       <Route path="/" element={<Home />} />
       <Route path="/gallery" element={<Gallery />} />
+      <Route path="/about" element={<About />} />
       <Route path="/viewer/:modelId" element={<Viewer />} />
       <Route path="/admin" element={<Admin />} />
       <Route path="/upload" element={<UploadModel />} />

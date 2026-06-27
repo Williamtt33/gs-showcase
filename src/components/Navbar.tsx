@@ -50,6 +50,7 @@ export default function Navbar() {
   const contentLinks = [
     { to: '/', label: t.nav.home },
     { to: '/gallery', label: t.nav.gallery },
+    { to: '/about', label: t.nav.about },
   ]
 
   return (
@@ -79,14 +80,13 @@ export default function Navbar() {
           style={{ flex: 1, justifyContent: 'flex-start' }}>
           <Link to="/" className="flex items-center gap-2 sm:gap-2.5 group shrink-0">
             <svg
-              className="w-5 h-5 sm:w-6 sm:h-6 transition-colors duration-500 shrink-0"
+              className="w-5 h-5 sm:w-6 sm:h-6 transition-colors duration-500 shrink-0 text-accent-1/70"
               viewBox="0 0 24 24"
               fill="none"
               stroke="currentColor"
               strokeWidth="1.2"
               strokeLinecap="round"
               strokeLinejoin="round"
-              style={{ color: 'rgba(212,165,116,0.7)' }}
             >
               <path d="M4 20 L4 10 Q8 4 12 10 L12 20" />
               <path d="M20 20 L20 10 Q16 4 12 10" />
@@ -94,10 +94,9 @@ export default function Navbar() {
               <path d="M17 20 L17 12 Q15 8 12 12" />
             </svg>
             <span
-              className="font-medium tracking-[0.05em] leading-none hidden sm:inline whitespace-nowrap"
+              className="font-medium tracking-[0.05em] leading-none hidden sm:inline whitespace-nowrap text-text-1/80"
               style={{
                 fontSize: scrolled ? 13 : 15,
-                color: 'rgba(232,224,213,0.8)',
               }}
             >
               墨韵
@@ -114,21 +113,14 @@ export default function Navbar() {
               <Link
                 key={link.to}
                 to={link.to}
-                className="relative px-3 sm:px-5 py-2 text-[13px] sm:text-[14px] font-medium tracking-[0.04em] whitespace-nowrap transition-all duration-300"
-                style={{
-                  color: isActive
-                    ? 'rgb(232,224,213)'
-                    : 'rgba(232,224,213,0.4)',
-                }}
+                className={`relative px-3 sm:px-5 py-2 text-[13px] sm:text-[14px] font-medium tracking-[0.04em] whitespace-nowrap transition-all duration-300 ${
+                  isActive ? 'text-text-1' : 'text-text-3/40'
+                }`}
               >
                 {isActive && (
                   <motion.span
                     layoutId="nav-active-dot"
-                    className="absolute -top-1 left-1/2 -translate-x-1/2 w-1.5 h-1.5 rounded-full"
-                    style={{
-                      background: '#d4a574',
-                      boxShadow: '0 0 6px rgba(212,165,116,0.5), 0 0 12px rgba(212,165,116,0.2)',
-                    }}
+                    className="absolute -top-1 left-1/2 -translate-x-1/2 w-1.5 h-1.5 rounded-full bg-accent-1 shadow-[0_0_6px_rgba(200,169,110,0.5),0_0_12px_rgba(200,169,110,0.2)]"
                     transition={{ type: 'spring', stiffness: 400, damping: 28 }}
                   />
                 )}
@@ -143,19 +135,15 @@ export default function Navbar() {
           style={{ flex: 1, justifyContent: 'flex-end', gap: 'clamp(16px, 3vw, 32px)' }}>
           <Link
             to="/admin"
-            className="text-[11px] sm:text-[12px] font-medium tracking-[0.04em] whitespace-nowrap transition-all duration-300"
-            style={{
-              color: location.pathname === '/admin'
-                ? 'rgba(232,224,213,0.6)'
-                : 'rgba(232,224,213,0.3)',
-            }}
+            className={`text-[11px] sm:text-[12px] font-medium tracking-[0.04em] whitespace-nowrap transition-all duration-300 ${
+              location.pathname === '/admin' ? 'text-text-2' : 'text-text-3/30'
+            }`}
           >
             {t.nav.admin}
           </Link>
           <button
             onClick={toggleLang}
-            className="text-[10px] sm:text-[11px] font-medium tracking-[0.08em] uppercase whitespace-nowrap transition-all duration-300 font-mono"
-            style={{ color: 'rgba(232,224,213,0.3)' }}
+            className="text-[10px] sm:text-[11px] font-medium tracking-[0.08em] uppercase whitespace-nowrap transition-all duration-300 font-mono text-text-3/30"
           >
             {lang === 'zh' ? 'EN' : '中'}
           </button>
@@ -181,7 +169,7 @@ export default function Navbar() {
       <div
         className="h-px w-full opacity-25"
         style={{
-          background: 'linear-gradient(90deg, transparent 0%, rgba(212,165,116,0.3) 20%, rgba(212,165,116,0.5) 50%, rgba(212,165,116,0.3) 80%, transparent 100%)',
+          background: 'linear-gradient(90deg, transparent 0%, rgba(200,169,110,0.3) 20%, rgba(200,169,110,0.5) 50%, rgba(200,169,110,0.3) 80%, transparent 100%)',
         }}
       />
 
@@ -203,7 +191,7 @@ export default function Navbar() {
                     }`}
                   >
                     {isActive && (
-                      <span className="w-1.5 h-1.5 rounded-full bg-accent-1/60 shadow-[0_0_6px_rgba(212,165,116,0.4)]" />
+                      <span className="w-1.5 h-1.5 rounded-full bg-accent-1/60 shadow-[0_0_6px_rgba(200,169,110,0.4)]" />
                     )}
                     <span>{link.label}</span>
                   </Link>

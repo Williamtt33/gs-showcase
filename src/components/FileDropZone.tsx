@@ -77,7 +77,7 @@ export default function FileDropZone({
   return (
     <div className={className}>
       <motion.div
-        animate={dragover ? { scale: 1.01, borderColor: 'rgba(212,165,116,0.45)' } : { scale: 1, borderColor: 'rgba(255,255,255,0.06)' }}
+        animate={dragover ? { scale: 1.01, borderColor: 'var(--color-accent-1, rgba(200,169,110,0.45))' } : { scale: 1, borderColor: 'rgba(51,46,42,0.08)' }}
         className={`relative rounded-2xl border-2 border-dashed p-5 sm:p-6 text-center cursor-pointer transition-colors duration-300 ${
           dragover
             ? 'border-accent-1/40 bg-accent-1/[0.06]'

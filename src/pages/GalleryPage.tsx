@@ -4,6 +4,7 @@ import { getModels } from '../utils/models'
 import type { ModelMeta } from '../types'
 import ModelCard from '../components/ModelCard'
 import { motion } from 'framer-motion'
+import PointCloudBackground from '../components/decor/PointCloudBackground'
 
 function ScrollRoller({ className = '' }: { className?: string }) {
   return (
@@ -34,6 +35,7 @@ export default function Gallery() {
       {/* ── Wall-like ambient background ── */}
       <div className="fixed inset-0 pointer-events-none z-0">
         <div className="absolute inset-0 bg-ink-wash opacity-40" />
+        <PointCloudBackground className="opacity-40" />
         {/* Subtle garden wall texture */}
         <div
           className="absolute inset-0 opacity-[0.02]"
@@ -69,9 +71,9 @@ export default function Gallery() {
               <div
                 className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full mb-8 text-[11px] font-medium tracking-[0.05em]"
                 style={{
-                  background: 'rgba(24,23,20,0.6)',
-                  border: '1px solid rgba(163,181,166,0.08)',
-                  color: '#a3b5a6',
+                  background: 'rgba(255,255,255,0.8)',
+                  border: '1px solid rgba(141,163,145,0.12)',
+                  color: '#8DA391',
                 }}
               >
                 <span className="w-1.5 h-1.5 rounded-full bg-accent-2/60 shadow-[0_0_6px_rgba(163,181,166,0.3)]" />
@@ -116,8 +118,8 @@ export default function Gallery() {
                 <div
                   className="inline-block px-6 py-4 rounded-2xl text-center"
                   style={{
-                    background: 'rgba(24,23,20,0.5)',
-                    border: '1px dashed rgba(232,224,213,0.06)',
+                    background: 'rgba(255,255,255,0.7)',
+                    border: '1px dashed rgba(51,46,42,0.08)',
                   }}
                 >
                   <p className="text-text-3/50 text-[14px] leading-relaxed">

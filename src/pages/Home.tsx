@@ -1,11 +1,13 @@
 import { useRef, useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
+import { useI18n } from '../i18n/I18nContext'
 import { motion, useScroll, useTransform } from 'framer-motion'
 import { getModels } from '../utils/models'
 import ModelCard from '../components/ModelCard'
 import HeritageTimeline from '../components/HeritageTimeline'
 import BeforeAfterCard from '../components/BeforeAfterCard'
 import { DriftingLinework } from '../components/decor/ArchitecturalLinework'
+import PointCloudBackground from '../components/decor/PointCloudBackground'
 import {
   TIMELINE_EVENTS,
   PRESERVATION_BUILDINGS,
@@ -74,6 +76,7 @@ function SealStamp({ char = '印', className = '' }: { char?: string; className?
 /* ── Main Page ── */
 
 export default function Home() {
+  const { t } = useI18n()
   const containerRef = useRef<HTMLDivElement>(null)
 
   const { scrollYProgress } = useScroll({
@@ -126,9 +129,11 @@ export default function Home() {
       {/* ── Fixed background decorations ── */}
       <div className="fixed inset-0 pointer-events-none z-0">
         {/* Manuscript grid — subtle */}
-        <div className="absolute inset-0 bg-manuscript-grid opacity-30" />
+        <div className="absolute inset-0 bg-manuscript-grid opacity-20" />
         {/* Architectural linework — 界画线描 */}
-        <DriftingLinework className="absolute inset-0 opacity-50" />
+        <DriftingLinework className="absolute inset-0 opacity-30" />
+        {/* 3D Point cloud — 点云微动效 */}
+        <PointCloudBackground className="opacity-60" />
         {/* Fog atmosphere */}
         <FogAtmosphere />
 
@@ -139,7 +144,7 @@ export default function Home() {
           transition={{ duration: 8, repeat: Infinity, ease: 'easeInOut' }}
           style={{
             width: 'min(700px, 55vw)', height: 'min(700px, 55vw)',
-            background: 'radial-gradient(circle, rgba(212,165,116,0.15) 0%, rgba(163,181,166,0.05) 30%, transparent 70%)',
+            background: 'radial-gradient(circle, rgba(200,169,110,0.08) 0%, rgba(141,163,145,0.04) 30%, transparent 70%)',
             top: useTransform(scrollYProgress, [0, 1], ['-15%', '20%']),
             left: '25%',
             willChange: 'transform',
@@ -151,7 +156,7 @@ export default function Home() {
           transition={{ duration: 10, repeat: Infinity, ease: 'easeInOut', delay: 3 }}
           style={{
             width: 'min(500px, 38vw)', height: 'min(500px, 38vw)',
-            background: 'radial-gradient(circle, rgba(200,75,49,0.06) 0%, rgba(212,165,116,0.04) 40%, transparent 70%)',
+            background: 'radial-gradient(circle, rgba(201,79,42,0.04) 0%, rgba(200,169,110,0.03) 40%, transparent 70%)',
             top: useTransform(scrollYProgress, [0, 1], ['45%', '70%']),
             right: '12%',
             willChange: 'transform',
@@ -198,12 +203,21 @@ export default function Home() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.8, delay: 0.1 }}
             >
-              <div className="inline-flex flex-wrap items-center justify-center gap-2 sm:gap-3 px-3.5 sm:px-5 py-2 sm:py-2.5 rounded-full glass-light text-[11px] sm:text-[13px] font-medium text-text-2 tracking-[0.04em] sm:tracking-[0.06em] mb-10 sm:mb-12 max-w-[92vw]">
-                <span className="w-1.5 h-1.5 rounded-full bg-accent-3/70 shadow-[0_0_8px_rgba(200,75,49,0.4)] animate-pulse shrink-0" />
+              <div
+                className="inline-flex flex-wrap items-center justify-center gap-2 sm:gap-3 px-3.5 sm:px-5 py-2 sm:py-2.5 rounded-full text-[11px] sm:text-[13px] font-medium tracking-[0.04em] sm:tracking-[0.06em] mb-10 sm:mb-12 max-w-[92vw]"
+                style={{
+                  background: 'rgba(255,255,255,0.5)',
+                  backdropFilter: 'blur(12px)',
+                  WebkitBackdropFilter: 'blur(12px)',
+                  border: '1px solid rgba(200,169,110,0.15)',
+                  color: '#4A4744',
+                }}
+              >
+                <span className="w-1.5 h-1.5 rounded-full bg-accent-2/60 shadow-[0_0_6px_rgba(141,163,145,0.3)] animate-pulse shrink-0" />
                 <span className="whitespace-nowrap">历史文化街区</span>
-                <span className="text-text-3/25 select-none">·</span>
+                <span className="opacity-20 select-none">·</span>
                 <span className="whitespace-nowrap">数字化保护</span>
-                <span className="text-text-3/25 select-none">·</span>
+                <span className="opacity-20 select-none">·</span>
                 <span className="whitespace-nowrap">三维重建</span>
               </div>
             </motion.div>
@@ -231,23 +245,32 @@ export default function Home() {
               initial={{ opacity: 0, y: 30 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.9, delay: 0.5 }}
-              className="flex flex-col sm:flex-row items-center justify-center gap-6 sm:gap-10"
+              className="flex flex-col sm:flex-row items-center justify-center gap-5 sm:gap-12"
             >
               <Link
                 to="/viewer/shamian"
-                className="btn-outline-gold"
+                className="btn-primary text-[15px] px-8 py-4 rounded-xl font-semibold tracking-[0.04em]"
                 style={{ cursor: 'pointer' }}
               >
                 <span className="mr-2">◇</span>
                 探索场景
               </Link>
-              <Link
-                to="/upload"
-                className="btn-text-ghost"
-                style={{ cursor: 'pointer' }}
-              >
-                上传场景
-              </Link>
+              <div className="flex items-center gap-6 sm:gap-8">
+                <Link
+                  to="/gallery"
+                  className="text-[13px] text-text-3/50 hover:text-text-1 transition-colors duration-300"
+                  style={{ cursor: 'pointer' }}
+                >
+                  {t.nav.gallery}
+                </Link>
+                <Link
+                  to="/upload"
+                  className="text-[13px] text-text-3/50 hover:text-text-1 transition-colors duration-300"
+                  style={{ cursor: 'pointer' }}
+                >
+                  上传场景
+                </Link>
+              </div>
             </motion.div>
           </motion.div>
 

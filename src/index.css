@@ -1,44 +1,56 @@
 @import "tailwindcss";
 
 @theme {
-  /* ── Ink-wash backgrounds — warm stone, not cold ── */
-  --color-surface-0: #1A1815;
-  --color-surface-1: #1e1c19;
-  --color-surface-2: #22201c;
-  --color-surface-3: #282621;
+  /* ── Rice-paper surfaces — warm, bright, breathable ── */
+  --color-surface-0: #F8F5F0;    /* 宣纸米白 — page background */
+  --color-surface-1: #F2EFE9;    /* slightly deeper paper */
+  --color-surface-2: #EBE6DD;    /* card surface */
+  --color-surface-3: #E0D9CD;    /* deepest paper / active */
 
-  /* ── Subtle warm borders ── */
-  --color-border-1: #1c1a17;
-  --color-border-2: #2a2723;
+  /* ── Warm fiber-like borders ── */
+  --color-border-1: #E0D9CD;     /* subtle paper-fiber border */
+  --color-border-2: #CDC4B3;     /* slightly more visible */
 
-  /* ── Mineral-pigment accents, used with restraint ── */
-  --color-accent-1: #d4a574;    /* 赭石金 — primary CTA, highlights */
-  --color-accent-2: #a3b5a6;    /* 石绿 — secondary, success, natural */
-  --color-accent-3: #c84b31;    /* 朱砂 — sparingly: delete, warnings, rare emphasis */
+  /* ── Mineral-pigment accents — used with restraint ── */
+  --color-accent-1: #C8A96E;     /* 鎏金色 — gold for buttons, highlights */
+  --color-accent-2: #8DA391;     /* 石绿 — success, natural, secondary */
+  --color-accent-3: #C94F2A;     /* 朱砂红 — sparingly: delete, warnings */
 
-  /* ── Rice-paper whites to ink grays ── */
-  --color-text-1: #e8e0d5;      /* 宣纸白 — primary text */
-  --color-text-2: #a09888;      /* 暖灰 — secondary text */
-  --color-text-3: #6b6358;      /* 墨灰 — muted/tertiary text */
+  /* ── Ink-to-stone text scale ── */
+  --color-text-1: #332E2A;       /* 深墨褐 — primary text */
+  --color-text-2: #4A4744;       /* 深灰褐 — body/secondary text */
+  --color-text-3: #8B8782;       /* 中灰 — muted/tertiary text */
 }
 
 * { margin: 0; padding: 0; box-sizing: border-box; }
 
 html {
   scroll-behavior: smooth;
-  background: #1A1815;
-  color: #e8e0d5;
+  background: #F8F5F0;
+  color: #332E2A;
 }
 
 body {
-  font-family: 'Inter', 'Noto Sans SC', system-ui, -apple-system, sans-serif;
+  font-family: 'PingFang SC', 'Microsoft YaHei', 'Noto Sans SC', 'Inter', system-ui, -apple-system, sans-serif;
   overflow-x: hidden;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   text-rendering: optimizeLegibility;
-  line-height: 1.75;
-  /* Promote to own compositing layer for smooth scrolling */
+  line-height: 1.8;
   isolation: isolate;
+}
+
+/* ── Rice paper texture — subtle SVG noise overlay ── */
+body::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  opacity: 0.04;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  background-repeat: repeat;
+  background-size: 256px 256px;
 }
 
 /* ── Performance: hint compositor for scroll-driven animated sections ── */
@@ -48,48 +60,43 @@ body {
   contain-intrinsic-size: auto 100vh;
 }
 
-#root { min-height: 100vh; }
+#root { min-height: 100vh; position: relative; z-index: 1; }
 
-/* ── Scrollbar — warm ink tones ── */
+/* ── Scrollbar — warm stone tones ── */
 ::-webkit-scrollbar { width: 4px; }
 ::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: #2a2723; border-radius: 3px; }
-::-webkit-scrollbar-thumb:hover { background: #3d3833; }
+::-webkit-scrollbar-thumb { background: #D0C9BC; border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: #B8AFA0; }
 
 /* ── Selection ── */
 ::selection {
-  background: rgba(212, 165, 116, 0.2);
-  color: #e8e0d5;
+  background: rgba(200, 169, 110, 0.2);
+  color: #332E2A;
 }
 
-/* ── Ink-paper card surfaces — replaces .glass ── */
+/* ── Paper cards — light, soft shadow, breathing room ── */
 .ink-card {
-  background: linear-gradient(135deg,
-    rgba(18, 17, 15, 0.92) 0%,
-    rgba(18, 17, 15, 0.85) 100%);
-  backdrop-filter: blur(24px) saturate(150%);
-  -webkit-backdrop-filter: blur(24px) saturate(150%);
-  border: 1px solid rgba(232, 224, 213, 0.04);
-  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.3);
+  background: #FFFFFF;
+  border: 1px solid rgba(0, 0, 0, 0.05);
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.04);
 }
 .ink-card-light {
-  background: linear-gradient(135deg,
-    rgba(24, 23, 20, 0.88) 0%,
-    rgba(24, 23, 20, 0.78) 100%);
-  backdrop-filter: blur(16px) saturate(130%);
-  -webkit-backdrop-filter: blur(16px) saturate(130%);
-  border: 1px solid rgba(232, 224, 213, 0.03);
+  background: rgba(255, 255, 255, 0.75);
+  border: 1px solid rgba(0, 0, 0, 0.04);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.03);
 }
 
-/* ── Keep .glass as alias for backward compat ── */
+/* ── Viewer glass — kept dark for 3D overlay readability ── */
 .glass {
   background: linear-gradient(135deg,
-    rgba(18, 17, 15, 0.92) 0%,
-    rgba(18, 17, 15, 0.85) 100%);
-  backdrop-filter: blur(24px) saturate(150%);
-  -webkit-backdrop-filter: blur(24px) saturate(150%);
-  border: 1px solid rgba(232, 224, 213, 0.04);
-  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.3);
+    rgba(18, 17, 15, 0.88) 0%,
+    rgba(18, 17, 15, 0.78) 100%);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(200, 169, 110, 0.08);
+  box-shadow:
+    0 8px 32px rgba(0, 0, 0, 0.45),
+    0 0 0 1px rgba(200, 169, 110, 0.03) inset;
 }
 .glass-light {
   background: linear-gradient(135deg,
@@ -97,22 +104,22 @@ body {
     rgba(24, 23, 20, 0.78) 100%);
   backdrop-filter: blur(16px) saturate(130%);
   -webkit-backdrop-filter: blur(16px) saturate(130%);
-  border: 1px solid rgba(232, 224, 213, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.03);
 }
 
-/* ── Ink-wash ambient glow — replaces .bg-mesh ── */
+/* ── Ambient page glow — warm mineral tints on rice paper ── */
 .bg-ink-wash, .bg-mesh {
   background-image:
-    radial-gradient(ellipse at 25% 40%, rgba(212, 165, 116, 0.04) 0%, transparent 50%),
-    radial-gradient(ellipse at 75% 60%, rgba(163, 181, 166, 0.03) 0%, transparent 50%),
-    radial-gradient(ellipse at 50% 30%, rgba(200, 75, 49, 0.015) 0%, transparent 40%);
+    radial-gradient(ellipse at 25% 40%, rgba(200, 169, 110, 0.06) 0%, transparent 50%),
+    radial-gradient(ellipse at 75% 60%, rgba(141, 163, 145, 0.04) 0%, transparent 50%),
+    radial-gradient(ellipse at 50% 30%, rgba(201, 79, 42, 0.02) 0%, transparent 40%);
 }
 
-/* ── Manuscript grid — subtle ── */
+/* ── Manuscript grid — subtle ink-on-paper lines ── */
 .bg-manuscript-grid, .bg-grid-subtle {
   background-image:
-    linear-gradient(rgba(232,224,213,0.018) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(232,224,213,0.012) 1px, transparent 1px);
+    linear-gradient(rgba(51,46,42,0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(51,46,42,0.02) 1px, transparent 1px);
   background-size: 100px 100px;
 }
 
@@ -126,21 +133,21 @@ canvas.gsplat-canvas {
 
 /* ── Typography helpers ── */
 .font-display {
-  font-family: 'Crimson Pro', 'Noto Serif SC', 'STSong', 'SimSun', serif;
+  font-family: 'Noto Serif SC', 'STSong', 'SimSun', serif;
   font-weight: 600;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.08em;
 }
-.font-mono { font-family: 'JetBrains Mono', ui-monospace, monospace; }
+.font-mono { font-family: 'JetBrains Mono', 'Consolas', monospace; }
 
-/* ── Warm gradient text — replaces violet-green gradient ── */
+/* ── Gradient text — deep ink to warm gold ── */
 .gradient-text {
-  background: linear-gradient(135deg, #e8d5c4 0%, #d4a574 50%, #a3b5a6 100%);
+  background: linear-gradient(135deg, #332E2A 0%, #B28D55 50%, #C8A96E 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
 }
 
-/* ── Entrance animations — slightly slower, more deliberate ── */
+/* ── Entrance animations ── */
 @keyframes fade-up {
   from { opacity: 0; transform: translateY(18px); }
   to { opacity: 1; transform: translateY(0); }
@@ -157,7 +164,7 @@ canvas.gsplat-canvas {
 .animate-fade-in { animation: fade-in 0.6s ease-out both; }
 .animate-scale-in { animation: scale-in 0.5s ease-out both; }
 
-/* ── Stagger children — slower rhythm ── */
+/* ── Stagger children ── */
 .stagger > * {
   opacity: 0;
   animation: fade-up 0.8s ease-out forwards;
@@ -169,21 +176,23 @@ canvas.gsplat-canvas {
 .stagger > *:nth-child(5) { animation-delay: 0.30s; }
 .stagger > *:nth-child(6) { animation-delay: 0.36s; }
 
-/* ── Glow effects — warm tones ── */
+/* ── Glow effects — warm, subtle ── */
 .glow-violet {
-  box-shadow: 0 0 60px -10px rgba(212, 165, 116, 0.12),
-              0 0 120px -20px rgba(212, 165, 116, 0.06);
+  box-shadow: 0 0 60px -10px rgba(200, 169, 110, 0.08),
+              0 0 120px -20px rgba(200, 169, 110, 0.04);
 }
 .glow-green {
-  box-shadow: 0 0 40px -10px rgba(163, 181, 166, 0.1);
+  box-shadow: 0 0 40px -10px rgba(141, 163, 145, 0.08);
 }
 
-/* ── Refined buttons ── */
+/* ── Buttons ── */
+
+/* Primary: deep ink on rice-paper, gold shimmer on hover */
 .btn-primary {
   display: inline-flex; align-items: center; justify-content: center;
   padding: 0.625rem 1.5rem;
   border-radius: 0.75rem;
-  background: #e8e0d5; color: #0a0908;
+  background: #332E2A; color: #F8F5F0;
   font-size: 0.8125rem; font-weight: 600; letter-spacing: 0.01em;
   transition: all 0.4s cubic-bezier(0.22, 1, 0.36, 1);
   cursor: pointer; border: none; outline: none;
@@ -191,36 +200,38 @@ canvas.gsplat-canvas {
 }
 .btn-primary::after {
   content: ''; position: absolute; inset: 0;
-  background: linear-gradient(135deg, rgba(212,165,116,0.3) 0%, rgba(163,181,166,0.2) 100%);
+  background: linear-gradient(135deg, rgba(200,169,110,0.3) 0%, rgba(141,163,145,0.2) 100%);
   opacity: 0; transition: opacity 0.4s;
 }
 .btn-primary:hover::after { opacity: 1; }
 .btn-primary:hover {
   transform: translateY(-1px);
-  box-shadow: 0 8px 32px rgba(212, 165, 116, 0.15), 0 2px 8px rgba(0,0,0,0.3);
+  box-shadow: 0 8px 32px rgba(51, 46, 42, 0.12), 0 2px 8px rgba(0,0,0,0.08);
 }
 .btn-primary:active { transform: translateY(0) scale(0.985); }
 .btn-primary:disabled { opacity: 0.35; cursor: not-allowed; pointer-events: none; }
 
+/* Ghost secondary: subtle border on light bg */
 .btn-ghost {
   display: inline-flex; align-items: center; justify-content: center;
   padding: 0.5rem 1rem;
   border-radius: 0.75rem;
-  background: rgba(232, 224, 213, 0.03);
-  border: 1px solid rgba(232, 224, 213, 0.06);
+  background: rgba(51, 46, 42, 0.03);
+  border: 1px solid rgba(51, 46, 42, 0.08);
   color: var(--color-text-2);
   font-size: 0.75rem; font-weight: 500;
   transition: all 0.35s cubic-bezier(0.22, 1, 0.36, 1);
   cursor: pointer; outline: none;
 }
 .btn-ghost:hover {
-  background: rgba(232, 224, 213, 0.06);
-  border-color: rgba(232, 224, 213, 0.1);
+  background: rgba(51, 46, 42, 0.06);
+  border-color: rgba(51, 46, 42, 0.14);
   color: var(--color-text-1);
   transform: translateY(-1px);
 }
 .btn-ghost:active { transform: translateY(0) scale(0.985); }
 
+/* Icon button */
 .btn-icon {
   display: inline-flex; align-items: center; justify-content: center;
   width: 2.25rem; height: 2.25rem;
@@ -231,8 +242,8 @@ canvas.gsplat-canvas {
   transition: all 0.3s cubic-bezier(0.22, 1, 0.36, 1);
 }
 .btn-icon:hover {
-  background: rgba(232, 224, 213, 0.05);
-  border-color: rgba(232, 224, 213, 0.06);
+  background: rgba(51, 46, 42, 0.04);
+  border-color: rgba(51, 46, 42, 0.08);
   color: var(--color-text-1);
 }
 
@@ -261,12 +272,12 @@ canvas.gsplat-canvas {
 /* ── Heritage page: timeline decoration ── */
 .heritage-overlay {
   background: linear-gradient(to bottom,
-    rgba(10,9,8,0.3) 0%,
-    rgba(10,9,8,0.6) 60%,
-    rgba(10,9,8,0.9) 100%);
+    rgba(248,245,240,0.3) 0%,
+    rgba(248,245,240,0.6) 60%,
+    rgba(248,245,240,0.9) 100%);
 }
 
-/* ── Dynamic viewport units (accounts for browser chrome / OS scaling) ── */
+/* ── Dynamic viewport units ── */
 .h-dyn { height: 100vh; height: 100dvh; }
 .min-h-dyn { min-height: 100vh; min-height: 100dvh; }
 .w-dyn { width: 100vw; width: 100dvw; }
@@ -274,31 +285,31 @@ canvas.gsplat-canvas {
 /* ── Atmosphere: slow-drifting fog particles ── */
 @keyframes drift-fog {
   0% { transform: translate(0, 0) scale(1); opacity: 0; }
-  15% { opacity: 0.7; }
-  50% { opacity: 0.4; }
-  85% { opacity: 0.7; }
+  15% { opacity: 0.5; }
+  50% { opacity: 0.25; }
+  85% { opacity: 0.5; }
   100% { transform: translate(var(--drift-x, 10px), var(--drift-y, -5px)) scale(1.05); opacity: 0; }
 }
 .fog-particle {
   position: absolute;
   border-radius: 50%;
-  background: radial-gradient(circle, rgba(212,165,116,0.06) 0%, transparent 70%);
+  background: radial-gradient(circle, rgba(200,169,110,0.04) 0%, transparent 70%);
   animation: drift-fog 30s ease-in-out infinite;
   pointer-events: none;
 }
 
-/* ── Frosted navbar ── */
+/* ── Frosted navbar — rice-paper white, transparent ── */
 .navbar-glass {
-  background: rgba(26, 24, 21, 0.85);
+  background: rgba(248, 245, 240, 0.88);
   backdrop-filter: blur(20px) saturate(120%);
   -webkit-backdrop-filter: blur(20px) saturate(120%);
-  border-bottom: 1px solid rgba(232, 224, 213, 0.08);
+  border-bottom: 1px solid rgba(51, 46, 42, 0.06);
   transition: background 0.6s ease, border-color 0.6s ease;
 }
 .navbar-glass:hover,
 .navbar-glass:focus-within {
-  background: rgba(26, 24, 21, 0.92);
-  border-bottom-color: rgba(232, 224, 213, 0.16);
+  background: rgba(248, 245, 240, 0.94);
+  border-bottom-color: rgba(51, 46, 42, 0.12);
 }
 
 /* ── Gold outline button — primary CTA ── */
@@ -307,8 +318,8 @@ canvas.gsplat-canvas {
   padding: 0.75rem 2.5rem;
   border-radius: 0.75rem;
   background: transparent;
-  border: 1px solid rgba(212, 165, 116, 0.45);
-  color: #d4a574;
+  border: 1px solid rgba(200, 169, 110, 0.45);
+  color: #9B7D4C;
   font-size: 0.9375rem; font-weight: 500;
   letter-spacing: 0.04em;
   cursor: pointer;
@@ -319,7 +330,7 @@ canvas.gsplat-canvas {
   content: '';
   position: absolute; inset: 0;
   background: linear-gradient(90deg,
-    transparent 0%, rgba(212,165,116,0.08) 50%, transparent 100%);
+    transparent 0%, rgba(200,169,110,0.08) 50%, transparent 100%);
   transform: translateX(-100%);
   transition: transform 0.6s ease;
 }
@@ -327,8 +338,8 @@ canvas.gsplat-canvas {
   transform: translateX(100%);
 }
 .btn-outline-gold:hover {
-  border-color: rgba(212, 165, 116, 0.8);
-  box-shadow: 0 0 40px -10px rgba(212,165,116,0.15), inset 0 0 30px -10px rgba(212,165,116,0.04);
+  border-color: rgba(200, 169, 110, 0.8);
+  box-shadow: 0 0 40px -10px rgba(200,169,110,0.2), inset 0 0 30px -10px rgba(200,169,110,0.04);
   transform: translateY(-1px);
 }
 .btn-outline-gold:active {
@@ -341,17 +352,16 @@ canvas.gsplat-canvas {
   padding: 0.75rem 2.5rem;
   border-radius: 0.75rem;
   background: transparent; border: none;
-  color: #a09888;
+  color: #8B8782;
   font-size: 0.9375rem; font-weight: 400;
   letter-spacing: 0.03em;
   cursor: pointer;
   transition: all 0.35s ease;
 }
 .btn-text-ghost:hover {
-  color: #e8e0d5;
+  color: #332E2A;
   transform: translateY(-1px);
 }
 .btn-text-ghost:active {
   transform: translateY(0) scale(0.985);
 }
-

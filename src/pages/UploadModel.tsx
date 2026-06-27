@@ -1,5 +1,6 @@
 import { useState, useRef, useCallback } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
+import { useI18n } from '../i18n/I18nContext'
 import { motion } from 'framer-motion'
 import { addCustomModel, generateId } from '../store/modelStore'
 import { storeSplatFileWithProgress, storeThumbnail } from '../utils/fileStorage'
@@ -10,6 +11,7 @@ import type { ModelMeta } from '../types'
 import FileDropZone from '../components/FileDropZone'
 
 export default function UploadModel() {
+  const { t } = useI18n()
   const navigate = useNavigate()
 
   const [name, setName] = useState('')
@@ -158,9 +160,18 @@ export default function UploadModel() {
           <h1 className="text-3xl font-display tracking-tight mb-2">
             <span className="gradient-text">上传新场景</span>
           </h1>
-          <p className="text-text-3 text-[14px] mb-12 leading-relaxed">
+          <p className="text-text-3 text-[14px] mb-4 leading-relaxed">
             上传 3D Gaussian Splatting 模型文件，支持 .ply / .sog / .splat 格式
           </p>
+          <details className="mb-12 group">
+            <summary className="text-[12px] text-text-3/50 hover:text-text-3/80 cursor-pointer transition-colors select-none">
+              {t.upload.whatAreFormats}
+            </summary>
+            <div className="mt-3 ink-card-light rounded-xl px-4 py-3 text-[12px] text-text-3/60 leading-relaxed space-y-2">
+              <p>{t.upload.formatDesc1}</p>
+              <p>{t.upload.formatDesc2}</p>
+            </div>
+          </details>
         </motion.div>
 
         <motion.div
@@ -345,7 +356,7 @@ export default function UploadModel() {
               <button
                 onClick={handleSave}
                 disabled={!modelFile || validating}
-                className="flex-1 py-3.5 px-6 rounded-xl bg-[#e8e0d5] text-[#0a0908] text-[15px] font-semibold cursor-pointer border-none outline-none hover:shadow-lg hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.985] transition-all duration-300 disabled:opacity-35 disabled:cursor-not-allowed"
+                className="flex-1 py-3.5 px-6 rounded-xl btn-primary text-[15px] font-semibold cursor-pointer border-none outline-none hover:shadow-lg hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.985] transition-all duration-300 disabled:opacity-35 disabled:cursor-not-allowed"
                 style={{ cursor: !modelFile || validating ? 'not-allowed' : 'pointer' }}
               >
                 上传场景

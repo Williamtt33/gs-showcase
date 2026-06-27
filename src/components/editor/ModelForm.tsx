@@ -198,7 +198,7 @@ export default function ModelForm({ isOpen, editingModel, onSaved, onClose }: Pr
           <div className="flex items-center gap-3 mt-6">
             <button
               onClick={handleSave} disabled={uploading}
-              className="flex-1 py-3 px-6 rounded-xl bg-[#e8e0d5] text-[#0a0908] text-[14px] font-semibold cursor-pointer border-none outline-none hover:shadow-lg hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.985] transition-all duration-300 disabled:opacity-35 disabled:cursor-not-allowed"
+              className="flex-1 py-3 px-6 rounded-xl btn-primary text-[14px] font-semibold cursor-pointer border-none outline-none hover:shadow-lg hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.985] transition-all duration-300 disabled:opacity-35 disabled:cursor-not-allowed"
               style={{ cursor: uploading ? 'not-allowed' : 'pointer' }}
             >{uploading ? '保存中...' : editingModel ? '保存修改' : '添加场景'}</button>
             <button onClick={onClose}

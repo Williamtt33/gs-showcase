@@ -44,7 +44,24 @@ export default function Viewer3D({ modelUrl, modelName, modelId, readOnly, downl
   // WASD flight control refs
   const keysRef = useRef<Set<string>>(new Set())
   const lastTimeRef = useRef<number>(0)
-  const flightSpeedRef = useRef(25) // base speed units/sec
+  const SPEED_KEY = 'gs_flight_speed'
+  const SPEED_MIN = 5
+  const SPEED_MAX = 150
+  const [flightSpeed, setFlightSpeed] = useState(() => {
+    try {
+      const stored = localStorage.getItem(SPEED_KEY)
+      if (stored) {
+        const v = parseInt(stored, 10)
+        return v >= SPEED_MIN && v <= SPEED_MAX ? v : 25
+      }
+      return 25
+    } catch { return 25 }
+  })
+  const flightSpeedRef = useRef(flightSpeed)
+  useEffect(() => {
+    flightSpeedRef.current = flightSpeed
+    localStorage.setItem(SPEED_KEY, String(flightSpeed))
+  }, [flightSpeed])
 
   // View state
   const [isLoading, setIsLoading] = useState(true)
@@ -78,6 +95,7 @@ export default function Viewer3D({ modelUrl, modelName, modelId, readOnly, downl
   const isLoadingRef = useRef(true)
   const selectedHotspotRef = useRef<Hotspot | null>(null)
   const [showPerf, setShowPerf] = useState(false)
+  const [isFirstVisit, setIsFirstVisit] = useState(false)
 
   // Fly-to animation refs
   const flyAnimIdRef = useRef<number>(0)
@@ -166,6 +184,16 @@ export default function Viewer3D({ modelUrl, modelName, modelId, readOnly, downl
   useEffect(() => { hotspotsRef.current = hotspots }, [hotspots])
   useEffect(() => { isLoadingRef.current = isLoading }, [isLoading])
   useEffect(() => { selectedHotspotRef.current = selectedHotspot }, [selectedHotspot])
+
+  // First-visit: auto-dim the controls help after 8 seconds
+  useEffect(() => {
+    if (!isFirstVisit) return
+    const timer = setTimeout(() => {
+      setIsFirstVisit(false)
+      localStorage.setItem('gs_viewer_visited', '1')
+    }, 8000)
+    return () => clearTimeout(timer)
+  }, [isFirstVisit])
 
   // --- Init & Load ---
   const initAndLoad = useCallback(async () => {
@@ -354,6 +382,12 @@ export default function Viewer3D({ modelUrl, modelName, modelId, readOnly, downl
 
       setIsLoading(false)
 
+      // First-visit hint: show controls fully for 8 seconds
+      if (!localStorage.getItem('gs_viewer_visited')) {
+        setIsFirstVisit(true)
+        setShowControls(true)
+      }
+
       const onKeyDown = (e: KeyboardEvent) => {
         // Track WASD/QE flight keys (always track, to avoid stuck keys)
         if (['KeyW','KeyA','KeyS','KeyD','KeyQ','KeyE'].includes(e.code)) {
@@ -500,50 +534,83 @@ export default function Viewer3D({ modelUrl, modelName, modelId, readOnly, downl
 
       {/* Top toolbar */}
       {!isLoading && !error && (
-        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="absolute top-4 left-4 flex items-center gap-2 z-10 flex-wrap">
-          {/* Back to gallery */}
-          <Link to="/gallery" className="glass rounded-xl px-3 py-2.5 text-sm text-white/50 hover:text-white/80 transition-colors">←</Link>
+        <motion.div
+          initial={{ opacity: 0, y: -8 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, delay: 0.8, ease: [0.22, 1, 0.36, 1] }}
+          className="absolute top-4 left-4 flex items-center gap-2 z-10 flex-wrap">
+          {/* Unified glass bar: back | model name | speed slider | screenshot */}
+          <div className="glass rounded-xl flex items-center gap-0 px-1.5 py-1.5 group/toolbar">
+            {/* Back */}
+            <Link to="/gallery" className="px-2.5 py-1.5 text-sm text-white/40 hover:text-white/70 transition-colors rounded-lg hover:bg-white/[0.03]" title="返回画廊">←</Link>
+            <span className="w-px h-4 bg-[rgba(199,185,156,0.10)]" />
 
-          {/* Model name */}
-          <div className="glass rounded-xl px-4 py-2.5 text-sm font-medium text-white/80">{modelName}</div>
+            {/* Model name */}
+            <span className="px-2.5 py-1.5 text-[13px] font-medium text-[#d4c5a9]/80 select-none">{modelName}</span>
+            <span className="w-px h-4 bg-[rgba(199,185,156,0.10)]" />
 
-          {/* Screenshot button */}
-          <button
-            onClick={() => {
-              const canvas = canvasRef.current
-              if (!canvas) return
-              try {
-                const dataUrl = canvas.toDataURL('image/jpeg', 0.85)
-                import('../utils/fileStorage').then(({ storeThumbnail }) => {
-                  storeThumbnail(modelId, dataUrl).then(() => {
-                    const el = document.createElement('div')
-                    el.className = 'fixed top-4 left-1/2 -translate-x-1/2 glass rounded-xl px-4 py-2 text-xs text-accent-2 z-[100] animate-fade-in'
-                    el.textContent = '✅ 封面已保存'
-                    document.body.appendChild(el)
-                    setTimeout(() => el.remove(), 2000)
+            {/* Speed slider — track only visible on toolbar hover */}
+            <div className="flex items-center gap-1.5 pl-2 pr-1" title={`移动速度: ${flightSpeed}`}>
+              <span className="text-[9px] text-[#a09888]/0 group-hover/toolbar:text-[#a09888]/25 shrink-0 select-none font-medium uppercase tracking-wider transition-colors duration-300">Spd</span>
+              <input
+                type="range"
+                min={SPEED_MIN}
+                max={SPEED_MAX}
+                value={flightSpeed}
+                onChange={e => setFlightSpeed(Number(e.target.value))}
+                className="w-12 h-[2px] appearance-none rounded-full outline-none cursor-pointer
+                  bg-white/[0.03] group-hover/toolbar:bg-white/[0.07] transition-colors duration-300
+                  [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-2 [&::-webkit-slider-thumb]:h-2
+                  [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-[#c9a96e]/70
+                  [&::-webkit-slider-thumb]:shadow-[0_0_4px_rgba(201,169,110,0.25)]
+                  group-hover/toolbar:[&::-webkit-slider-thumb]:bg-[#c9a96e]
+                  group-hover/toolbar:[&::-webkit-slider-thumb]:shadow-[0_0_8px_rgba(201,169,110,0.4)]
+                  [&::-webkit-slider-thumb]:transition-all"
+                style={{ cursor: 'pointer' }}
+              />
+            </div>
+
+            <span className="w-px h-4 bg-[rgba(199,185,156,0.10)]" />
+
+            {/* Screenshot — integrated into the bar */}
+            <button
+              onClick={() => {
+                const canvas = canvasRef.current
+                if (!canvas) return
+                try {
+                  const dataUrl = canvas.toDataURL('image/jpeg', 0.85)
+                  import('../utils/fileStorage').then(({ storeThumbnail }) => {
+                    storeThumbnail(modelId, dataUrl).then(() => {
+                      const el = document.createElement('div')
+                      el.className = 'fixed top-4 left-1/2 -translate-x-1/2 glass rounded-xl px-4 py-2 text-xs text-accent-2 z-[100] animate-fade-in'
+                      el.textContent = '✅ 封面已保存'
+                      document.body.appendChild(el)
+                      setTimeout(() => el.remove(), 2000)
+                    }).catch((e: unknown) => {
+                      console.error('Screenshot save failed:', e)
+                      const el = document.createElement('div')
+                      el.className = 'fixed top-4 left-1/2 -translate-x-1/2 glass rounded-xl px-4 py-2 text-xs text-red-400 z-[100] animate-fade-in'
+                      el.textContent = '✕ 封面保存失败'
+                      document.body.appendChild(el)
+                      setTimeout(() => el.remove(), 2000)
+                    })
                   }).catch((e: unknown) => {
-                    console.error('Screenshot save failed:', e)
-                    const el = document.createElement('div')
-                    el.className = 'fixed top-4 left-1/2 -translate-x-1/2 glass rounded-xl px-4 py-2 text-xs text-red-400 z-[100] animate-fade-in'
-                    el.textContent = '✕ 封面保存失败'
-                    document.body.appendChild(el)
-                    setTimeout(() => el.remove(), 2000)
+                    console.error('Screenshot import failed:', e)
                   })
-                }).catch((e: unknown) => {
-                  console.error('Screenshot import failed:', e)
-                })
-              } catch (e: unknown) {
-                console.error('Screenshot capture failed:', e)
-                const el = document.createElement('div')
-                el.className = 'fixed top-4 left-1/2 -translate-x-1/2 glass rounded-xl px-4 py-2 text-xs text-red-400 z-[100] animate-fade-in'
-                el.textContent = '✕ 截图失败'
-                document.body.appendChild(el)
-                setTimeout(() => el.remove(), 2000)
-              }
-            }}
-            className="glass rounded-xl px-3 py-2.5 text-sm text-white/40 hover:text-white/70 transition-colors"
-            title="截取当前画面作为封面"
-          >📷</button>
+                } catch (e: unknown) {
+                  console.error('Screenshot capture failed:', e)
+                  const el = document.createElement('div')
+                  el.className = 'fixed top-4 left-1/2 -translate-x-1/2 glass rounded-xl px-4 py-2 text-xs text-red-400 z-[100] animate-fade-in'
+                  el.textContent = '✕ 截图失败'
+                  document.body.appendChild(el)
+                  setTimeout(() => el.remove(), 2000)
+                }
+              }}
+              className="px-2.5 py-1.5 text-sm text-white/25 hover:text-white/65 transition-colors rounded-lg hover:bg-white/[0.03] cursor-pointer border-none bg-none"
+              style={{ cursor: 'pointer' }}
+              title="保存当前画面为封面"
+            >📷</button>
+          </div>
 
           {/* Annotation tools — only in edit pages */}
           {!readOnly && (
@@ -603,18 +670,6 @@ export default function Viewer3D({ modelUrl, modelName, modelId, readOnly, downl
 
       <PerformancePanel fps={fps} splatCount={splatCount} isVisible={showPerf && !isLoading && !error} />
 
-      {/* Perf toggle — tiny and unobtrusive */}
-      {!isLoading && !error && (
-        <button
-          onClick={() => setShowPerf(!showPerf)}
-          className={`absolute glass rounded-lg px-2.5 py-1.5 text-[10px] font-mono text-text-3/50 hover:text-text-3/80 transition-colors z-10 ${showPerf ? 'bottom-4 right-4' : 'top-4 right-4'}`}
-          title="Toggle performance overlay"
-        >
-          {showPerf ? `${fps} fps` : '···'}
-        </button>
-      )}
-
-
       {/* Hotspot editor — only in edit pages */}
       {!readOnly && (
         <HotspotEditor
@@ -642,7 +697,20 @@ export default function Viewer3D({ modelUrl, modelName, modelId, readOnly, downl
         />
       )}
 
-      <ControlsHelp isVisible={showControls && !isLoading && !error} onClose={() => setShowControls(false)} />
+      <ControlsHelp
+        isVisible={showControls && !isLoading && !error}
+        onClose={() => {
+          setShowControls(false)
+          if (isFirstVisit) {
+            setIsFirstVisit(false)
+            localStorage.setItem('gs_viewer_visited', '1')
+          }
+        }}
+        showPerf={showPerf}
+        onTogglePerf={() => setShowPerf(!showPerf)}
+        forceVisible={isFirstVisit}
+      />
+
 
       {!isLoading && !error && !showControls && (
         <motion.button initial={{ opacity: 0 }} animate={{ opacity: 1 }}

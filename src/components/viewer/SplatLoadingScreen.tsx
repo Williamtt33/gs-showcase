@@ -72,7 +72,7 @@ export default function SplatLoadingScreen({ progress, isDownloading }: Props) {
       <div
         className="absolute inset-0 opacity-40"
         style={{
-          background: 'radial-gradient(ellipse 60% 50% at 50% 45%, rgba(212,165,116,0.06) 0%, transparent 70%), radial-gradient(ellipse 80% 60% at 50% 55%, rgba(163,181,166,0.04) 0%, transparent 70%)',
+          background: 'radial-gradient(ellipse 60% 50% at 50% 45%, rgba(200,169,110,0.06) 0%, transparent 70%), radial-gradient(ellipse 80% 60% at 50% 55%, rgba(141,163,145,0.04) 0%, transparent 70%)',
         }}
       />
 
@@ -87,12 +87,12 @@ export default function SplatLoadingScreen({ progress, isDownloading }: Props) {
               top: `${seed.y}%`,
               width: seed.r,
               height: seed.r,
-              background: `radial-gradient(circle, rgba(232,224,213,${seed.a}) 0%, rgba(212,165,116,${seed.a * 0.6}) 40%, transparent 70%)`,
+              background: `radial-gradient(circle, rgba(248,245,240,${seed.a}) 0%, rgba(200,169,110,${seed.a * 0.6}) 40%, transparent 70%)`,
               boxShadow:
                 seed.r > 4
-                  ? `0 0 ${seed.r * 3}px rgba(212,165,116,${seed.a * 0.7})`
+                  ? `0 0 ${seed.r * 3}px rgba(200,169,110,${seed.a * 0.7})`
                   : seed.r > 2
-                    ? `0 0 ${seed.r * 2}px rgba(212,165,116,${seed.a * 0.5})`
+                    ? `0 0 ${seed.r * 2}px rgba(200,169,110,${seed.a * 0.5})`
                     : 'none',
             }}
             animate={{
@@ -120,7 +120,7 @@ export default function SplatLoadingScreen({ progress, isDownloading }: Props) {
           style={{
             width: 'min(300px, 40vw)',
             height: 'min(300px, 40vw)',
-            background: 'radial-gradient(circle, rgba(212,165,116,0.12) 0%, rgba(163,181,166,0.06) 40%, transparent 70%)',
+            background: 'radial-gradient(circle, rgba(200,169,110,0.12) 0%, rgba(141,163,145,0.06) 40%, transparent 70%)',
           }}
         />
       </motion.div>
@@ -133,7 +133,7 @@ export default function SplatLoadingScreen({ progress, isDownloading }: Props) {
             <motion.div
               className="h-full rounded-full"
               style={{
-                background: 'linear-gradient(90deg, rgba(212,165,116,0.5), rgba(163,181,166,0.5), rgba(212,165,116,0.3))',
+                background: 'linear-gradient(90deg, rgba(200,169,110,0.5), rgba(141,163,145,0.5), rgba(200,169,110,0.3))',
                 width: `${progress}%`,
                 willChange: 'width',
               }}

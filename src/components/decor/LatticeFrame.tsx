@@ -25,11 +25,11 @@ export default function LatticeFrame({ children, pattern = 'step', className = '
       <div
         className="absolute inset-0 rounded-2xl pointer-events-none z-10"
         style={{
-          border: `${borderWidth}px solid #1a1714`,
+          border: `${borderWidth}px solid #332E2A`,
           boxShadow: `
-            inset 0 0 0 1px rgba(232,224,213,0.04),
-            0 2px 12px rgba(0,0,0,0.4),
-            0 0 0 1px rgba(232,224,213,0.03)
+            inset 0 0 0 1px rgba(51,46,42,0.06),
+            0 2px 12px rgba(0,0,0,0.15),
+            0 0 0 1px rgba(51,46,42,0.04)
           `,
         }}
       />
@@ -46,7 +46,7 @@ export default function LatticeFrame({ children, pattern = 'step', className = '
         className="absolute inset-0 rounded-2xl pointer-events-none z-[6]"
         style={{
           margin: borderWidth,
-          boxShadow: 'inset 0 0 24px rgba(0,0,0,0.5), inset 0 0 2px rgba(232,224,213,0.02)',
+          boxShadow: 'inset 0 0 24px rgba(0,0,0,0.2), inset 0 0 2px rgba(51,46,42,0.04)',
         }}
       />
 
@@ -61,8 +61,8 @@ export default function LatticeFrame({ children, pattern = 'step', className = '
 /* ── 步步锦 pattern — concentric stepped squares (classic 园林 window) ── */
 
 function StepPattern() {
-  const strokes = 'rgba(232,224,213,0.06)'
-  const accents = 'rgba(232,224,213,0.09)'
+  const strokes = 'rgba(51,46,42,0.06)'
+  const accents = 'rgba(51,46,42,0.09)'
   return (
     <g>
       {/* Outer rect */}
@@ -108,13 +108,13 @@ function IcePattern() {
   ]
 
   return (
-    <g stroke="rgba(232,224,213,0.05)" strokeWidth="0.7" fill="none">
+    <g stroke="rgba(51,46,42,0.05)" strokeWidth="0.7" fill="none">
       {lines.map((pts, i) => (
         <polyline key={i} points={pts.map(([x, y]) => `${x},${y}`).join(' ')} />
       ))}
       {/* Junction dots — where cracks meet */}
       {[[45, 35], [50, 55], [100, 40], [70, 90], [110, 110], [80, 140], [150, 45], [160, 55]].map(([cx, cy], i) => (
-        <circle key={`dot-${i}`} cx={cx} cy={cy} r="1.2" fill="rgba(232,224,213,0.07)" stroke="none" />
+        <circle key={`dot-${i}`} cx={cx} cy={cy} r="1.2" fill="rgba(51,46,42,0.07)" stroke="none" />
       ))}
     </g>
   )
@@ -136,8 +136,8 @@ export function LatticeFrameHover({ children, className = '' }: { children: Reac
       <motion.div
         className="absolute inset-0 rounded-2xl pointer-events-none z-20"
         variants={{
-          idle: { opacity: 0, boxShadow: 'inset 0 0 0 1px rgba(200,75,49,0)' },
-          hover: { opacity: 1, boxShadow: 'inset 0 0 0 1px rgba(200,75,49,0.08), 0 0 40px -10px rgba(200,75,49,0.06)' },
+          idle: { opacity: 0, boxShadow: 'inset 0 0 0 1px rgba(201,79,42,0)' },
+          hover: { opacity: 1, boxShadow: 'inset 0 0 0 1px rgba(201,79,42,0.08), 0 0 40px -10px rgba(201,79,42,0.06)' },
         }}
         initial="idle"
         transition={{ duration: 0.5 }}

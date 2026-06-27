@@ -69,7 +69,7 @@ export default function ModelCard({ model, index }: Props) {
 
         {/* ── Title plaque — like a carved wooden nameplate below the window ── */}
         <div className="mt-3 px-1">
-          <h3 className="text-[15px] font-semibold text-text-1 group-hover/card:text-[#e8d5c4] transition-colors leading-snug tracking-[0.02em]">
+          <h3 className="text-[15px] font-semibold text-text-1 group-hover/card:text-accent-1 transition-colors leading-snug tracking-[0.02em]">
             {model.name}
           </h3>
           {model.description && (

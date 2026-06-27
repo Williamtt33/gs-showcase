@@ -9,9 +9,9 @@ import { motion } from 'framer-motion'
  * floating behind the content.
  */
 
-const INK = 'rgba(212,165,116,0.06)'
-const INK_ACCENT = 'rgba(212,165,116,0.09)'
-const INK_DIM = 'rgba(212,165,116,0.035)'
+const INK = 'rgba(200,169,110,0.06)'
+const INK_ACCENT = 'rgba(200,169,110,0.09)'
+const INK_DIM = 'rgba(200,169,110,0.035)'
 
 interface Props {
   className?: string

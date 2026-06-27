@@ -33,10 +33,10 @@ export default function BeforeAfterCard({ building, index }: Props) {
                 <div className="absolute inset-0 bg-manuscript-grid opacity-50" />
                 {/* Crack / damage lines */}
                 <svg className="absolute inset-0 w-full h-full opacity-30" viewBox="0 0 200 150" preserveAspectRatio="none">
-                  <line x1="20" y1="10" x2="80" y2="90" stroke="#c84b31" strokeWidth="0.5" />
-                  <line x1="120" y1="20" x2="60" y2="140" stroke="#c84b31" strokeWidth="0.3" />
-                  <line x1="40" y1="120" x2="180" y2="50" stroke="#6b6358" strokeWidth="0.4" />
-                  <line x1="160" y1="80" x2="190" y2="130" stroke="#c84b31" strokeWidth="0.3" />
+                  <line x1="20" y1="10" x2="80" y2="90" stroke="var(--color-accent-3)" strokeWidth="0.5" />
+                  <line x1="120" y1="20" x2="60" y2="140" stroke="var(--color-accent-3)" strokeWidth="0.3" />
+                  <line x1="40" y1="120" x2="180" y2="50" stroke="var(--color-text-3)" strokeWidth="0.4" />
+                  <line x1="160" y1="80" x2="190" y2="130" stroke="var(--color-accent-3)" strokeWidth="0.3" />
                 </svg>
                 <div className="absolute inset-0 flex items-center justify-center">
                   <span className="text-[10px] text-text-3/25 font-mono tracking-[0.1em]">历史照片缺失</span>
