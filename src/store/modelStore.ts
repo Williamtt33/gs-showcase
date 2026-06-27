@@ -118,3 +118,57 @@ export function deleteCustomModel(id: string): void {
   localStorage.removeItem(STORAGE_KEY_HOTSPOTS + id)
   localStorage.removeItem(STORAGE_KEY_CAMERA_PATHS + id)
 }
+
+// ── Supabase-backed async versions (load remote hotspots/paths when applicable) ──
+
+function isSupabaseUrl(file: string): boolean {
+  return file.startsWith('https://') && file.includes('supabase.co')
+}
+
+let _apiModule: typeof import('../lib/api') | null = null
+async function getApi() {
+  if (!_apiModule) _apiModule = await import('../lib/api')
+  return _apiModule
+}
+
+export async function loadHotspots(modelId: string, modelFile?: string): Promise<Hotspot[]> {
+  if (modelFile && isSupabaseUrl(modelFile)) {
+    try {
+      const { fetchHotspots } = await getApi()
+      return await fetchHotspots(modelId)
+    } catch (e) {
+      console.warn('Failed to load hotspots from Supabase, falling back to local:', e)
+    }
+  }
+  return getHotspots(modelId)
+}
+
+export async function saveHotspotsRemote(modelId: string, hotspots: Hotspot[], modelFile?: string): Promise<void> {
+  if (modelFile && isSupabaseUrl(modelFile)) {
+    const { saveHotspots: saveRemote } = await getApi()
+    await saveRemote(modelId, hotspots)
+  }
+  // Always save locally as fallback
+  saveHotspots(modelId, hotspots)
+}
+
+export async function loadCameraPaths(modelId: string, modelFile?: string): Promise<CameraPath[]> {
+  if (modelFile && isSupabaseUrl(modelFile)) {
+    try {
+      const { fetchCameraPaths } = await getApi()
+      return await fetchCameraPaths(modelId)
+    } catch (e) {
+      console.warn('Failed to load camera paths from Supabase, falling back to local:', e)
+    }
+  }
+  return getCameraPaths(modelId)
+}
+
+export async function saveCameraPathsRemote(modelId: string, paths: CameraPath[], modelFile?: string): Promise<void> {
+  if (modelFile && isSupabaseUrl(modelFile)) {
+    const { saveCameraPaths: saveRemote } = await getApi()
+    await saveRemote(modelId, paths)
+  }
+  // Always save locally as fallback
+  saveCameraPaths(modelId, paths)
+}

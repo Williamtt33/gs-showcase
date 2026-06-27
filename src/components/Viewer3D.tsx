@@ -13,6 +13,7 @@ import { worldToScreen, easeInOutCubic } from '../utils/math3d'
 import { syncOrbitControls } from '../utils/orbitSync'
 import {
   getHotspots, addHotspot, updateHotspot, deleteHotspot,
+  loadHotspots, saveHotspotsRemote,
 } from '../store/modelStore'
 import type { Hotspot, CameraPath } from '../types'
 import type { Scene, Camera, WebGLRenderer, OrbitControls, IntersectionTester } from 'gsplat'
@@ -171,14 +172,16 @@ export default function Viewer3D({ modelUrl, modelName, modelId, readOnly, downl
   const hotspotScreensRef = useRef<Map<string, { x: number; y: number; visible: boolean; scale: number }>>(new Map())
   const overlayRef = useRef<HTMLDivElement>(null)
 
-  // Load hotspots from store when switching models
+  // Load hotspots from store (Supabase if remote, localStorage fallback)
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect -- loading data on model change
-    setHotspots(getHotspots(modelId))
+    loadHotspots(modelId, modelUrl).then(hs => {
+      setHotspots(hs)
+    })
     setSelectedHotspot(null)
     setEditingHotspot(null)
     setShowHotspotEditor(false)
-  }, [modelId])
+  }, [modelId, modelUrl])
 
   // Keep refs in sync with state for render loop / event handler closure
   useEffect(() => { hotspotsRef.current = hotspots }, [hotspots])
@@ -468,15 +471,19 @@ export default function Viewer3D({ modelUrl, modelName, modelId, readOnly, downl
       }
       addHotspot(modelId, hsData)
     }
-    setHotspots(getHotspots(modelId))
+    const updated = getHotspots(modelId)
+    setHotspots(updated)
+    saveHotspotsRemote(modelId, updated, modelUrl).catch(() => {})
     setShowHotspotEditor(false); setEditingHotspot(null)
-  }, [modelId, editingHotspot, hotspots.length])
+  }, [modelId, editingHotspot, hotspots.length, modelUrl])
 
   const handleDeleteHotspot = useCallback((id: string) => {
     deleteHotspot(modelId, id)
-    setHotspots(getHotspots(modelId))
+    const updated = getHotspots(modelId)
+    setHotspots(updated)
+    saveHotspotsRemote(modelId, updated, modelUrl).catch(() => {})
     setSelectedHotspot(null); setEditingHotspot(null); setShowHotspotEditor(false)
-  }, [modelId])
+  }, [modelId, modelUrl])
 
   // --- Annotation overlay — markers positioned by React, screen positions
   //     updated directly in DOM via rAF loop for 60fps smoothness ---

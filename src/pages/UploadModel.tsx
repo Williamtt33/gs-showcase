@@ -7,6 +7,7 @@ import { storeSplatFileWithProgress, storeThumbnail } from '../utils/fileStorage
 import { validateModelFile } from '../utils/fileValidation'
 import { showToast } from '../components/Toast'
 import { addUploadRecord } from '../utils/uploadHistory'
+import { createModel, uploadSplatFile, uploadThumbnail, isSupabaseConfigured } from '../lib/api'
 import type { ModelMeta } from '../types'
 import FileDropZone from '../components/FileDropZone'
 
@@ -95,34 +96,64 @@ export default function UploadModel() {
     abortRef.current = controller
 
     try {
-      // Store splat file with progress
-      await storeSplatFileWithProgress(
-        modelId,
-        modelFile,
-        modelFile.name,
-        (pct) => setUploadProgress(pct),
-        controller.signal,
-      )
+      const useRemote = isSupabaseConfigured()
 
-      if (coverPreview) {
-        await storeThumbnail(modelId, coverPreview)
+      if (useRemote) {
+        // ── Supabase path: upload to cloud ──
+        setUploadProgress(10)
+        const fileUrl = await uploadSplatFile(modelId, modelFile)
+
+        setUploadProgress(70)
+        let thumbUrl = ''
+        if (coverPreview) {
+          thumbUrl = await uploadThumbnail(modelId, coverPreview)
+        }
+
+        setUploadProgress(90)
+        const model: Omit<ModelMeta, 'id'> = {
+          name: name.trim(),
+          nameEn: name.trim(),
+          description: description.trim(),
+          descriptionEn: description.trim(),
+          file: fileUrl,                  // Full Supabase Storage public URL
+          thumbnail: thumbUrl,
+          tags: [],
+          pointCount: '',
+          size: '',
+          featured: false,
+          hotspots: [],
+        }
+
+        await createModel(model, modelId)
+        setUploadProgress(100)
+      } else {
+        // ── Local path: IndexedDB + localStorage ──
+        await storeSplatFileWithProgress(
+          modelId, modelFile, modelFile.name,
+          (pct) => setUploadProgress(pct), controller.signal,
+        )
+
+        if (coverPreview) {
+          await storeThumbnail(modelId, coverPreview)
+        }
+
+        const model: Omit<ModelMeta, 'id'> = {
+          name: name.trim(),
+          nameEn: name.trim(),
+          description: description.trim(),
+          descriptionEn: description.trim(),
+          file: `[local]${modelFile.name}`,
+          thumbnail: coverPreview ? '[local]' : '',
+          tags: [],
+          pointCount: '',
+          size: '',
+          featured: false,
+          hotspots: [],
+        }
+
+        addCustomModel(model, modelId)
       }
 
-      const model: Omit<ModelMeta, 'id'> = {
-        name: name.trim(),
-        nameEn: name.trim(),
-        description: description.trim(),
-        descriptionEn: description.trim(),
-        file: `[local]${modelFile.name}`,
-        thumbnail: coverPreview ? '[local]' : '',
-        tags: [],
-        pointCount: '',
-        size: '',
-        featured: false,
-        hotspots: [],
-      }
-
-      addCustomModel(model, modelId)
       addUploadRecord({ id: modelId, name: name.trim(), filename: modelFile.name, size: modelFile.size })
 
       showToast(`「${name.trim()}」上传成功`, 'success')

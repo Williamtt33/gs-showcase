@@ -1,5 +1,6 @@
 import { getCustomModels } from '../store/modelStore'
 import { getSplatFileUrl, cacheModelFile, getCachedModelFile } from './fileStorage'
+import { fetchCustomModels, isSupabaseConfigured } from '../lib/api'
 import type { ModelMeta } from '../types'
 
 export type { ModelMeta as ModelInfo }
@@ -23,7 +24,22 @@ export async function getBuiltinModels(): Promise<ModelMeta[]> {
 export async function getModels(): Promise<ModelMeta[]> {
   const builtin = await getBuiltinModels()
   const custom = getCustomModels()
-  return [...builtin, ...custom]
+
+  // Fetch shared models from Supabase (if configured)
+  let remote: ModelMeta[] = []
+  if (isSupabaseConfigured()) {
+    try {
+      remote = await fetchCustomModels()
+    } catch (e) {
+      console.warn('Failed to fetch remote models:', e)
+    }
+  }
+
+  // Deduplicate: Supabase models take priority over local models with same ID
+  const remoteIds = new Set(remote.map(m => m.id))
+  const filteredCustom = custom.filter(m => !remoteIds.has(m.id))
+
+  return [...builtin, ...remote, ...filteredCustom]
 }
 
 /** Resolve the actual loadable URL for a model.

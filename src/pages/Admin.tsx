@@ -7,17 +7,18 @@ import { getCustomModels, deleteCustomModel } from '../store/modelStore'
 import { getUploadHistory, clearUploadHistory } from '../utils/uploadHistory'
 import type { UploadRecord } from '../utils/uploadHistory'
 import ModelForm from '../components/editor/ModelForm'
+import { useAuth, useIsAdmin } from '../lib/auth'
+import { fetchCustomModels, deleteModel as deleteRemoteModel, isSupabaseConfigured } from '../lib/api'
 import type { ModelMeta } from '../types'
 
-/* ── Demo password (hardcoded) ── */
-const ADMIN_PASSWORD = 'admin123'
+/* ── Legacy local auth (fallback when Supabase not configured) ── */
 const AUTH_KEY = 'gs_admin_auth'
 
-function isAuthenticated(): boolean {
+function isLocalAuth(): boolean {
   return sessionStorage.getItem(AUTH_KEY) === '1'
 }
 
-function setAuth(value: boolean): void {
+function setLocalAuth(value: boolean): void {
   if (value) sessionStorage.setItem(AUTH_KEY, '1')
   else sessionStorage.removeItem(AUTH_KEY)
 }
@@ -53,22 +54,39 @@ function ModelRow({ model, isBuiltin, onDelete }: {
   )
 }
 
-/* ── Login screen ── */
+/* ── Login screen — Supabase Auth with local fallback ── */
 
-function LoginScreen({ onLogin }: { onLogin: (pw: string) => void }) {
+function LoginScreen({ onLogin }: { onLogin: () => void }) {
+  const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
+  const { signIn } = useAuth()
+  const useRemote = isSupabaseConfigured()
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleRemoteLogin = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setError('')
+    if (!email || !password) { setError('请输入邮箱和密码'); return }
+    setLoading(true)
+    try {
+      await signIn(email, password)
+      onLogin()
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : '登录失败')
+      setLoading(false)
+    }
+  }
+
+  const handleLocalLogin = (e: React.FormEvent) => {
     e.preventDefault()
     setError('')
     if (!password) { setError('请输入密码'); return }
     setLoading(true)
-    // Small delay for UX feedback
     setTimeout(() => {
-      if (password === ADMIN_PASSWORD) {
-        onLogin(password)
+      if (password === 'admin123') {
+        setLocalAuth(true)
+        onLogin()
       } else {
         setError('密码错误，请重试')
         setPassword('')
@@ -76,6 +94,8 @@ function LoginScreen({ onLogin }: { onLogin: (pw: string) => void }) {
       }
     }, 400)
   }
+
+  const handleSubmit = useRemote ? handleRemoteLogin : handleLocalLogin
 
   return (
     <div className="min-h-dyn bg-surface-0 flex items-center justify-center px-6">
@@ -85,60 +105,58 @@ function LoginScreen({ onLogin }: { onLogin: (pw: string) => void }) {
         transition={{ duration: 0.5 }}
         className="w-full max-w-sm"
       >
-        {/* Logo area */}
         <div className="text-center mb-10">
           <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-accent-1/20 via-accent-1/10 to-accent-2/20 border border-border-1 flex items-center justify-center mx-auto mb-4">
             <span className="text-lg font-bold text-accent-1/60">3D</span>
           </div>
           <h1 className="text-xl font-semibold text-text-1">管理后台</h1>
-          <p className="text-[13px] text-text-3/50 mt-1">输入密码以继续</p>
+          <p className="text-[13px] text-text-3/50 mt-1">
+            {useRemote ? '使用管理员账号登录' : '输入密码以继续'}
+          </p>
         </div>
 
-        {/* Login form */}
         <form onSubmit={handleSubmit} className="ink-card rounded-2xl p-6 space-y-4">
+          {useRemote && (
+            <div>
+              <label htmlFor="admin-email" className="text-[11px] font-medium text-text-3/50 block mb-2 uppercase tracking-[0.08em]">邮箱</label>
+              <input
+                id="admin-email" name="admin-email" type="email" autoComplete="email"
+                value={email} onChange={e => { setEmail(e.target.value); setError('') }}
+                placeholder="admin@example.com" autoFocus
+                className="w-full bg-surface-2/80 border border-border-1 rounded-xl px-4 py-3 text-[14px] text-text-1 placeholder:text-text-3/25 focus:outline-none focus:border-accent-1/40 transition-colors"
+              />
+            </div>
+          )}
           <div>
             <label htmlFor="admin-pw" className="text-[11px] font-medium text-text-3/50 block mb-2 uppercase tracking-[0.08em]">
-              密码
+              {useRemote ? '密码' : '密码'}
             </label>
             <input
-              id="admin-pw"
-              name="admin-pw"
-              type="password"
-              value={password}
-              onChange={e => { setPassword(e.target.value); setError('') }}
-              placeholder="请输入管理密码"
-              autoFocus
+              id="admin-pw" name="admin-pw" type="password" autoComplete="current-password"
+              value={password} onChange={e => { setPassword(e.target.value); setError('') }}
+              placeholder={useRemote ? '输入密码' : '请输入管理密码'}
+              autoFocus={!useRemote}
               className="w-full bg-surface-2/80 border border-border-1 rounded-xl px-4 py-3 text-[14px] text-text-1 placeholder:text-text-3/25 focus:outline-none focus:border-accent-1/40 transition-colors"
-              onKeyDown={e => { if (e.key === 'Enter') handleSubmit(e) }}
             />
           </div>
 
           <AnimatePresence>
             {error && (
-              <motion.p
-                initial={{ opacity: 0, y: -4 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0 }}
-                className="text-[12px] text-accent-3/80 bg-accent-3/[0.06] border border-accent-3/10 rounded-lg px-3 py-2"
-              >
+              <motion.p initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
+                className="text-[12px] text-accent-3/80 bg-accent-3/[0.06] border border-accent-3/10 rounded-lg px-3 py-2">
                 {error}
               </motion.p>
             )}
           </AnimatePresence>
 
-          <button
-            type="submit"
-            disabled={loading}
+          <button type="submit" disabled={loading}
             className="w-full py-3 rounded-xl btn-primary text-[14px] font-semibold cursor-pointer border-none outline-none hover:shadow-lg hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.985] transition-all duration-300 disabled:opacity-35 disabled:cursor-not-allowed"
-            style={{ cursor: loading ? 'not-allowed' : 'pointer' }}
-          >
+            style={{ cursor: loading ? 'not-allowed' : 'pointer' }}>
             {loading ? '验证中...' : '登 录'}
           </button>
         </form>
 
-        <p className="text-center text-[11px] text-text-3/25 mt-6">
-          墨韵三维 · 管理后台
-        </p>
+        <p className="text-center text-[11px] text-text-3/25 mt-6">墨韵三维 · 管理后台</p>
       </motion.div>
     </div>
   )
@@ -148,14 +166,24 @@ function LoginScreen({ onLogin }: { onLogin: (pw: string) => void }) {
 
 export default function Admin() {
   const { t } = useI18n()
-  const [authenticated, setAuthenticated] = useState(() => isAuthenticated())
+  const isRemote = isSupabaseConfigured()
+  const isAdmin = useIsAdmin()
+  const { signOut } = useAuth()
+  const isLocalAuthed = isLocalAuth()
+  const [authenticated, setAuthenticated] = useState(() => isRemote ? isAdmin : isLocalAuthed)
   const [builtinModels, setBuiltinModels] = useState<ModelMeta[]>([])
   const [customModels, setCustomModels] = useState<ModelMeta[]>([])
+  const [remoteModels, setRemoteModels] = useState<ModelMeta[]>([])
   const [showForm, setShowForm] = useState(false)
   const [editingModel, setEditingModel] = useState<ModelMeta | null>(null)
   const [loadingBuiltin, setLoadingBuiltin] = useState(true)
   const [uploadHistory, setUploadHistory] = useState<UploadRecord[]>([])
-  const [loginKey, setLoginKey] = useState(0) // force LoginScreen remount on logout
+  const [loginKey, setLoginKey] = useState(0)
+
+  // Sync auth state
+  useEffect(() => {
+    setAuthenticated(isRemote ? isAdmin : isLocalAuthed)
+  }, [isRemote, isAdmin, isLocalAuthed])
 
   const load = useCallback(async () => {
     try {
@@ -168,24 +196,36 @@ export default function Admin() {
     }
     setCustomModels(getCustomModels())
     setUploadHistory(getUploadHistory())
-  }, [])
+    // Also load remote models for management
+    if (isRemote) {
+      fetchCustomModels().then(setRemoteModels).catch(console.error)
+    }
+  }, [isRemote])
 
-  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => { if (authenticated) load() }, [authenticated, load])
 
   const handleLogin = () => {
-    setAuth(true)
+    if (!isRemote) setLocalAuth(true)
     setAuthenticated(true)
   }
 
-  const handleLogout = () => {
-    setAuth(false)
+  const handleLogout = async () => {
+    if (isRemote) await signOut()
+    setLocalAuth(false)
     setAuthenticated(false)
-    setLoginKey(k => k + 1) // force fresh login form
+    setLoginKey(k => k + 1)
   }
 
-  const handleDelete = (id: string) => {
-    if (window.confirm(t.admin.deleteConfirm)) {
+  const handleDelete = async (id: string) => {
+    if (!window.confirm(t.admin.deleteConfirm)) return
+    if (isRemote) {
+      try {
+        await deleteRemoteModel(id)
+        setRemoteModels(prev => prev.filter(m => m.id !== id))
+      } catch (e) {
+        console.error('Delete failed:', e)
+      }
+    } else {
       deleteCustomModel(id)
       setCustomModels(getCustomModels())
     }
@@ -262,9 +302,27 @@ export default function Admin() {
             )}
           </section>
 
-          {/* Custom models */}
+          {/* Remote models (Supabase cloud) */}
+          {isRemote && (
+            <section className="mb-8">
+              <h2 className="text-caption font-semibold text-text-3/50 uppercase tracking-[0.15em] mb-3 pl-1">云端场景</h2>
+              {remoteModels.length === 0 ? (
+                <div className="rounded-2xl border border-dashed border-border-1 p-10 text-center">
+                  <p className="text-text-3 text-[13px] mb-4">云端暂无场景，上传第一个吧</p>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {remoteModels.map(m => <ModelRow key={m.id} model={m} isBuiltin={false} onDelete={handleDelete} />)}
+                </div>
+              )}
+            </section>
+          )}
+
+          {/* Custom models (local only) */}
           <section className="mb-12">
-            <h2 className="text-caption font-semibold text-text-3/50 uppercase tracking-[0.15em] mb-3 pl-1">自定义场景</h2>
+            <h2 className="text-caption font-semibold text-text-3/50 uppercase tracking-[0.15em] mb-3 pl-1">
+              {isRemote ? '本地场景' : '自定义场景'}
+            </h2>
             {customModels.length === 0 ? (
               <div className="rounded-2xl border border-dashed border-border-1 p-10 text-center">
                 <p className="text-text-3 text-[13px] mb-4">还没有自定义场景，点击上方按钮添加</p>
