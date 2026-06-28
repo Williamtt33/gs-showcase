@@ -56,46 +56,32 @@ function ModelRow({ model, isBuiltin, onDelete }: {
 
 /* ── Login screen — Supabase Auth with local fallback ── */
 
+const ADMIN_CREDENTIALS = { email: '1590992057@qq.com', password: 'Admin123456!' }
+
 function LoginScreen({ onLogin }: { onLogin: () => void }) {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
   const { signIn } = useAuth()
-  const useRemote = isSupabaseConfigured()
 
-  const handleRemoteLogin = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError('')
     if (!email || !password) { setError('请输入邮箱和密码'); return }
     setLoading(true)
-    try {
-      await signIn(email, password)
+
+    if (email === ADMIN_CREDENTIALS.email && password === ADMIN_CREDENTIALS.password) {
+      setLocalAuth(true)
+      // Also attempt Supabase sign-in so cloud operations work
+      try { await signIn(email, password) } catch { /* Supabase may be unavailable */ }
       onLogin()
-    } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : '登录失败')
+    } else {
+      setError('邮箱或密码错误，请重试')
+      setPassword('')
       setLoading(false)
     }
   }
-
-  const handleLocalLogin = (e: React.FormEvent) => {
-    e.preventDefault()
-    setError('')
-    if (!password) { setError('请输入密码'); return }
-    setLoading(true)
-    setTimeout(() => {
-      if (password === 'admin123') {
-        setLocalAuth(true)
-        onLogin()
-      } else {
-        setError('密码错误，请重试')
-        setPassword('')
-        setLoading(false)
-      }
-    }, 400)
-  }
-
-  const handleSubmit = useRemote ? handleRemoteLogin : handleLocalLogin
 
   return (
     <div className="min-h-dyn bg-surface-0 flex items-center justify-center px-6">
@@ -111,31 +97,26 @@ function LoginScreen({ onLogin }: { onLogin: () => void }) {
           </div>
           <h1 className="text-xl font-semibold text-text-1">管理后台</h1>
           <p className="text-[13px] text-text-3/50 mt-1">
-            {useRemote ? '使用管理员账号登录' : '输入密码以继续'}
+            使用管理员账号登录
           </p>
         </div>
 
         <form onSubmit={handleSubmit} className="ink-card rounded-2xl p-6 space-y-4">
-          {useRemote && (
-            <div>
-              <label htmlFor="admin-email" className="text-[11px] font-medium text-text-3/50 block mb-2 uppercase tracking-[0.08em]">邮箱</label>
-              <input
-                id="admin-email" name="admin-email" type="email" autoComplete="email"
-                value={email} onChange={e => { setEmail(e.target.value); setError('') }}
-                placeholder="admin@example.com" autoFocus
-                className="w-full bg-surface-2/80 border border-border-1 rounded-xl px-4 py-3 text-[14px] text-text-1 placeholder:text-text-3/25 focus:outline-none focus:border-accent-1/40 transition-colors"
-              />
-            </div>
-          )}
           <div>
-            <label htmlFor="admin-pw" className="text-[11px] font-medium text-text-3/50 block mb-2 uppercase tracking-[0.08em]">
-              {useRemote ? '密码' : '密码'}
-            </label>
+            <label htmlFor="admin-email" className="text-[11px] font-medium text-text-3/50 block mb-2 uppercase tracking-[0.08em]">邮箱</label>
+            <input
+              id="admin-email" name="admin-email" type="email" autoComplete="email"
+              value={email} onChange={e => { setEmail(e.target.value); setError('') }}
+              placeholder="admin@example.com" autoFocus
+              className="w-full bg-surface-2/80 border border-border-1 rounded-xl px-4 py-3 text-[14px] text-text-1 placeholder:text-text-3/25 focus:outline-none focus:border-accent-1/40 transition-colors"
+            />
+          </div>
+          <div>
+            <label htmlFor="admin-pw" className="text-[11px] font-medium text-text-3/50 block mb-2 uppercase tracking-[0.08em]">密码</label>
             <input
               id="admin-pw" name="admin-pw" type="password" autoComplete="current-password"
               value={password} onChange={e => { setPassword(e.target.value); setError('') }}
-              placeholder={useRemote ? '输入密码' : '请输入管理密码'}
-              autoFocus={!useRemote}
+              placeholder="输入密码"
               className="w-full bg-surface-2/80 border border-border-1 rounded-xl px-4 py-3 text-[14px] text-text-1 placeholder:text-text-3/25 focus:outline-none focus:border-accent-1/40 transition-colors"
             />
           </div>
@@ -170,7 +151,7 @@ export default function Admin() {
   const isAdmin = useIsAdmin()
   const { signOut } = useAuth()
   const isLocalAuthed = isLocalAuth()
-  const [authenticated, setAuthenticated] = useState(() => isRemote ? isAdmin : isLocalAuthed)
+  const [authenticated, setAuthenticated] = useState(() => isLocalAuthed || isAdmin)
   const [builtinModels, setBuiltinModels] = useState<ModelMeta[]>([])
   const [customModels, setCustomModels] = useState<ModelMeta[]>([])
   const [remoteModels, setRemoteModels] = useState<ModelMeta[]>([])
@@ -180,10 +161,10 @@ export default function Admin() {
   const [uploadHistory, setUploadHistory] = useState<UploadRecord[]>([])
   const [loginKey, setLoginKey] = useState(0)
 
-  // Sync auth state
+  // Sync auth state — local auth takes priority
   useEffect(() => {
-    setAuthenticated(isRemote ? isAdmin : isLocalAuthed)
-  }, [isRemote, isAdmin, isLocalAuthed])
+    setAuthenticated(isLocalAuthed || isAdmin)
+  }, [isLocalAuthed, isAdmin])
 
   const load = useCallback(async () => {
     try {
@@ -205,12 +186,12 @@ export default function Admin() {
   useEffect(() => { if (authenticated) load() }, [authenticated, load])
 
   const handleLogin = () => {
-    if (!isRemote) setLocalAuth(true)
+    setLocalAuth(true)
     setAuthenticated(true)
   }
 
   const handleLogout = async () => {
-    if (isRemote) await signOut()
+    if (isAdmin) await signOut().catch(() => {})
     setLocalAuth(false)
     setAuthenticated(false)
     setLoginKey(k => k + 1)

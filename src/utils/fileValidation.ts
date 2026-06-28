@@ -87,15 +87,8 @@ export async function validateModelFile(file: File): Promise<ValidationResult> {
       return { valid: true, format: 'PLY (点云)', vertexCount: vc }
     }
 
-    // .splat / .sog — should be gzip-compressed
-    if (!isGzip(head)) {
-      return {
-        valid: false,
-        error: `文件可能已损坏：${ext.toUpperCase()} 文件应为 gzip 压缩格式（缺少 gzip 文件头）`,
-      }
-    }
-
-    return { valid: true, format: `${ext.toUpperCase()} (高斯泼溅)` }
+    // .splat / .sog — may be gzip-compressed or raw binary (both are valid)
+    return { valid: true, format: `${ext.toUpperCase()} (高斯泼溅)${isGzip(head) ? ' · gzip' : ''}` }
   } catch {
     // If we can't read the header, allow it — the loader will catch real errors
     return { valid: true, format: ext?.toUpperCase() ?? '未知' }

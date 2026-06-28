@@ -3,6 +3,7 @@ import { motion } from 'framer-motion'
 import type { ModelMeta } from '../../types'
 import { addCustomModel, updateCustomModel, generateId } from '../../store/modelStore'
 import { storeSplatFile, deleteSplatFile, storeThumbnail } from '../../utils/fileStorage'
+import { createModel, uploadSplatFile, uploadThumbnail, isSupabaseConfigured } from '../../lib/api'
 import FileDropZone from '../FileDropZone'
 
 interface Props {
@@ -70,33 +71,72 @@ export default function ModelForm({ isOpen, editingModel, onSaved, onClose }: Pr
 
     setUploading(true)
     const modelId = editingModel?.id || generateId()
+    const useRemote = isSupabaseConfigured()
 
     try {
-      if (splatFile) {
-        const buffer = await splatFile.arrayBuffer()
-        await storeSplatFile(modelId, buffer, splatFile.name)
-      }
-      if (coverPreview) {
-        await storeThumbnail(modelId, coverPreview)
-      }
+      let fileUrl = splatFile ? `[local]${splatFile.name}` : file.trim()
+      let thumbUrl = ''
+      let useLocalFallback = false
 
-      const base: Omit<ModelMeta, 'id'> = {
-        name: name.trim(), nameEn: name.trim(),
-        description: description.trim(), descriptionEn: description.trim(),
-        file: splatFile ? `[local]${splatFile.name}` : file.trim(),
-        thumbnail: coverPreview ? '[local]' : '',
-        tags: [], pointCount: '', size: '',
-        featured: false,
-        hotspots: editingModel?.hotspots || [],
-      }
+      if (useRemote) {
+        // ── Try Supabase cloud path ──
+        try {
+          if (splatFile) {
+            fileUrl = await uploadSplatFile(modelId, splatFile)
+          }
+          if (coverPreview) {
+            thumbUrl = await uploadThumbnail(modelId, coverPreview)
+          }
 
-      if (editingModel) {
-        if (!splatFile && editingModel.file !== file.trim()) {
-          await deleteSplatFile(editingModel.id)
+          const model: Omit<ModelMeta, 'id'> = {
+            name: name.trim(), nameEn: name.trim(),
+            description: description.trim(), descriptionEn: description.trim(),
+            file: fileUrl,
+            thumbnail: thumbUrl,
+            tags: [], pointCount: '', size: '',
+            featured: false,
+            hotspots: editingModel?.hotspots || [],
+          }
+
+          if (editingModel) {
+            await createModel(model, modelId)
+          } else {
+            await createModel(model, modelId)
+          }
+        } catch {
+          console.warn('Supabase upload failed, falling back to local storage')
+          useLocalFallback = true
         }
-        updateCustomModel(editingModel.id, base)
-      } else {
-        addCustomModel(base, modelId)
+      }
+
+      if (!useRemote || useLocalFallback) {
+        // ── Local IndexedDB + localStorage path ──
+        if (splatFile) {
+          const buffer = await splatFile.arrayBuffer()
+          await storeSplatFile(modelId, buffer, splatFile.name)
+        }
+        if (coverPreview) {
+          await storeThumbnail(modelId, coverPreview)
+        }
+
+        const base: Omit<ModelMeta, 'id'> = {
+          name: name.trim(), nameEn: name.trim(),
+          description: description.trim(), descriptionEn: description.trim(),
+          file: fileUrl,
+          thumbnail: coverPreview ? '[local]' : '',
+          tags: [], pointCount: '', size: '',
+          featured: false,
+          hotspots: editingModel?.hotspots || [],
+        }
+
+        if (editingModel) {
+          if (!splatFile && editingModel.file !== file.trim()) {
+            await deleteSplatFile(editingModel.id)
+          }
+          updateCustomModel(editingModel.id, base)
+        } else {
+          addCustomModel(base, modelId)
+        }
       }
 
       onSaved()

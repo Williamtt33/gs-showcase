@@ -97,36 +97,45 @@ export default function UploadModel() {
 
     try {
       const useRemote = isSupabaseConfigured()
+      let useLocalFallback = false
 
       if (useRemote) {
-        // ── Supabase path: upload to cloud ──
-        setUploadProgress(10)
-        const fileUrl = await uploadSplatFile(modelId, modelFile)
+        // ── Try Supabase cloud path first ──
+        try {
+          setUploadProgress(10)
+          const fileUrl = await uploadSplatFile(modelId, modelFile)
 
-        setUploadProgress(70)
-        let thumbUrl = ''
-        if (coverPreview) {
-          thumbUrl = await uploadThumbnail(modelId, coverPreview)
+          setUploadProgress(70)
+          let thumbUrl = ''
+          if (coverPreview) {
+            thumbUrl = await uploadThumbnail(modelId, coverPreview)
+          }
+
+          setUploadProgress(90)
+          const model: Omit<ModelMeta, 'id'> = {
+            name: name.trim(),
+            nameEn: name.trim(),
+            description: description.trim(),
+            descriptionEn: description.trim(),
+            file: fileUrl,
+            thumbnail: thumbUrl,
+            tags: [],
+            pointCount: '',
+            size: '',
+            featured: false,
+            hotspots: [],
+          }
+
+          await createModel(model, modelId)
+          setUploadProgress(100)
+        } catch (remoteErr: unknown) {
+          // Supabase failed (e.g. RLS, auth) — fall back to local storage
+          console.warn('Supabase upload failed, falling back to local storage:', remoteErr)
+          useLocalFallback = true
         }
+      }
 
-        setUploadProgress(90)
-        const model: Omit<ModelMeta, 'id'> = {
-          name: name.trim(),
-          nameEn: name.trim(),
-          description: description.trim(),
-          descriptionEn: description.trim(),
-          file: fileUrl,                  // Full Supabase Storage public URL
-          thumbnail: thumbUrl,
-          tags: [],
-          pointCount: '',
-          size: '',
-          featured: false,
-          hotspots: [],
-        }
-
-        await createModel(model, modelId)
-        setUploadProgress(100)
-      } else {
+      if (!useRemote || useLocalFallback) {
         // ── Local path: IndexedDB + localStorage ──
         await storeSplatFileWithProgress(
           modelId, modelFile, modelFile.name,

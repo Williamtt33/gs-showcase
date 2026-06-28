@@ -77,6 +77,7 @@ export default function Viewer3D({ modelUrl, modelName, modelId, readOnly, downl
   const [showHotspotEditor, setShowHotspotEditor] = useState(false)
   const [selectedHotspot, setSelectedHotspot] = useState<Hotspot | null>(null)
   const [editingHotspot, setEditingHotspot] = useState<Hotspot | null>(null)
+  const [isPlacingHotspot, setIsPlacingHotspot] = useState(false) // waiting for user to click on canvas
 
   // Camera path state — refs owned by Viewer3D so render loop reads them directly
   const [activePathId, setActivePathId] = useState<string | null>(null)
@@ -97,6 +98,8 @@ export default function Viewer3D({ modelUrl, modelName, modelId, readOnly, downl
   const selectedHotspotRef = useRef<Hotspot | null>(null)
   const [showPerf, setShowPerf] = useState(false)
   const [isFirstVisit, setIsFirstVisit] = useState(false)
+  const editingHotspotRef = useRef<Hotspot | null>(null)
+  const showHotspotEditorRef = useRef(false)
 
   // Fly-to animation refs
   const flyAnimIdRef = useRef<number>(0)
@@ -115,30 +118,26 @@ export default function Viewer3D({ modelUrl, modelName, modelId, readOnly, downl
     // Current camera state as start
     const startPos = { x: cam.position.x, y: cam.position.y, z: cam.position.z }
 
-    // Target: fly close to the annotation point, looking at it
-    const endLookAt = { x: hs.position.x, y: hs.position.y, z: hs.position.z }
-    // Approach direction from annotation point toward current camera
-    const dx = startPos.x - hs.position.x
-    const dy = startPos.y - hs.position.y
-    const dz = startPos.z - hs.position.z
-    const dist = Math.sqrt(dx * dx + dy * dy + dz * dz)
-    const closeDist = 1.5 // units from the point
-    const endPos = dist > 0.01
-      ? {
-          x: hs.position.x + (dx / dist) * closeDist,
-          y: hs.position.y + (dy / dist) * closeDist,
-          z: hs.position.z + (dz / dist) * closeDist,
-        }
-      : {
-          x: hs.position.x + 2,
-          y: hs.position.y + 1,
-          z: hs.position.z + 1.5,
-        }
+    // Use saved camera position/target if available, otherwise fall back to
+    // flying toward the hotspot position
+    const hasSavedCamera = hs.cameraPosition && hs.cameraTarget &&
+      (hs.cameraPosition.x !== 0 || hs.cameraPosition.y !== 0 || hs.cameraPosition.z !== 0)
+    const endPos = hasSavedCamera
+      ? { x: hs.cameraPosition!.x, y: hs.cameraPosition!.y, z: hs.cameraPosition!.z }
+      : (() => {
+          const d = Math.sqrt((startPos.x-hs.position.x)**2 + (startPos.y-hs.position.y)**2 + (startPos.z-hs.position.z)**2)
+          const cd = 1.5
+          if (d < 0.01) return { x: hs.position.x+2, y: hs.position.y+1, z: hs.position.z+1.5 }
+          return { x: hs.position.x + (startPos.x-hs.position.x)/d*cd, y: hs.position.y + (startPos.y-hs.position.y)/d*cd, z: hs.position.z + (startPos.z-hs.position.z)/d*cd }
+        })()
+    const endLookAt = hasSavedCamera
+      ? { x: hs.cameraTarget!.x, y: hs.cameraTarget!.y, z: hs.cameraTarget!.z }
+      : { x: hs.position.x, y: hs.position.y, z: hs.position.z }
 
     const startTime = performance.now()
-    const duration = 0.5 // seconds — quick snap to the point
+    const duration = 0.6
     isFlyingRef.current = true
-    ctrl.dampening = 0 // Kill orbit damping during animation
+    ctrl.dampening = 0
 
     const tick = () => {
       const elapsed = (performance.now() - startTime) / 1000
@@ -148,20 +147,16 @@ export default function Viewer3D({ modelUrl, modelName, modelId, readOnly, downl
       const px = startPos.x + (endPos.x - startPos.x) * ease
       const py = startPos.y + (endPos.y - startPos.y) * ease
       const pz = startPos.z + (endPos.z - startPos.z) * ease
-      // Keep camera facing the annotation point throughout — no lookAt interpolation
       const dirVec = new SPLAT.Vector3(endLookAt.x - px, endLookAt.y - py, endLookAt.z - pz)
       const rot = SPLAT.Quaternion.LookRotation(dirVec)
-      const pos = new SPLAT.Vector3(px, py, pz)
-      cam.position = pos
+      cam.position = new SPLAT.Vector3(px, py, pz)
       cam.rotation = rot
 
       if (t < 1) {
         flyAnimIdRef.current = requestAnimationFrame(tick)
       } else {
-        // Animation complete — sync OrbitControls and resume
         isFlyingRef.current = false
-        syncOrbitControls(ctrl, SPLAT,
-          endLookAt.x, endLookAt.y, endLookAt.z)
+        syncOrbitControls(ctrl, SPLAT, endLookAt.x, endLookAt.y, endLookAt.z)
       }
     }
     flyAnimIdRef.current = requestAnimationFrame(tick)
@@ -185,6 +180,8 @@ export default function Viewer3D({ modelUrl, modelName, modelId, readOnly, downl
 
   // Keep refs in sync with state for render loop / event handler closure
   useEffect(() => { hotspotsRef.current = hotspots }, [hotspots])
+  useEffect(() => { editingHotspotRef.current = editingHotspot }, [editingHotspot])
+  useEffect(() => { showHotspotEditorRef.current = showHotspotEditor }, [showHotspotEditor])
   useEffect(() => { isLoadingRef.current = isLoading }, [isLoading])
   useEffect(() => { selectedHotspotRef.current = selectedHotspot }, [selectedHotspot])
 
@@ -313,14 +310,18 @@ export default function Viewer3D({ modelUrl, modelName, modelId, readOnly, downl
 
         // Update hotspot positions using gsplat's actual view-projection matrix
         const currentHotspots = hotspotsRef.current
-        if (currentHotspots.length > 0) {
+        // Include pending hotspot (being created) in position updates
+        const pending = showHotspotEditorRef.current && editingHotspotRef.current && editingHotspotRef.current.id === '__pending__' && editingHotspotRef.current.position
+          ? editingHotspotRef.current : null
+        const allHotspots = pending ? [...currentHotspots, pending] : currentHotspots
+        if (allHotspots.length > 0) {
           const newScreens = new Map<string, { x: number; y: number; visible: boolean; scale: number }>()
           const camPos = camera.position
           const vp = camera.data?.viewProj
           const vpBuffer: number[] | undefined = vp?.buffer
           const rect = container.getBoundingClientRect()
           const sw = rect.width; const sh = rect.height
-          for (const hs of currentHotspots) {
+          for (const hs of allHotspots) {
             if (!vpBuffer) {
               // Fallback to simple projection
               const fwd = camera.forward
@@ -392,12 +393,13 @@ export default function Viewer3D({ modelUrl, modelName, modelId, readOnly, downl
       }
 
       const onKeyDown = (e: KeyboardEvent) => {
-        // Track WASD/QE flight keys (always track, to avoid stuck keys)
+        // Don't handle ANY keys if user is typing in an input/textarea
+        const tag = (e.target as HTMLElement)?.tagName
+        if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return
+        // Track WASD/QE flight keys
         if (['KeyW','KeyA','KeyS','KeyD','KeyQ','KeyE'].includes(e.code)) {
           keysRef.current.add(e.code)
         }
-        // Don't handle keys if user is typing in an input
-        if ((e.target as HTMLElement)?.tagName === 'INPUT' || (e.target as HTMLElement)?.tagName === 'TEXTAREA') return
         if (e.key === 'r' || e.key === 'R') {
           const cam = cameraRef.current; const ctrl = controlsRef.current
           if (cam && ctrl) {
@@ -457,7 +459,7 @@ export default function Viewer3D({ modelUrl, modelName, modelId, readOnly, downl
   // --- Hotspot handlers ---
   const handleSaveHotspot = useCallback((data: { title: string; titleEn: string; description: string; descriptionEn: string }) => {
     if (!data.title.trim()) return
-    if (editingHotspot?.id) {
+    if (editingHotspot?.id && editingHotspot.id !== '__pending__') {
       updateHotspot(modelId, editingHotspot.id, { ...data, note: data.description || data.descriptionEn })
     } else if (editingHotspot?.position) {
       const hsData = {
@@ -487,27 +489,76 @@ export default function Viewer3D({ modelUrl, modelName, modelId, readOnly, downl
 
   // --- Annotation overlay — markers positioned by React, screen positions
   //     updated directly in DOM via rAF loop for 60fps smoothness ---
-  const hotspotElements = hotspots.map((hs, idx) => (
-    <AnnotationMarker
-      key={hs.id}
-      hotspotId={hs.id}
-      screenX={0} screenY={0}
-      number={hs.order || idx + 1}
-      title={lang === 'zh' ? hs.title : hs.titleEn || hs.title}
-      note={hs.note || hs.description || (lang === 'zh' ? hs.description : hs.descriptionEn) || ''}
-      isSelected={selectedHotspot?.id === hs.id}
-      scale={1}
-      onSelect={() => { flyToHotspot(hs) }}
-      onEdit={() => { setEditingHotspot(hs); setShowHotspotEditor(true) }}
-    />
-  ))
+  const hotspotElements = [
+    ...hotspots.map((hs, idx) => (
+      <AnnotationMarker
+        key={hs.id}
+        hotspotId={hs.id}
+        screenX={0} screenY={0}
+        number={hs.order || idx + 1}
+        title={lang === 'zh' ? hs.title : hs.titleEn || hs.title}
+        note={hs.note || hs.description || (lang === 'zh' ? hs.description : hs.descriptionEn) || ''}
+        isSelected={selectedHotspot?.id === hs.id}
+        scale={1}
+        onSelect={() => { flyToHotspot(hs) }}
+        onEdit={() => { setEditingHotspot(hs); setShowHotspotEditor(true) }}
+      />
+    )),
+    // Pending hotspot being placed/edited — shown while editor is open
+    ...(showHotspotEditor && editingHotspot && editingHotspot.id === '__pending__' && editingHotspot.position ? [
+      <AnnotationMarker
+        key="__pending__"
+        hotspotId="__pending__"
+        screenX={0} screenY={0}
+        number={editingHotspot.order || hotspots.length + 1}
+        title="新标注"
+        note="填写信息后保存"
+        isSelected={true}
+        scale={1.1}
+        onSelect={() => {}}
+        onEdit={() => {}}
+      />
+    ] : []),
+  ]
 
   return (
     <div ref={containerRef} className="relative w-full h-full bg-black overflow-hidden"
       onClick={(e) => {
+        // Hotspot placement mode — raycast from mouse click
+        if (isPlacingHotspot && (e.target as HTMLElement).tagName === 'CANVAS') {
+          const canvas = canvasRef.current; const cam = cameraRef.current
+          if (!canvas || !cam) return
+          const rect = canvas.getBoundingClientRect()
+          const x = e.clientX - rect.left; const y = e.clientY - rect.top
+          const tester = intersectionTesterRef.current
+          let pos = { x: cam.position.x + cam.forward.x * 3, y: cam.position.y + cam.forward.y * 3, z: cam.position.z + cam.forward.z * 3 }
+          if (tester?.testPoint(x, y)) {
+            const rayDir = cam.screenPointToRay(x, y)
+            const cp = cam.position; const vp = cam.data.viewProj.buffer
+            const { width: w, height: h } = cam.data
+            for (let d = 0.5; d <= 80; d += 0.5) {
+              const wx = cp.x + rayDir.x * d; const wy = cp.y + rayDir.y * d; const wz = cp.z + rayDir.z * d
+              const cw = vp[3] * wx + vp[7] * wy + vp[11] * wz + vp[15]
+              if (cw <= 0.001) continue
+              const sx = ((vp[0] * wx + vp[4] * wy + vp[8] * wz + vp[12]) / cw * 0.5 + 0.5) * w
+              const sy = ((-(vp[1] * wx + vp[5] * wy + vp[9] * wz + vp[13]) / cw) * 0.5 + 0.5) * h
+              if (Math.abs(sx - x) < 3 && Math.abs(sy - y) < 3) { pos = { x: wx, y: wy, z: wz }; break }
+            }
+          }
+          const camTgt = {
+            x: cam.position.x + cam.forward.x * 3,
+            y: cam.position.y + cam.forward.y * 3,
+            z: cam.position.z + cam.forward.z * 3,
+          }
+          const nextOrder = hotspots.length + 1
+          setEditingHotspot({ id: '__pending__', position: pos, title: '', titleEn: '', description: '', descriptionEn: '', note: '', order: nextOrder, cameraPosition: { x: cam.position.x, y: cam.position.y, z: cam.position.z }, cameraTarget: camTgt })
+          setShowHotspotEditor(true)
+          setIsPlacingHotspot(false)
+          return
+        }
         // Deselect hotspot when clicking empty canvas space
         if ((e.target as HTMLElement).tagName === 'CANVAS') {
-          setSelectedHotspot(null)
+          setSelectedHotspot(null); setIsPlacingHotspot(false)
         }
       }}
     >
@@ -623,41 +674,19 @@ export default function Viewer3D({ modelUrl, modelName, modelId, readOnly, downl
           {!readOnly && (
             <>
               <div className="w-px h-6 bg-white/10" />
-              {/* Add annotation button */}
+              {/* Add annotation button — enters placement mode */}
               <button
                 onClick={() => {
-                  const canvas = canvasRef.current; const cam = cameraRef.current
-                  if (!canvas || !cam) return
-                  const rect = canvas.getBoundingClientRect()
-                  const x = rect.width / 2; const y = rect.height / 2
-                  const tester = intersectionTesterRef.current
-                  let pos = { x: cam.position.x + cam.forward.x * 3, y: cam.position.y + cam.forward.y * 3, z: cam.position.z + cam.forward.z * 3 }
-                  if (tester?.testPoint(x, y)) {
-                    const rayDir = cam.screenPointToRay(x, y)
-                    const cp = cam.position; const vp = cam.data.viewProj.buffer
-                    const { width: w, height: h } = cam.data
-                    for (let d = 0.5; d <= 80; d += 0.5) {
-                      const wx = cp.x + rayDir.x * d; const wy = cp.y + rayDir.y * d; const wz = cp.z + rayDir.z * d
-                      const cw = vp[3] * wx + vp[7] * wy + vp[11] * wz + vp[15]
-                      if (cw <= 0.001) continue
-                      const sx = ((vp[0] * wx + vp[4] * wy + vp[8] * wz + vp[12]) / cw * 0.5 + 0.5) * w
-                      const sy = ((-(vp[1] * wx + vp[5] * wy + vp[9] * wz + vp[13]) / cw) * 0.5 + 0.5) * h
-                      if (Math.abs(sx - x) < 3 && Math.abs(sy - y) < 3) { pos = { x: wx, y: wy, z: wz }; break }
-                    }
-                  }
-                  // Compute look-at target from camera forward (ctrl.target is private in gsplat)
-                  const camTgt = {
-                    x: cam.position.x + cam.forward.x * 3,
-                    y: cam.position.y + cam.forward.y * 3,
-                    z: cam.position.z + cam.forward.z * 3,
-                  }
-                  const nextOrder = hotspots.length + 1
-                  setEditingHotspot({ id: '', position: pos, title: '', titleEn: '', description: '', descriptionEn: '', note: '', order: nextOrder, cameraPosition: { x: cam.position.x, y: cam.position.y, z: cam.position.z }, cameraTarget: camTgt })
-                  setShowHotspotEditor(true)
+                  setIsPlacingHotspot(true)
+                  setShowHotspotEditor(false)
                 }}
-                className="rounded-xl px-3 py-2.5 text-xs font-medium glass text-white/70 hover:text-white hover:bg-white/[0.06] transition-all cursor-pointer"
+                className={`rounded-xl px-3 py-2.5 text-xs font-medium transition-all cursor-pointer ${
+                  isPlacingHotspot
+                    ? 'bg-accent-1/25 text-accent-1 border border-accent-1/40'
+                    : 'glass text-white/70 hover:text-white hover:bg-white/[0.06]'
+                }`}
                 style={{ cursor: 'pointer' }}
-              >📌 添加标注</button>
+              >📌 {isPlacingHotspot ? '点击画布放置标注...' : '添加标注'}</button>
 
               <div className="w-px h-6 bg-white/10" />
               {/* Camera path button */}
@@ -681,10 +710,10 @@ export default function Viewer3D({ modelUrl, modelName, modelId, readOnly, downl
       {!readOnly && (
         <HotspotEditor
           isOpen={showHotspotEditor}
-          mode={editingHotspot?.id ? 'edit' : 'add'}
+          mode={editingHotspot?.id && editingHotspot.id !== '__pending__' ? 'edit' : 'add'}
           editingHotspot={editingHotspot}
           onSave={handleSaveHotspot}
-          onDelete={editingHotspot?.id ? () => handleDeleteHotspot(editingHotspot!.id) : undefined}
+          onDelete={editingHotspot?.id && editingHotspot.id !== '__pending__' ? () => handleDeleteHotspot(editingHotspot!.id) : undefined}
           onClose={() => { setShowHotspotEditor(false); setEditingHotspot(null) }}
         />
       )}

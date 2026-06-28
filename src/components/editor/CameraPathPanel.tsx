@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react'
+import { useState, useCallback, useEffect, useRef } from 'react'
 import { motion } from 'framer-motion'
 import { useI18n } from '../../i18n/I18nContext'
 import type { CameraPath } from '../../types'
@@ -11,6 +11,8 @@ import {
   deleteCameraPath,
   generateId,
 } from '../../store/modelStore'
+
+const RECORD_INTERVAL_MS = 80 // ~12.5 fps — high density for smooth playback
 
 interface Props {
   modelId: string
@@ -40,6 +42,12 @@ export default function CameraPathPanel({
   const [paths, setPaths] = useState<CameraPath[]>(() => getCameraPaths(modelId))
   const [editingMode, setEditingMode] = useState<'none' | 'new' | 'rename'>('none')
   const [editValue, setEditValue] = useState('')
+
+  // ── Recording mode ──
+  const [isRecording, setIsRecording] = useState(false)
+  const [recordingCount, setRecordingCount] = useState(0)
+  const recordIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
+  const pendingKeyframesRef = useRef<Array<{ id: string; position: { x: number; y: number; z: number }; target: { x: number; y: number; z: number } }>>([])
 
   // Reload paths when panel opens or model changes
   useEffect(() => {
@@ -132,6 +140,100 @@ export default function CameraPathPanel({
     setPaths(reloaded)
     onSelectPath(reloaded.find(p => p.id === activePathId) || null)
   }, [modelId, activePathId, activePath, onSelectPath])
+
+  // ── Recording mode ──
+  const startRecording = useCallback(() => {
+    // Auto-create a path if none selected
+    let targetPathId = activePathId
+    if (!targetPathId) {
+      const now = new Date()
+      const ts = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`
+      const newPath = addCameraPath(modelId, {
+        name: `录制 ${ts}`,
+        nameEn: `Recording ${ts}`,
+        keyframes: [],
+      })
+      targetPathId = newPath.id
+      setPaths(getCameraPaths(modelId))
+      onSelectPath(newPath)
+    }
+
+    pendingKeyframesRef.current = []
+    setRecordingCount(0)
+    setIsRecording(true)
+
+    recordIntervalRef.current = setInterval(() => {
+      const cam = cameraRef.current
+      if (!cam) return
+
+      const pos = { x: cam.position.x, y: cam.position.y, z: cam.position.z }
+      const fwd = cam.forward
+      const target = {
+        x: pos.x + fwd.x * 3,
+        y: pos.y + fwd.y * 3,
+        z: pos.z + fwd.z * 3,
+      }
+
+      pendingKeyframesRef.current.push({
+        id: generateId(),
+        position: pos,
+        target,
+      })
+
+      setRecordingCount(c => c + 1)
+    }, RECORD_INTERVAL_MS)
+  }, [activePathId, modelId, cameraRef, onSelectPath])
+
+  const stopRecording = useCallback(() => {
+    if (recordIntervalRef.current) {
+      clearInterval(recordIntervalRef.current)
+      recordIntervalRef.current = null
+    }
+    setIsRecording(false)
+
+    const pending = pendingKeyframesRef.current
+    if (pending.length === 0) return
+
+    // Use the active path at stop time (may differ from start if user switched)
+    const targetPathId = activePathId
+    if (!targetPathId) {
+      pendingKeyframesRef.current = []
+      return
+    }
+
+    // Merge pending keyframes into active path
+    const currentPath = paths.find(p => p.id === targetPathId)
+    const existingKfs = currentPath?.keyframes || []
+    const merged = [...existingKfs, ...pending]
+    updateCameraPath(modelId, targetPathId, { keyframes: merged })
+    pendingKeyframesRef.current = []
+
+    const reloaded = getCameraPaths(modelId)
+    setPaths(reloaded)
+    onSelectPath(reloaded.find(p => p.id === targetPathId) || null)
+    setRecordingCount(0)
+  }, [activePathId, modelId, paths, onSelectPath])
+
+  const toggleRecording = useCallback(() => {
+    if (isRecording) {
+      // Stop first, then ensure playback is stopped (recording and playback can't coexist)
+      stopRecording()
+      if (playback?.state !== 'idle') playback?.stop()
+    } else {
+      // Stop playback before recording
+      if (playback?.state !== 'idle') playback?.stop()
+      startRecording()
+    }
+  }, [isRecording, startRecording, stopRecording, playback])
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      if (recordIntervalRef.current) {
+        clearInterval(recordIntervalRef.current)
+      }
+    }
+  }, [])
 
   // ── Escape key ──
   useEffect(() => {
@@ -302,9 +404,35 @@ export default function CameraPathPanel({
         </div>
       )}
 
-      {/* ═══ Section 3: Playback Controls ═══ */}
+      {/* ═══ Section 3: Playback Controls + Recording ═══ */}
       {activePath && playback && (
         <div className="border-t border-border-1 pt-4">
+          {/* Recording row */}
+          <div className="mb-3">
+            <button
+              onClick={toggleRecording}
+              disabled={isRecording ? false : playback.state === 'playing'}
+              className={`w-full py-2.5 rounded-xl text-[13px] font-semibold cursor-pointer border outline-none transition-all duration-300 ${
+                isRecording
+                  ? 'bg-red-500/15 border-red-500/40 text-red-400 animate-pulse'
+                  : 'bg-white/[0.04] border border-dashed border-white/[0.10] text-text-3/60 hover:text-text-2 hover:border-white/[0.18]'
+              } disabled:opacity-20 disabled:cursor-not-allowed`}
+              style={{ cursor: (playback.state === 'playing' && !isRecording) ? 'not-allowed' : 'pointer' }}
+            >
+              {isRecording ? (
+                <span className="flex items-center justify-center gap-2">
+                  <span className="w-2 h-2 rounded-full bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.6)]" />
+                  停止录制 ({recordingCount} 帧)
+                </span>
+              ) : (
+                <span className="flex items-center justify-center gap-2">
+                  <span className="w-2 h-2 rounded-full bg-red-400/60" />
+                  录制相机路径
+                </span>
+              )}
+            </button>
+          </div>
+
           {/* Progress bar */}
           <div className="w-full h-1 bg-white/[0.06] rounded-full overflow-hidden mb-3">
             <motion.div

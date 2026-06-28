@@ -4,15 +4,9 @@ import { useI18n } from '../i18n/I18nContext'
 import { motion, useScroll, useTransform } from 'framer-motion'
 import { getModels } from '../utils/models'
 import ModelCard from '../components/ModelCard'
-import HeritageTimeline from '../components/HeritageTimeline'
-import BeforeAfterCard from '../components/BeforeAfterCard'
 import { DriftingLinework } from '../components/decor/ArchitecturalLinework'
 import PointCloudBackground from '../components/decor/PointCloudBackground'
-import {
-  TIMELINE_EVENTS,
-  PRESERVATION_BUILDINGS,
-  HERITAGE_TAGS,
-} from '../data/heritage'
+import { HERITAGE_TAGS } from '../data/heritage'
 import type { ModelMeta } from '../types'
 
 /* ── Fog particles — ultra-slow drifting atmosphere ── */
@@ -88,11 +82,6 @@ export default function Home() {
   const heroOpacity = useTransform(scrollYProgress, [0, 0.12], [1, 0])
   const heroY = useTransform(scrollYProgress, [0, 0.15], [0, -60])
   const heroScale = useTransform(scrollYProgress, [0, 0.15], [1, 0.95])
-
-  // Section reveals
-  const timelineOpacity = useTransform(scrollYProgress, [0.1, 0.2], [0, 1])
-  const preservationOpacity = useTransform(scrollYProgress, [0.35, 0.45], [0, 1])
-  const galleryTransition = useTransform(scrollYProgress, [0.48, 0.58], [0, 1])
 
   // Scroll progress indicator
   const progressHeight = useTransform(scrollYProgress, [0, 1], [0, 100])
@@ -274,143 +263,7 @@ export default function Home() {
             </motion.div>
           </motion.div>
 
-          {/* Scroll hint */}
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 1.6 }}
-            className="absolute bottom-10 left-1/2 -translate-x-1/2"
-          >
-            <motion.div
-              animate={{ opacity: [0.2, 0.6, 0.2] }}
-              transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut' }}
-              className="flex flex-col items-center gap-3"
-            >
-              <span className="text-[11px] text-text-3/40 uppercase tracking-[0.25em] font-medium">
-                向下滚动展开画卷
-              </span>
-              <svg className="w-4 h-5 text-text-3/30" viewBox="0 0 16 20" fill="none" stroke="currentColor" strokeWidth="1.2">
-                <rect x="1" y="1" width="14" height="18" rx="7" />
-                <motion.circle cx="8" cy="7" r="2"
-                  animate={{ cy: [7, 11, 7] }}
-                  transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
-                />
-              </svg>
-            </motion.div>
-          </motion.div>
         </section>
-
-        {/* ═══════════════════════════════════════════
-            TRANSITION
-            ═══════════════════════════════════════════ */}
-        <motion.div style={{ opacity: timelineOpacity }} className="relative py-8">
-          <div className="max-w-4xl mx-auto px-6">
-            <ScrollRoller />
-          </div>
-          <motion.div
-            initial={{ opacity: 0, scale: 0.8, rotate: 6 }}
-            whileInView={{ opacity: 1, scale: 1, rotate: 6 }}
-            viewport={{ once: true, margin: '-50px' }}
-            transition={{ duration: 0.6, delay: 0.3 }}
-            className="flex justify-center mt-6"
-          >
-            <SealStamp char="史" />
-          </motion.div>
-        </motion.div>
-
-        {/* ═══════════════════════════════════════════
-            HISTORY — 历史溯源
-            ═══════════════════════════════════════════ */}
-        <motion.section
-          style={{ opacity: timelineOpacity }}
-          className="relative py-12 sm:py-16"
-        >
-          <div className="max-w-5xl lg:max-w-6xl mx-auto px-6 lg:px-10">
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ duration: 0.7 }}
-              className="text-center mb-14 sm:mb-18"
-            >
-              <h2 className="text-3xl sm:text-4xl lg:text-5xl font-display tracking-tight mb-5 leading-[1.25]">
-                <span className="gradient-text">历史溯源</span>
-              </h2>
-              <p className="text-text-3 text-base max-w-lg mx-auto font-light leading-[1.8]">
-                六百年街巷脉络，从明代商埠到数字重生
-              </p>
-            </motion.div>
-
-            <HeritageTimeline events={TIMELINE_EVENTS} />
-          </div>
-        </motion.section>
-
-        {/* ═══════════════════════════════════════════
-            TRANSITION
-            ═══════════════════════════════════════════ */}
-        <motion.div style={{ opacity: preservationOpacity }} className="relative py-8">
-          <div className="max-w-4xl mx-auto px-6">
-            <ScrollRoller />
-          </div>
-          <motion.div
-            initial={{ opacity: 0, scale: 0.8, rotate: 6 }}
-            whileInView={{ opacity: 1, scale: 1, rotate: 6 }}
-            viewport={{ once: true, margin: '-50px' }}
-            transition={{ duration: 0.6, delay: 0.3 }}
-            className="flex justify-center mt-6"
-          >
-            <SealStamp char="护" />
-          </motion.div>
-        </motion.div>
-
-        {/* ═══════════════════════════════════════════
-            PRESERVATION — 保护现状
-            ═══════════════════════════════════════════ */}
-        <motion.section
-          style={{ opacity: preservationOpacity }}
-          className="relative py-12 sm:py-16"
-        >
-          <div className="max-w-5xl lg:max-w-6xl mx-auto px-6 lg:px-10">
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ duration: 0.7 }}
-              className="text-center mb-14 sm:mb-18"
-            >
-              <h2 className="text-3xl sm:text-4xl lg:text-5xl font-display tracking-tight mb-5 leading-[1.25]">
-                <span className="gradient-text">保护现状</span>
-              </h2>
-              <p className="text-text-3 text-base max-w-lg mx-auto font-light leading-[1.8]">
-                重点历史建筑的保护与修缮——修旧如旧，存真守正
-              </p>
-            </motion.div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-5 sm:gap-6">
-              {PRESERVATION_BUILDINGS.map((b, i) => (
-                <BeforeAfterCard key={b.id} building={b} index={i} />
-              ))}
-            </div>
-          </div>
-        </motion.section>
-
-        {/* ═══════════════════════════════════════════
-            TRANSITION — 转入画廊
-            ═══════════════════════════════════════════ */}
-        <motion.div style={{ opacity: galleryTransition }} className="relative py-8">
-          <div className="max-w-4xl mx-auto px-6">
-            <ScrollRoller />
-          </div>
-          <motion.div
-            initial={{ opacity: 0, scale: 0.8, rotate: 6 }}
-            whileInView={{ opacity: 1, scale: 1, rotate: 6 }}
-            viewport={{ once: true, margin: '-50px' }}
-            transition={{ duration: 0.6, delay: 0.3 }}
-            className="flex justify-center mt-6"
-          >
-            <SealStamp char="观" />
-          </motion.div>
-        </motion.div>
 
         {/* ═══════════════════════════════════════════
             GALLERY — 场景画廊
