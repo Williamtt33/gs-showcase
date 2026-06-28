@@ -31,11 +31,11 @@ export default function AnnotationMarker({ hotspotId, screenX, screenY, number, 
           onClick={onSelect}
           className="shrink-0 flex items-center justify-center rounded-full select-none cursor-pointer"
           style={{
-            width: isSelected ? 34 : 26, height: isSelected ? 34 : 26,
+            width: isSelected ? 56 : 42, height: isSelected ? 56 : 42,
             background: isSelected ? 'rgba(255,255,255,0.18)' : 'rgba(0,0,0,0.6)',
-            border: isSelected ? '2.5px solid rgba(255,255,255,0.9)' : '2px solid rgba(255,255,255,0.45)',
-            boxShadow: isSelected ? '0 0 20px rgba(255,255,255,0.3)' : '0 2px 6px rgba(0,0,0,0.6)',
-            color: '#fff', fontSize: isSelected ? 14 : 12, fontWeight: 700,
+            border: isSelected ? '3px solid rgba(255,255,255,0.9)' : '3px solid rgba(255,255,255,0.55)',
+            boxShadow: isSelected ? '0 0 28px rgba(255,255,255,0.3)' : '0 3px 10px rgba(0,0,0,0.65)',
+            color: '#fff', fontSize: isSelected ? 21 : 16, fontWeight: 700,
             fontFamily: 'Inter, Noto Sans SC, sans-serif',
             transition: 'all 0.25s cubic-bezier(0.22, 1, 0.36, 1)',
             backdropFilter: 'blur(4px)', WebkitBackdropFilter: 'blur(4px)',
@@ -46,7 +46,7 @@ export default function AnnotationMarker({ hotspotId, screenX, screenY, number, 
 
         {/* Unselected: just label */}
         {!isSelected && (
-          <span onClick={onSelect} className="text-xs font-medium text-white/70 truncate max-w-[120px] cursor-pointer"
+          <span onClick={onSelect} className="text-[15px] font-semibold text-white/85 truncate max-w-[160px] cursor-pointer"
             style={{ textShadow: '0 1px 4px rgba(0,0,0,0.9)' }}>
             {label}
           </span>
@@ -60,11 +60,11 @@ export default function AnnotationMarker({ hotspotId, screenX, screenY, number, 
                 background: 'rgba(0,0,0,0.78)', border: '1px solid rgba(255,255,255,0.15)',
                 backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)',
               }}>
-              <p className="text-xs font-semibold text-white/90 leading-snug">{label}</p>
+              <p className="text-[16px] font-semibold text-white/90 leading-snug">{label}</p>
               {note ? (
-                <p className="text-[11px] text-white/55 leading-snug mt-1">{note}</p>
+                <p className="text-[13px] text-white/55 leading-snug mt-1">{note}</p>
               ) : (
-                <p className="text-[11px] text-white/25 italic mt-0.5">点击编辑添加注释</p>
+                <p className="text-[13px] text-white/25 italic mt-0.5">点击编辑添加注释</p>
               )}
             </div>
             <button onClick={e => { e.stopPropagation(); onEdit() }}
