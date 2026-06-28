@@ -1,5 +1,5 @@
-import type { ModelMeta, Hotspot, CameraPath } from '../types'
-import { STORAGE_KEY_HOTSPOTS, STORAGE_KEY_CAMERA_PATHS, STORAGE_KEY_CUSTOM_MODELS } from '../types'
+import type { ModelMeta, Hotspot, CameraPath, Vector3Like } from '../types'
+import { STORAGE_KEY_HOTSPOTS, STORAGE_KEY_CAMERA_PATHS, STORAGE_KEY_CUSTOM_MODELS, STORAGE_KEY_INITIAL_CAMERA } from '../types'
 
 export function generateId(): string {
   return Date.now().toString(36) + Math.random().toString(36).slice(2, 8)
@@ -79,6 +79,19 @@ export function deleteCameraPath(modelId: string, id: string): void {
   saveCameraPaths(modelId, paths)
 }
 
+// --- Initial Camera ---
+
+export function saveInitialCamera(modelId: string, position: Vector3Like, target: Vector3Like): void {
+  localStorage.setItem(STORAGE_KEY_INITIAL_CAMERA + modelId, JSON.stringify({ position, target }))
+}
+
+export function getInitialCamera(modelId: string): { position: Vector3Like; target: Vector3Like } | null {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY_INITIAL_CAMERA + modelId)
+    return raw ? JSON.parse(raw) : null
+  } catch { return null }
+}
+
 // --- Custom Models ---
 
 export function getCustomModels(): ModelMeta[] {
@@ -117,6 +130,7 @@ export function deleteCustomModel(id: string): void {
   // Also clean up associated data
   localStorage.removeItem(STORAGE_KEY_HOTSPOTS + id)
   localStorage.removeItem(STORAGE_KEY_CAMERA_PATHS + id)
+  localStorage.removeItem(STORAGE_KEY_INITIAL_CAMERA + id)
 }
 
 // ── Supabase-backed async versions (load remote hotspots/paths when applicable) ──

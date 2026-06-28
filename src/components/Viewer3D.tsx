@@ -14,6 +14,7 @@ import { syncOrbitControls } from '../utils/orbitSync'
 import {
   getHotspots, addHotspot, updateHotspot, deleteHotspot,
   loadHotspots, saveHotspotsRemote,
+  getInitialCamera, saveInitialCamera,
 } from '../store/modelStore'
 import type { Hotspot, CameraPath } from '../types'
 import type { Scene, Camera, WebGLRenderer, OrbitControls, IntersectionTester } from 'gsplat'
@@ -102,8 +103,16 @@ export default function Viewer3D({ modelUrl, modelName, modelId, readOnly, downl
   const showHotspotEditorRef = useRef(false)
 
   // Fly-to animation refs
-  const flyAnimIdRef = useRef<number>(0)
   const isFlyingRef = useRef(false)
+
+  // Fly animation state — driven by main rAF loop for smooth rendering
+  const flyStateRef = useRef<{
+    startPos: { x: number; y: number; z: number }
+    endPos: { x: number; y: number; z: number }
+    endLookAt: { x: number; y: number; z: number }
+    startTime: number
+    duration: number
+  } | null>(null)
 
   const flyToHotspot = useCallback((hs: Hotspot) => {
     const cam = cameraRef.current; const ctrl = controlsRef.current
@@ -112,14 +121,8 @@ export default function Viewer3D({ modelUrl, modelName, modelId, readOnly, downl
 
     setSelectedHotspot(hs)
 
-    // Cancel any in-progress fly animation
-    if (flyAnimIdRef.current) cancelAnimationFrame(flyAnimIdRef.current)
-
-    // Current camera state as start
     const startPos = { x: cam.position.x, y: cam.position.y, z: cam.position.z }
 
-    // Use saved camera position/target if available, otherwise fall back to
-    // flying toward the hotspot position
     const hasSavedCamera = hs.cameraPosition && hs.cameraTarget &&
       (hs.cameraPosition.x !== 0 || hs.cameraPosition.y !== 0 || hs.cameraPosition.z !== 0)
     const endPos = hasSavedCamera
@@ -134,32 +137,10 @@ export default function Viewer3D({ modelUrl, modelName, modelId, readOnly, downl
       ? { x: hs.cameraTarget!.x, y: hs.cameraTarget!.y, z: hs.cameraTarget!.z }
       : { x: hs.position.x, y: hs.position.y, z: hs.position.z }
 
-    const startTime = performance.now()
-    const duration = 0.6
+    // Set fly state — driven by main rAF loop below
+    flyStateRef.current = { startPos, endPos, endLookAt, startTime: performance.now(), duration: 0.6 }
     isFlyingRef.current = true
     ctrl.dampening = 0
-
-    const tick = () => {
-      const elapsed = (performance.now() - startTime) / 1000
-      const t = Math.min(elapsed / duration, 1)
-      const ease = easeInOutCubic(t)
-
-      const px = startPos.x + (endPos.x - startPos.x) * ease
-      const py = startPos.y + (endPos.y - startPos.y) * ease
-      const pz = startPos.z + (endPos.z - startPos.z) * ease
-      const dirVec = new SPLAT.Vector3(endLookAt.x - px, endLookAt.y - py, endLookAt.z - pz)
-      const rot = SPLAT.Quaternion.LookRotation(dirVec)
-      cam.position = new SPLAT.Vector3(px, py, pz)
-      cam.rotation = rot
-
-      if (t < 1) {
-        flyAnimIdRef.current = requestAnimationFrame(tick)
-      } else {
-        isFlyingRef.current = false
-        syncOrbitControls(ctrl, SPLAT, endLookAt.x, endLookAt.y, endLookAt.z)
-      }
-    }
-    flyAnimIdRef.current = requestAnimationFrame(tick)
   }, [])
 
   // Hotspot screen positions — stored in ref to avoid React re-render per frame.
@@ -207,8 +188,27 @@ export default function Viewer3D({ modelUrl, modelName, modelId, readOnly, downl
 
       const scene = new SPLAT.Scene()
       const camera = new SPLAT.Camera()
+      // Apply saved initial camera if available
+      const savedCam = getInitialCamera(modelId)
+      if (savedCam) {
+        camera.position = new SPLAT.Vector3(savedCam.position.x, savedCam.position.y, savedCam.position.z)
+        // Set rotation from direction to target
+        const dir = new SPLAT.Vector3(
+          savedCam.target.x - savedCam.position.x,
+          savedCam.target.y - savedCam.position.y,
+          savedCam.target.z - savedCam.position.z,
+        )
+        if (Math.sqrt(dir.x*dir.x+dir.y*dir.y+dir.z*dir.z) > 0.001) {
+          camera.rotation = SPLAT.Quaternion.LookRotation(dir)
+        }
+      }
       const renderer = new SPLAT.WebGLRenderer(canvas)
       const controls = new SPLAT.OrbitControls(camera, canvas, undefined, undefined, undefined, false)
+      // Sync controls target to saved initial camera
+      if (savedCam) {
+        controls.setCameraTarget(new SPLAT.Vector3(savedCam.target.x, savedCam.target.y, savedCam.target.z))
+        controls.update()
+      }
 
       sceneRef.current = scene
       cameraRef.current = camera
@@ -232,9 +232,26 @@ export default function Viewer3D({ modelUrl, modelName, modelId, readOnly, downl
       const animate = () => {
         const now = performance.now()
 
-        // Skip controls.update() during fly animation or path playback
+        // ── Fly animation: driven by main rAF for smooth rendering ──
         if (isFlyingRef.current) {
-          // Camera driven by flyToHotspot rAF loop — just render
+          const fly = flyStateRef.current
+          const SPLAT = splatModuleRef.current
+          if (fly && SPLAT) {
+            const elapsed = (now - fly.startTime) / 1000
+            const t = Math.min(elapsed / fly.duration, 1)
+            const ease = easeInOutCubic(t)
+            const px = fly.startPos.x + (fly.endPos.x - fly.startPos.x) * ease
+            const py = fly.startPos.y + (fly.endPos.y - fly.startPos.y) * ease
+            const pz = fly.startPos.z + (fly.endPos.z - fly.startPos.z) * ease
+            const dir = new SPLAT.Vector3(fly.endLookAt.x - px, fly.endLookAt.y - py, fly.endLookAt.z - pz)
+            camera.position = new SPLAT.Vector3(px, py, pz)
+            camera.rotation = SPLAT.Quaternion.LookRotation(dir)
+            if (t >= 1) {
+              isFlyingRef.current = false
+              flyStateRef.current = null
+              syncOrbitControls(controls, SPLAT, fly.endLookAt.x, fly.endLookAt.y, fly.endLookAt.z)
+            }
+          }
         } else if (isPathPlayingRef.current) {
           // Camera driven by path playback engine — update then render
           pathUpdateRef.current?.()
@@ -393,9 +410,11 @@ export default function Viewer3D({ modelUrl, modelName, modelId, readOnly, downl
       }
 
       const onKeyDown = (e: KeyboardEvent) => {
-        // Don't handle ANY keys if user is typing in an input/textarea
-        const tag = (e.target as HTMLElement)?.tagName
-        if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return
+        // Don't handle keys if user is typing in a text input — but allow range sliders
+        const el = e.target as HTMLElement
+        const tag = el?.tagName
+        if (tag === 'TEXTAREA' || tag === 'SELECT') return
+        if (tag === 'INPUT' && (el as HTMLInputElement).type !== 'range') return
         // Track WASD/QE flight keys
         if (['KeyW','KeyA','KeyS','KeyD','KeyQ','KeyE'].includes(e.code)) {
           keysRef.current.add(e.code)
@@ -616,6 +635,7 @@ export default function Viewer3D({ modelUrl, modelName, modelId, readOnly, downl
                 max={SPEED_MAX}
                 value={flightSpeed}
                 onChange={e => setFlightSpeed(Number(e.target.value))}
+                onMouseUp={e => (e.target as HTMLInputElement).blur()}
                 className="w-12 h-[2px] appearance-none rounded-full outline-none cursor-pointer
                   bg-white/[0.03] group-hover/toolbar:bg-white/[0.07] transition-colors duration-300
                   [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-2 [&::-webkit-slider-thumb]:h-2
@@ -699,6 +719,27 @@ export default function Viewer3D({ modelUrl, modelName, modelId, readOnly, downl
                 }`}
                 style={{ cursor: 'pointer' }}
               >🎥 {lang === 'zh' ? '相机路径' : 'Cam Path'}</button>
+
+              <div className="w-px h-6 bg-white/10" />
+              {/* Set initial camera button */}
+              <button
+                onClick={() => {
+                  const cam = cameraRef.current
+                  if (!cam) return
+                  const pos = { x: cam.position.x, y: cam.position.y, z: cam.position.z }
+                  const fwd = cam.forward
+                  const tgt = { x: pos.x + fwd.x * 3, y: pos.y + fwd.y * 3, z: pos.z + fwd.z * 3 }
+                  saveInitialCamera(modelId, pos, tgt)
+                  const el = document.createElement('div')
+                  el.className = 'fixed top-4 left-1/2 -translate-x-1/2 glass rounded-xl px-4 py-2 text-xs text-accent-2 z-[100] animate-fade-in'
+                  el.textContent = '✅ 初始视角已保存'
+                  document.body.appendChild(el)
+                  setTimeout(() => el.remove(), 2000)
+                }}
+                className="rounded-xl px-3 py-2.5 text-xs font-medium glass text-white/70 hover:text-white hover:bg-white/[0.06] transition-all cursor-pointer"
+                style={{ cursor: 'pointer' }}
+                title="保存当前视角为默认视角"
+              >🎯 {lang === 'zh' ? '设初始视角' : 'Set View'}</button>
             </>
           )}
         </motion.div>

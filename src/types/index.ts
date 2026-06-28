@@ -32,6 +32,9 @@ export interface ModelMeta {
   size: string
   featured: boolean
   hotspots: Hotspot[]
+  /** Saved initial camera viewpoint for this model */
+  initialCameraPosition?: Vector3Like
+  initialCameraTarget?: Vector3Like
 }
 
 // --- Camera Paths ---
@@ -56,3 +59,4 @@ export interface CameraPath {
 export const STORAGE_KEY_HOTSPOTS = 'gs_hotspots_'
 export const STORAGE_KEY_CAMERA_PATHS = 'gs_camera_paths_'
 export const STORAGE_KEY_CUSTOM_MODELS = 'gs_custom_models'
+export const STORAGE_KEY_INITIAL_CAMERA = 'gs_initial_camera_'
