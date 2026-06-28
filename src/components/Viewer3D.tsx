@@ -464,14 +464,22 @@ export default function Viewer3D({ modelUrl, modelName, modelId, readOnly, downl
     const ctrl = controlsRef.current
     const SPLAT = splatModuleRef.current
     if (!cam || !ctrl || !SPLAT) return
+
+    // Set target first — this updates internal spherical coordinates
+    ctrl.setCameraTarget(new SPLAT.Vector3(savedCam.target.x, savedCam.target.y, savedCam.target.z))
+    // Set camera position directly
     cam.position = new SPLAT.Vector3(savedCam.position.x, savedCam.position.y, savedCam.position.z)
+    // Set rotation
     const dx = savedCam.target.x - savedCam.position.x
     const dy = savedCam.target.y - savedCam.position.y
     const dz = savedCam.target.z - savedCam.position.z
     if (Math.sqrt(dx*dx+dy*dy+dz*dz) > 0.001) {
       cam.rotation = SPLAT.Quaternion.LookRotation(new SPLAT.Vector3(dx, dy, dz))
     }
-    ctrl.setCameraTarget(new SPLAT.Vector3(savedCam.target.x, savedCam.target.y, savedCam.target.z))
+    // Force OrbitControls to sync internal state from our camera position
+    // dampening=1 tells controls.update() to snap instantly (no lerp)
+    ctrl.dampening = 1
+    ctrl.update()
     ctrl.dampening = 0.2
   }, [isLoading, modelId])
 
