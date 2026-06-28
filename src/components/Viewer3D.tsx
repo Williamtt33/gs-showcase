@@ -466,7 +466,7 @@ export default function Viewer3D({ modelUrl, modelName, modelId, readOnly, downl
       setIsLoading(false)
       return () => { cancelAnimationFrame(animRef.current); rendererRef.current?.dispose() }
     }
-  }, [modelUrl, flyToHotspot])
+  }, [modelUrl, modelId, flyToHotspot])
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect -- init external WebGL system
