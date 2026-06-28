@@ -188,27 +188,8 @@ export default function Viewer3D({ modelUrl, modelName, modelId, readOnly, downl
 
       const scene = new SPLAT.Scene()
       const camera = new SPLAT.Camera()
-      // Apply saved initial camera if available
-      const savedCam = getInitialCamera(modelId)
-      if (savedCam) {
-        camera.position = new SPLAT.Vector3(savedCam.position.x, savedCam.position.y, savedCam.position.z)
-        // Set rotation from direction to target
-        const dir = new SPLAT.Vector3(
-          savedCam.target.x - savedCam.position.x,
-          savedCam.target.y - savedCam.position.y,
-          savedCam.target.z - savedCam.position.z,
-        )
-        if (Math.sqrt(dir.x*dir.x+dir.y*dir.y+dir.z*dir.z) > 0.001) {
-          camera.rotation = SPLAT.Quaternion.LookRotation(dir)
-        }
-      }
       const renderer = new SPLAT.WebGLRenderer(canvas)
       const controls = new SPLAT.OrbitControls(camera, canvas, undefined, undefined, undefined, false)
-      // Sync controls target to saved initial camera
-      if (savedCam) {
-        controls.setCameraTarget(new SPLAT.Vector3(savedCam.target.x, savedCam.target.y, savedCam.target.z))
-        controls.update()
-      }
 
       sceneRef.current = scene
       cameraRef.current = camera
@@ -474,6 +455,25 @@ export default function Viewer3D({ modelUrl, modelName, modelId, readOnly, downl
     return () => { cleanup.then((fn) => { if (typeof fn === 'function') fn() }) }
   }, [initAndLoad])
 
+  // Apply saved initial camera after scene is fully loaded
+  useEffect(() => {
+    if (isLoading) return
+    const savedCam = getInitialCamera(modelId)
+    if (!savedCam) return
+    const cam = cameraRef.current
+    const ctrl = controlsRef.current
+    const SPLAT = splatModuleRef.current
+    if (!cam || !ctrl || !SPLAT) return
+    cam.position = new SPLAT.Vector3(savedCam.position.x, savedCam.position.y, savedCam.position.z)
+    const dx = savedCam.target.x - savedCam.position.x
+    const dy = savedCam.target.y - savedCam.position.y
+    const dz = savedCam.target.z - savedCam.position.z
+    if (Math.sqrt(dx*dx+dy*dy+dz*dz) > 0.001) {
+      cam.rotation = SPLAT.Quaternion.LookRotation(new SPLAT.Vector3(dx, dy, dz))
+    }
+    ctrl.setCameraTarget(new SPLAT.Vector3(savedCam.target.x, savedCam.target.y, savedCam.target.z))
+    ctrl.dampening = 0.2
+  }, [isLoading, modelId])
 
   // --- Hotspot handlers ---
   const handleSaveHotspot = useCallback((data: { title: string; titleEn: string; description: string; descriptionEn: string }) => {
