@@ -4,6 +4,7 @@ import { hasValidExtension, formatSize } from '../utils/fileValidation'
 
 interface Props {
   onFile: (file: File) => void
+  onClear?: () => void
   accept?: string
   hint?: string
   className?: string
@@ -50,7 +51,8 @@ export default function FileDropZone({
   const resetFile = useCallback(() => {
     setPendingFile(null)
     setInvalidExt(false)
-  }, [])
+    onClear?.()
+  }, [onClear])
 
   const onDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault()
@@ -165,9 +167,24 @@ export default function FileDropZone({
                 )}
 
                 {!requireConfirm && (
-                  <p className="text-[10px] text-text-3/40">
-                    点击或拖拽以替换文件
-                  </p>
+                  <div className="flex items-center justify-center gap-2 pt-1">
+                    <button
+                      type="button"
+                      onClick={(e) => { e.stopPropagation(); inputRef.current?.click() }}
+                      className="px-4 py-2 rounded-lg bg-accent-1/15 border border-accent-1/25 text-accent-1/80 text-[12px] font-medium hover:bg-accent-1/20 transition-all cursor-pointer"
+                      style={{ cursor: 'pointer' }}
+                    >
+                      替换文件
+                    </button>
+                    <button
+                      type="button"
+                      onClick={(e) => { e.stopPropagation(); resetFile() }}
+                      className="px-4 py-2 rounded-lg bg-white/[0.03] border border-white/[0.05] text-text-3/60 text-[12px] hover:text-text-2 hover:bg-white/[0.06] transition-all cursor-pointer"
+                      style={{ cursor: 'pointer' }}
+                    >
+                      移除
+                    </button>
+                  </div>
                 )}
               </>
             )}
