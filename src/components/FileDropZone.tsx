@@ -15,6 +15,7 @@ interface Props {
 
 export default function FileDropZone({
   onFile,
+  onClear,
   accept = '.ply,.sog,.splat',
   hint,
   className = '',
