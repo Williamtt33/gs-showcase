@@ -197,19 +197,24 @@ export default function Admin() {
     setLoginKey(k => k + 1)
   }
 
-  const handleDelete = async (id: string) => {
+  const handleDeleteRemote = async (id: string) => {
     if (!window.confirm(t.admin.deleteConfirm)) return
-    if (isRemote) {
-      try {
-        await deleteRemoteModel(id)
-        setRemoteModels(prev => prev.filter(m => m.id !== id))
-      } catch (e) {
-        console.error('Delete failed:', e)
-      }
-    } else {
+    try {
+      await deleteRemoteModel(id)
+      setRemoteModels(prev => prev.filter(m => m.id !== id))
+      // Also clean up local copy if exists
       deleteCustomModel(id)
       setCustomModels(getCustomModels())
+    } catch (e) {
+      console.error('Delete failed:', e)
+      alert('删除失败，请重试')
     }
+  }
+
+  const handleDeleteLocal = (id: string) => {
+    if (!window.confirm(t.admin.deleteConfirm)) return
+    deleteCustomModel(id)
+    setCustomModels(getCustomModels())
   }
 
   const handleClearHistory = () => {
@@ -278,7 +283,7 @@ export default function Admin() {
               </div>
             ) : (
               <div className="space-y-2">
-                {builtinModels.map(m => <ModelRow key={m.id} model={m} isBuiltin onDelete={handleDelete} />)}
+                {builtinModels.map(m => <ModelRow key={m.id} model={m} isBuiltin onDelete={handleDeleteLocal} />)}
               </div>
             )}
           </section>
@@ -293,7 +298,7 @@ export default function Admin() {
                 </div>
               ) : (
                 <div className="space-y-2">
-                  {remoteModels.map(m => <ModelRow key={m.id} model={m} isBuiltin={false} onDelete={handleDelete} />)}
+                  {remoteModels.map(m => <ModelRow key={m.id} model={m} isBuiltin={false} onDelete={handleDeleteRemote} />)}
                 </div>
               )}
             </section>
@@ -310,7 +315,7 @@ export default function Admin() {
               </div>
             ) : (
               <div className="space-y-2">
-                {customModels.map(m => <ModelRow key={m.id} model={m} isBuiltin={false} onDelete={handleDelete} />)}
+                {customModels.map(m => <ModelRow key={m.id} model={m} isBuiltin={false} onDelete={handleDeleteLocal} />)}
               </div>
             )}
           </section>
