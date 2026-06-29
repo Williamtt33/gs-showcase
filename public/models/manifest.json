@@ -31,11 +31,11 @@
     "nameEn": "Ponte Portagem",
     "description": "历史石桥的高精度三维重建，展现古老建筑的精美细节",
     "descriptionEn": "High-precision 3D reconstruction of a historic stone bridge with exquisite architectural details",
-    "file": "ponte-portagem-full.splat",
+    "file": "ponte-portagem-lite.splat",
     "thumbnail": "",
     "tags": ["文化遗产", "古建筑", "石桥"],
-    "pointCount": "3.6M",
-    "size": "111 MB",
+    "pointCount": "2.9M",
+    "size": "90 MB",
     "featured": true
   }
 ]
