@@ -1,1 +1,28 @@
-[]
+[
+  {
+    "id": "chinese-guardian-lion",
+    "name": "石狮子",
+    "nameEn": "Chinese Guardian Lion",
+    "description": "中国传统石狮，精雕细刻，镇守门户的祥瑞之兽",
+    "descriptionEn": "Traditional Chinese guardian lion sculpture with intricate stone carving details",
+    "file": "Chinese Guardian Lion.splat",
+    "thumbnail": "",
+    "tags": ["文化遗产", "雕塑", "石狮"],
+    "pointCount": "747K",
+    "size": "23 MB",
+    "featured": true
+  },
+  {
+    "id": "container",
+    "name": "集装箱",
+    "nameEn": "Container",
+    "description": "集装箱三维重建模型，展现工业场景的高精度扫描效果",
+    "descriptionEn": "3D reconstruction of an industrial container, demonstrating high-precision 3D scanning",
+    "file": "Container.splat",
+    "thumbnail": "",
+    "tags": ["工业", "扫描重建"],
+    "pointCount": "969K",
+    "size": "30 MB",
+    "featured": false
+  }
+]
