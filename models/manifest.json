@@ -18,11 +18,11 @@
     "nameEn": "Container",
     "description": "集装箱三维重建模型，展现工业场景的高精度扫描效果",
     "descriptionEn": "3D reconstruction of an industrial container, demonstrating high-precision 3D scanning",
-    "file": "Container.splat",
+    "file": "Container.sog",
     "thumbnail": "",
     "tags": ["工业", "扫描重建"],
-    "pointCount": "969K",
-    "size": "30 MB",
-    "featured": false
+    "pointCount": "945K",
+    "size": "16 MB",
+    "featured": true
   }
 ]
