@@ -10,6 +10,7 @@ export default function Viewer() {
   const { t, lang } = useI18n()
   const [model, setModel] = useState<ModelInfo | null>(null)
   const [modelUrl, setModelUrl] = useState<string | null>(null)
+  const [modelBuffer, setModelBuffer] = useState<ArrayBuffer | null>(null)
   const [downloadProgress, setDownloadProgress] = useState(0)
   const [notFound, setNotFound] = useState(false)
   const [loadError, setLoadError] = useState<string | null>(null)
@@ -20,17 +21,21 @@ export default function Viewer() {
     genRef.current++
     const currentGen = genRef.current
     // eslint-disable-next-line react-hooks/set-state-in-effect
-    setModelUrl(null); setLoadError(null); setNotFound(false)
+    setModelUrl(null); setModelBuffer(null); setLoadError(null); setNotFound(false)
     getModelById(modelId).then(async (m) => {
       if (currentGen !== genRef.current) return // Stale request
       if (!m) { setNotFound(true); return }
       setModel(m)
       try {
-        const url = await resolveModelUrl(m, (p) => {
+        const resolved = await resolveModelUrl(m, (p) => {
           if (currentGen === genRef.current) setDownloadProgress(p)
         })
         if (currentGen !== genRef.current) return // Stale request
-        setModelUrl(url)
+        if (resolved.source === 'url') {
+          setModelUrl(resolved.url)
+        } else {
+          setModelBuffer(resolved.buffer)
+        }
       } catch (e: unknown) {
         if (currentGen !== genRef.current) return // Stale request
         setLoadError(e instanceof Error ? e.message : '加载失败')
@@ -55,9 +60,10 @@ export default function Viewer() {
 
   return (
     <div className="h-dyn w-full bg-black relative overflow-hidden">
-      {model && modelUrl && (
+      {model && (modelUrl || modelBuffer) && (
         <Viewer3D
-          modelUrl={modelUrl}
+          modelUrl={modelUrl ?? undefined}
+          modelBuffer={modelBuffer ?? undefined}
           modelName={lang === 'zh' ? model.name : model.nameEn}
           modelId={model.id}
           readOnly
@@ -66,14 +72,14 @@ export default function Viewer() {
       )}
 
       {/* Loading state — shows progress bar during download */}
-      {(!model || !modelUrl) && !notFound && !loadError && (
+      {(!model || !(modelUrl || modelBuffer)) && !notFound && !loadError && (
         <div className="h-full flex items-center justify-center bg-surface-0">
           <div className="text-center">
             <div className="w-16 h-16 border-2 border-white/[0.06] border-t-accent-1 rounded-full animate-spin mx-auto mb-6" />
             <p className="text-white/60 text-sm mb-3">
-              {model && !modelUrl ? '正在下载模型...' : t.gallery.loading}
+              {model && !(modelUrl || modelBuffer) ? '正在下载模型...' : t.gallery.loading}
             </p>
-            {model && !modelUrl && (
+            {model && !(modelUrl || modelBuffer) && (
               <>
                 <div className="w-64 h-1.5 bg-white/[0.06] rounded-full overflow-hidden">
                   <motion.div

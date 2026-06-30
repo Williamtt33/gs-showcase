@@ -1,9 +1,14 @@
 import { getCustomModels } from '../store/modelStore'
-import { getSplatFileUrl, cacheModelFile, getCachedModelFile } from './fileStorage'
+import { getSplatFileBuffer, cacheModelFile, getCachedModelBuffer } from './fileStorage'
 import { fetchCustomModels, isSupabaseConfigured } from '../lib/api'
 import type { ModelMeta } from '../types'
 
 export type { ModelMeta as ModelInfo }
+
+/** Result of resolving a model to its loadable source. */
+export type ResolvedModel =
+  | { source: 'url'; url: string }
+  | { source: 'buffer'; buffer: ArrayBuffer }
 
 let cachedManifest: ModelMeta[] | null = null
 
@@ -42,32 +47,33 @@ export async function getModels(): Promise<ModelMeta[]> {
   return [...builtin, ...remote, ...filteredCustom]
 }
 
-/** Resolve the actual loadable URL for a model.
- *  For relative-path builtin models: check IndexedDB cache first,
- *  otherwise download, cache, and return a blob URL.
- *  onProgress reports 0–100 during download. */
+/** Resolve a model to its loadable source.
+ *  For relative-path and [local] models: returns `{ source: 'buffer', buffer }`.
+ *  For http/https URLs: returns `{ source: 'url', url }` (passthrough).
+ *  onProgress reports 0–100 during download for relative-path cache misses. */
 export async function resolveModelUrl(
   model: ModelMeta,
   onProgress?: (p: number) => void,
-): Promise<string> {
-  // Locally uploaded file → load from IndexedDB
+): Promise<ResolvedModel> {
+  // Locally uploaded file → load raw ArrayBuffer from IndexedDB
   if (model.file.startsWith('[local]')) {
-    const url = await getSplatFileUrl(model.id)
-    if (!url) throw new Error(`Local file for "${model.name}" not found. Please re-upload.`)
-    return url
+    const buffer = await getSplatFileBuffer(model.id)
+    if (!buffer) throw new Error(`Local file for "${model.name}" not found. Please re-upload.`)
+    onProgress?.(100)
+    return { source: 'buffer', buffer }
   }
-  // Full URL — pass through, let gsplat handle download
+  // Full URL — pass through, gsplat handles fetch + progress internally
   if (model.file.startsWith('http://') || model.file.startsWith('https://')) {
-    return model.file
+    return { source: 'url', url: model.file }
   }
   // Relative path — check IndexedDB cache first
   const path = `${import.meta.env.BASE_URL}models/${model.file}`
-  const cached = await getCachedModelFile(path)
+  const cached = await getCachedModelBuffer(path)
   if (cached) {
     onProgress?.(100)
-    return cached
+    return { source: 'buffer', buffer: cached }
   }
-  // Download with progress, cache, return blob URL
+  // Cache miss — download with progress, cache in background, return buffer
   const response = await fetch(path)
   if (!response.ok) throw new Error(`Failed to load model: ${response.status}`)
   const contentLength = response.headers.get('content-length')
@@ -87,7 +93,8 @@ export async function resolveModelUrl(
   const buffer = await new Blob(chunks as BlobPart[]).arrayBuffer()
   // Cache in background — don't block loading
   cacheModelFile(path, buffer).catch((e: unknown) => { console.warn('Failed to cache model file:', e) })
-  return URL.createObjectURL(new Blob([buffer]))
+  onProgress?.(100)
+  return { source: 'buffer', buffer }
 }
 
 /** Get the display URL for showing in UI (not the real loadable URL) */

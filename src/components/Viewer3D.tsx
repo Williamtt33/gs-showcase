@@ -21,7 +21,8 @@ import type { Scene, Camera, WebGLRenderer, OrbitControls, IntersectionTester } 
 import { useCameraPathPlayer } from '../hooks/useCameraPathPlayer'
 
 interface Props {
-  modelUrl: string
+  modelUrl?: string           // URL for LoadAsync (http/https models)
+  modelBuffer?: ArrayBuffer   // Buffer for LoadFromArrayBuffer (local/cached models)
   modelName: string
   modelId: string
   readOnly?: boolean
@@ -29,7 +30,7 @@ interface Props {
   downloadProgress?: number
 }
 
-export default function Viewer3D({ modelUrl, modelName, modelId, readOnly, downloadProgress }: Props) {
+export default function Viewer3D({ modelUrl, modelBuffer, modelName, modelId, readOnly, downloadProgress }: Props) {
   const { lang } = useI18n()
   const containerRef = useRef<HTMLDivElement>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
@@ -374,8 +375,22 @@ export default function Viewer3D({ modelUrl, modelName, modelId, readOnly, downl
 
       // Load model
       setIsLoading(true); setProgress(0)
-      const splat = await SPLAT.Loader.LoadAsync(modelUrl, scene, (p: number) => setProgress(Math.round(p * 100)))
-      setSplatCount(splat?.data?.vertexCount ?? 0)
+
+      if (modelBuffer) {
+        // Synchronous load from pre-fetched ArrayBuffer.
+        // Yield one microtask so React renders the loading screen before
+        // Deserialize blocks the main thread (200-500ms for 90MB models).
+        await new Promise(r => setTimeout(r, 0))
+        const splat = SPLAT.Loader.LoadFromArrayBuffer(modelBuffer, scene)
+        setProgress(100)
+        setSplatCount(splat?.data?.vertexCount ?? 0)
+      } else if (modelUrl) {
+        // Async load from URL — gsplat handles fetch + deserialize with progress
+        const splat = await SPLAT.Loader.LoadAsync(modelUrl, scene, (p: number) => setProgress(Math.round(p * 100)))
+        setSplatCount(splat?.data?.vertexCount ?? 0)
+      } else {
+        throw new Error('No model source provided (neither modelUrl nor modelBuffer)')
+      }
 
       // Initialize intersection tester for click-to-place
       try {
@@ -447,7 +462,7 @@ export default function Viewer3D({ modelUrl, modelName, modelId, readOnly, downl
       setIsLoading(false)
       return () => { cancelAnimationFrame(animRef.current); rendererRef.current?.dispose() }
     }
-  }, [modelUrl, modelId, flyToHotspot])
+  }, [modelUrl, modelBuffer, modelId, flyToHotspot])
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect -- init external WebGL system

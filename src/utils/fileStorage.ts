@@ -118,6 +118,17 @@ export async function hasSplatFile(modelId: string): Promise<boolean> {
   })
 }
 
+/** Get raw ArrayBuffer for a locally-uploaded splat file — no blob URL wrapping. */
+export async function getSplatFileBuffer(modelId: string): Promise<ArrayBuffer | null> {
+  const db = await openDB()
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(STORE_SPLAT, 'readonly')
+    const req = tx.objectStore(STORE_SPLAT).get(modelId)
+    req.onsuccess = () => resolve(req.result?.buffer ?? null)
+    req.onerror = () => reject(req.error)
+  })
+}
+
 /** Delete stored splat file */
 export async function deleteSplatFile(modelId: string): Promise<void> {
   const db = await openDB()
@@ -173,6 +184,17 @@ export async function getCachedModelFile(url: string): Promise<string | null> {
       if (!data?.buffer) { resolve(null); return }
       resolve(URL.createObjectURL(new Blob([data.buffer])))
     }
+    req.onerror = () => reject(req.error)
+  })
+}
+
+/** Get raw ArrayBuffer for a cached builtin model — no blob URL wrapping. */
+export async function getCachedModelBuffer(url: string): Promise<ArrayBuffer | null> {
+  const db = await openDB()
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(STORE_CACHE, 'readonly')
+    const req = tx.objectStore(STORE_CACHE).get(url)
+    req.onsuccess = () => resolve(req.result?.buffer ?? null)
     req.onerror = () => reject(req.error)
   })
 }

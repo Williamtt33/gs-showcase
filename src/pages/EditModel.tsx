@@ -13,6 +13,7 @@ export default function EditModel() {
 
   const [model, setModel] = useState<ModelMeta | null>(null)
   const [modelUrl, setModelUrl] = useState<string | null>(null)
+  const [modelBuffer, setModelBuffer] = useState<ArrayBuffer | null>(null)
   const [downloadProgress, setDownloadProgress] = useState(0)
   const [notFound, setNotFound] = useState(false)
   const [loadError, setLoadError] = useState<string | null>(null)
@@ -40,8 +41,12 @@ export default function EditModel() {
       setLoading(false)
       setDownloading(true)
       try {
-        const url = await resolveModelUrl(m, setDownloadProgress)
-        setModelUrl(url)
+        const resolved = await resolveModelUrl(m, setDownloadProgress)
+        if (resolved.source === 'url') {
+          setModelUrl(resolved.url)
+        } else {
+          setModelBuffer(resolved.buffer)
+        }
       } catch (e: unknown) {
         setLoadError(e instanceof Error ? e.message : '模型文件加载失败')
       }
@@ -124,9 +129,10 @@ export default function EditModel() {
   return (
     <div className="h-dyn w-full bg-black relative overflow-hidden">
       {/* 3D Viewer in edit mode */}
-      {modelUrl && (
+      {(modelUrl || modelBuffer) && (
         <Viewer3D
-          modelUrl={modelUrl}
+          modelUrl={modelUrl ?? undefined}
+          modelBuffer={modelBuffer ?? undefined}
           modelName={model.name}
           modelId={model.id}
           readOnly={false}
@@ -135,7 +141,7 @@ export default function EditModel() {
       )}
 
       {/* Download progress overlay */}
-      {downloading && !modelUrl && (
+      {downloading && !modelUrl && !modelBuffer && (
         <div className="absolute inset-0 flex items-center justify-center bg-black/70 z-30">
           <div className="text-center">
             <div className="w-16 h-16 border-2 border-white/[0.06] border-t-accent-1 rounded-full animate-spin mx-auto mb-6" />
