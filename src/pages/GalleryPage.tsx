@@ -83,9 +83,6 @@ export default function Gallery() {
               <h1 className="text-4xl sm:text-5xl lg:text-6xl font-display tracking-tight mb-6 leading-[1.22]">
                 <span className="gradient-text">{t.gallery.title}</span>
               </h1>
-              <p className="text-text-3/70 text-base sm:text-lg font-light max-w-lg mx-auto leading-[1.8]">
-                透过花窗，窥见历史街区的三维映像
-              </p>
             </motion.div>
           </div>
         </section>
