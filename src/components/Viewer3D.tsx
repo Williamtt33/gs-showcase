@@ -31,7 +31,7 @@ export default function Viewer3D({ modelSource, modelName, modelId, readOnly, do
   // Scene init
   const {
     rendererRef, sceneRef, cameraRef, controlsRef, splatModuleRef, intersectionTesterRef,
-    isLoading, progress, error, splatCount, fps,
+    isLoading, progress, error, splatCount,
   } = useSceneInit({ canvasRef, containerRef, modelSource })
 
   // Hotspots
@@ -51,6 +51,10 @@ export default function Viewer3D({ modelSource, modelName, modelId, readOnly, do
   const isPathPlayingRef = useRef(false)
   const pathUpdateRef = useRef<(() => void) | null>(null)
   const playback = usePathPlayer(activePath, cameraRef, controlsRef, splatModuleRef, isPathPlayingRef, pathUpdateRef)
+
+  // FPS tracking (done in render loop, not useSceneInit)
+  const [fps, setFps] = useState(0)
+  const fpsFramesRef = useRef<number[]>([])
 
   // WASD flight
   const keysRef = useRef<Set<string>>(new Set())
@@ -176,6 +180,12 @@ export default function Viewer3D({ modelSource, modelName, modelId, readOnly, do
       const scene = sceneRef.current
       if (renderer && scene && SPLAT) {
         renderer.render(scene as any, cam as any)
+        // FPS tracking
+        fpsFramesRef.current.push(now)
+        while (fpsFramesRef.current.length > 0 && fpsFramesRef.current[0] < now - 1000) {
+          fpsFramesRef.current.shift()
+        }
+        setFps(fpsFramesRef.current.length)
       }
 
       // 5. Hotspot projection
@@ -408,22 +418,6 @@ export default function Viewer3D({ modelSource, modelName, modelId, readOnly, do
                 style={{ cursor: 'pointer' }}
               />
             </div>
-            <span className="w-px h-4 bg-[rgba(199,185,156,0.10)]" />
-            <button
-              onClick={() => {
-                const canvas = canvasRef.current
-                if (!canvas) return
-                try {
-                  const dataUrl = canvas.toDataURL('image/jpeg', 0.85)
-                  // Store screenshot via IndexedDB is gone — just download
-                  const a = document.createElement('a')
-                  a.href = dataUrl; a.download = `${modelId}-screenshot.jpg`; a.click()
-                } catch { /* ignore */ }
-              }}
-              className="px-2.5 py-1.5 text-sm text-white/25 hover:text-white/65 transition-colors rounded-lg hover:bg-white/[0.03] bg-transparent border-none cursor-pointer"
-              style={{ cursor: 'pointer' }}
-              title="截图"
-            >📷</button>
           </div>
 
           {!readOnly && (

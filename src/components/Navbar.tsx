@@ -145,7 +145,6 @@ export default function Navbar() {
               )
             })}
             <div className="h-px bg-border-1 mx-4 my-2" />
-            <div className="h-px bg-border-1 mx-4 my-2" />
             <button
               onClick={() => { go({ route: 'upload' }); setMobileOpen(false) }}
               className="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium w-full text-left bg-transparent border-none cursor-pointer transition-all whitespace-nowrap text-text-3/50"

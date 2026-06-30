@@ -32,8 +32,20 @@ export async function getBuiltinModels(): Promise<ModelMeta[]> {
 // ── Public API: Models ──
 
 export async function getAllModels(): Promise<ModelMeta[]> {
-  // Only use built-in models from manifest.json — no remote fetching
-  return getBuiltinModels()
+  const builtin = await getBuiltinModels()
+  // Merge custom models from localStorage
+  let custom: ModelMeta[] = []
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY_CUSTOM_MODELS)
+    custom = raw ? JSON.parse(raw) : []
+  } catch { /* localStorage not available */ }
+  // Deduplicate by id (builtin takes precedence)
+  const seen = new Set(builtin.map(m => m.id))
+  const all = [...builtin]
+  for (const m of custom) {
+    if (!seen.has(m.id)) { seen.add(m.id); all.push(m) }
+  }
+  return all
 }
 
 export async function getModelById(id: string): Promise<ModelMeta | null> {

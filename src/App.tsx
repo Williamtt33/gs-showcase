@@ -98,12 +98,7 @@ export default function App() {
   useEffect(() => {
     const onHashChange = () => {
       const p = pageFromHash()
-      setHistory(prev => {
-        // If already at this page, don't push duplicate
-        const last = prev[prev.length - 1]
-        if (last.route === p.route && (last.route !== 'viewer' || (last as any).modelId === (p as any).modelId)) return prev
-        return [...prev, p]
-      })
+      setHistory([p])
     }
     window.addEventListener('hashchange', onHashChange)
     return () => window.removeEventListener('hashchange', onHashChange)
