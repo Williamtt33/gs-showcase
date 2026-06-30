@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react'
-import { usePage } from '../App'
+import { useEffect, useState, useRef } from 'react'
+import { usePage, setLocalFile } from '../App'
 import { getAllModels } from '../store'
 import ModelCard from './ModelCard'
 import PointCloudBackground from './PointCloudBackground'
@@ -28,6 +28,36 @@ export default function Home() {
   const { go } = usePage()
   const [models, setModels] = useState<ModelMeta[]>([])
   const [loading, setLoading] = useState(true)
+  const fileInputRef = useRef<HTMLInputElement>(null)
+
+  const handleLocalFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    try {
+      let buffer: ArrayBuffer
+      let name = file.name
+
+      if (file.name.toLowerCase().endsWith('.sog')) {
+        // Decode SoG to PLY in the browser
+        const { sogFileToPly } = await import('../utils/sogDecoder')
+        name = file.name.replace(/\.sog$/i, '')
+        const result = await sogFileToPly(file)
+        buffer = result.buffer
+      } else {
+        // PLY or SPLAT — read directly
+        buffer = await file.arrayBuffer()
+      }
+
+      setLocalFile(buffer, name)
+      go({ route: 'localViewer' })
+    } catch (err: any) {
+      console.error('Failed to load local file:', err)
+    }
+
+    // Reset input so same file can be re-selected
+    if (fileInputRef.current) fileInputRef.current.value = ''
+  }
 
   const loadModels = () => {
     setLoading(true)
@@ -112,6 +142,21 @@ export default function Home() {
                 </button>
                 <button onClick={() => go({ route: 'upload' })} className="text-[13px] text-text-3/50 hover:text-text-1 transition-colors duration-300 bg-transparent border-none cursor-pointer">
                   上传场景
+                </button>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept=".sog,.ply,.splat"
+                  onChange={handleLocalFile}
+                  className="hidden"
+                />
+                <button
+                  onClick={() => fileInputRef.current?.click()}
+                  className="text-[13px] text-text-3/40 hover:text-text-1 transition-colors duration-300 bg-transparent border-none cursor-pointer"
+                  style={{ cursor: 'pointer' }}
+                  title="打开本地 .sog / .ply / .splat 文件"
+                >
+                  打开文件
                 </button>
               </div>
             </div>

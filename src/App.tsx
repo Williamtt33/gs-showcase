@@ -1,4 +1,4 @@
-import { useState, useCallback, createContext, useContext } from 'react'
+import { useState, useCallback, createContext, useContext, useEffect } from 'react'
 import Navbar from './components/Navbar'
 import Footer from './components/Footer'
 import Home from './components/Home'
@@ -7,6 +7,7 @@ import About from './components/About'
 import Admin from './components/Admin'
 import Upload from './components/Upload'
 import ViewerPage from './components/ViewerPage'
+import LocalViewerPage from './components/LocalViewerPage'
 import ToastProvider from './components/Toast'
 
 // ── Page State Machine ──
@@ -17,8 +18,23 @@ export type Page =
   | { route: 'gallery' }
   | { route: 'about' }
   | { route: 'viewer'; modelId: string; edit?: boolean }
+  | { route: 'localViewer' }
   | { route: 'upload' }
   | { route: 'admin' }
+
+// Module-level storage for local file data (can't put File/ArrayBuffer in React state easily)
+let localFileBuffer: ArrayBuffer | null = null
+let localFileName = ''
+
+export function setLocalFile(buffer: ArrayBuffer, name: string) {
+  localFileBuffer = buffer
+  localFileName = name
+}
+
+export function getLocalFile(): { buffer: ArrayBuffer; name: string } | null {
+  if (!localFileBuffer) return null
+  return { buffer: localFileBuffer!, name: localFileName }
+}
 
 interface PageCtxValue {
   page: Page
@@ -35,6 +51,7 @@ export function usePage() {
 // Restore page from hash (e.g. #/viewer/shamian)
 function pageFromHash(): Page {
   const hash = window.location.hash.replace('#', '')
+  if (hash === '/local-viewer') return { route: 'localViewer' }
   if (hash.startsWith('/viewer/')) {
     const parts = hash.split('/')
     return { route: 'viewer', modelId: parts[2], edit: parts[3] === 'edit' }
@@ -51,6 +68,7 @@ function pageToHash(p: Page): string {
     case 'viewer': return `/viewer/${p.modelId}${p.edit ? '/edit' : ''}`
     case 'gallery': return '/gallery'
     case 'about': return '/about'
+    case 'localViewer': return '/local-viewer'
     case 'upload': return '/upload'
     case 'admin': return '/admin'
     default: return ''
@@ -76,6 +94,26 @@ export default function App() {
     })
   }, [])
 
+  // Listen for browser back/forward (hashchange)
+  useEffect(() => {
+    const onHashChange = () => {
+      const p = pageFromHash()
+      setHistory(prev => {
+        // If already at this page, don't push duplicate
+        const last = prev[prev.length - 1]
+        if (last.route === p.route && (last.route !== 'viewer' || (last as any).modelId === (p as any).modelId)) return prev
+        return [...prev, p]
+      })
+    }
+    window.addEventListener('hashchange', onHashChange)
+    return () => window.removeEventListener('hashchange', onHashChange)
+  }, [])
+
+  // Scroll to top on page change
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  }, [page.route, (page as any).modelId])
+
   const isViewer = page.route === 'viewer'
 
   return (
@@ -99,6 +137,7 @@ function PageRenderer({ page }: { page: Page }) {
     case 'gallery': return <Gallery />
     case 'about': return <About />
     case 'viewer': return <ViewerPage modelId={page.modelId} edit={page.edit} />
+    case 'localViewer': return <LocalViewerPage />
     case 'upload': return <Upload />
     case 'admin': return <Admin />
   }

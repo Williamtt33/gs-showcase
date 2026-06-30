@@ -270,14 +270,30 @@ export type ModelSource =
 
 export async function resolveModelSource(model: ModelMeta): Promise<ModelSource> {
   const file = model.file
-  // HTTP(S) URL → use as-is
+  // HTTP(S) URL → handle .sog decoding, otherwise use as-is
   if (file.startsWith('http://') || file.startsWith('https://')) {
+    if (file.toLowerCase().endsWith('.sog')) {
+      // Remote .sog → download + decode to PLY client-side
+      const { sogUrlToPly } = await import('./utils/sogDecoder')
+      const plyBuffer = await sogUrlToPly(file)
+      return { type: 'buffer', buffer: plyBuffer }
+    }
     return { type: 'url', url: file }
   }
-  // Relative path → fetch from /models/
+  // Relative path → serve from /models/
   const base = import.meta.env.BASE_URL || '/'
   const url = `${base}models/${file}`
-  // Track download progress for large files
+  // SoG files: download + decode to PLY
+  if (file.toLowerCase().endsWith('.sog')) {
+    const { sogUrlToPly } = await import('./utils/sogDecoder')
+    const plyBuffer = await sogUrlToPly(url)
+    return { type: 'buffer', buffer: plyBuffer }
+  }
+  // PLY files: stream directly via gsplat LoadAsync
+  if (file.toLowerCase().endsWith('.ply')) {
+    return { type: 'url', url }
+  }
+  // SPLAT files: pre-fetch as ArrayBuffer
   const res = await fetch(url)
   if (!res.ok) throw new Error(`加载模型失败: HTTP ${res.status}`)
   const buffer = await res.arrayBuffer()

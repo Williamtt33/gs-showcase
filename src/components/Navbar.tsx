@@ -92,10 +92,10 @@ export default function Navbar() {
         {/* Desktop system links */}
         <div className="hidden md:flex items-center" style={{ flex: 1, justifyContent: 'flex-end', gap: 'clamp(16px, 3vw, 32px)' }}>
           <button
-            onClick={() => go({ route: 'about' })}
-            className={`text-[11px] sm:text-[12px] font-medium tracking-[0.04em] whitespace-nowrap bg-transparent border-none cursor-pointer transition-colors duration-300 ${currentRoute === 'about' ? 'text-text-2' : 'text-text-3/30'}`}
+            onClick={() => go({ route: 'upload' })}
+            className={`text-[11px] sm:text-[12px] font-medium tracking-[0.04em] whitespace-nowrap bg-transparent border-none cursor-pointer transition-colors duration-300 ${currentRoute === 'upload' ? 'text-text-2' : 'text-text-3/30'}`}
           >
-            关于
+            上传
           </button>
           <button
             onClick={() => go({ route: 'admin' })}
@@ -145,6 +145,13 @@ export default function Navbar() {
               )
             })}
             <div className="h-px bg-border-1 mx-4 my-2" />
+            <div className="h-px bg-border-1 mx-4 my-2" />
+            <button
+              onClick={() => { go({ route: 'upload' }); setMobileOpen(false) }}
+              className="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium w-full text-left bg-transparent border-none cursor-pointer transition-all whitespace-nowrap text-text-3/50"
+            >
+              <span>上传场景</span>
+            </button>
             <button
               onClick={() => { go({ route: 'admin' }); setMobileOpen(false) }}
               className={`flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium w-full text-left bg-transparent border-none cursor-pointer transition-all whitespace-nowrap ${currentRoute === 'admin' ? 'bg-white/[0.06] text-text-2' : 'text-text-3/50'}`}

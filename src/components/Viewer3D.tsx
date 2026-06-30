@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, useCallback } from 'react'
 import { usePage } from '../App'
 import type { Hotspot, CameraPath } from '../types'
 import { worldToScreen, easeInOutCubic } from '../math3d'
-import { getInitialCamera, saveInitialCamera, getHotspots as fetchHotspots } from '../store'
+import { getInitialCamera, saveInitialCamera } from '../store'
 import { useSceneInit } from '../hooks/useSceneInit'
 import { useHotspots } from '../hooks/useHotspots'
 import { usePathPlayer } from '../hooks/usePathPlayer'
@@ -30,7 +30,7 @@ export default function Viewer3D({ modelSource, modelName, modelId, readOnly, do
 
   // Scene init
   const {
-    cameraRef, controlsRef, splatModuleRef, intersectionTesterRef,
+    rendererRef, sceneRef, cameraRef, controlsRef, splatModuleRef, intersectionTesterRef,
     isLoading, progress, error, splatCount, fps,
   } = useSceneInit({ canvasRef, containerRef, modelSource })
 
@@ -171,9 +171,11 @@ export default function Viewer3D({ modelSource, modelName, modelId, readOnly, do
         }
       }
 
-      // 4. Render — scene renders via useSceneInit
-      if (!isFlyingRef.current && !isPathPlayingRef.current && keysRef.current.size === 0) {
-        ctrl.update()
+      // 4. Render the scene
+      const renderer = rendererRef.current
+      const scene = sceneRef.current
+      if (renderer && scene && SPLAT) {
+        renderer.render(scene as any, cam as any)
       }
 
       // 5. Hotspot projection
@@ -300,31 +302,19 @@ export default function Viewer3D({ modelSource, modelName, modelId, readOnly, do
 
   // Hotspot editor handlers
   const handleSaveHotspot = useCallback((data: { title: string; description: string }) => {
-    if (!data.title.trim()) return
-    if (editingHotspot?.id && editingHotspot.id !== '__pending__') {
-      updateHotspot(editingHotspot.id, data)
-    } else if (editingHotspot?.position) {
-      placeHotspot(editingHotspot.position, editingHotspot.cameraPosition || { x: 0, y: 0, z: 5 }, editingHotspot.cameraTarget || { x: 0, y: 0, z: 0 })
-      // Update the newly placed hotspot with title/description
-      const updated = getHotspotsForUpdate(modelId)
-      updated.then(hsList => {
-        const latest = hsList[hsList.length - 1]
-        if (latest) updateHotspot(latest.id, data)
-      })
-    }
+    if (!data.title.trim() || !editingHotspot?.id) return
+    updateHotspot(editingHotspot.id, data)
     setShowHotspotEditor(false)
-  }, [editingHotspot, updateHotspot, placeHotspot, modelId])
+  }, [editingHotspot, updateHotspot])
 
   const handleDeleteHotspot = useCallback((id: string) => {
     deleteHotspot(id)
     setShowHotspotEditor(false)
   }, [deleteHotspot])
 
-  async function getHotspotsForUpdate(modelId: string) { return fetchHotspots(modelId) }
-
   return (
     <div ref={containerRef} className="relative w-full h-full bg-black overflow-hidden"
-      onClick={(e) => {
+      onClick={async (e) => {
         if (isPlacingHotspot && (e.target as HTMLElement).tagName === 'CANVAS') {
           const canvas = canvasRef.current; const cam = cameraRef.current
           if (!canvas || !cam) return
@@ -350,7 +340,7 @@ export default function Viewer3D({ modelSource, modelName, modelId, readOnly, do
           }
           const camTgt = { x: cam.position.x + cam.forward.x * 3, y: cam.position.y + cam.forward.y * 3, z: cam.position.z + cam.forward.z * 3 }
           const camPos = { x: cam.position.x, y: cam.position.y, z: cam.position.z }
-          placeHotspot(pos, camPos, camTgt)
+          await placeHotspot(pos, camPos, camTgt)
           setShowHotspotEditor(true)
           return
         }
