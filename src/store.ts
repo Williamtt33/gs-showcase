@@ -19,7 +19,9 @@ let builtinCache: ModelMeta[] | null = null
 export async function getBuiltinModels(): Promise<ModelMeta[]> {
   if (builtinCache) return builtinCache
   try {
-    const res = await fetch(`${import.meta.env.BASE_URL}models/manifest.json`)
+    // Cache-bust with timestamp to avoid stale browser cache
+    const url = `${import.meta.env.BASE_URL}models/manifest.json?v=${Date.now()}`
+    const res = await fetch(url)
     if (!res.ok) throw new Error(`HTTP ${res.status}`)
     builtinCache = await res.json()
     return builtinCache ?? []
