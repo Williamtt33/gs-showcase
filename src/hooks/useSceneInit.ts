@@ -93,15 +93,18 @@ export function useSceneInit({ canvasRef, containerRef, modelSource }: UseSceneI
         setProgress(0)
 
         if (modelSource.type === 'buffer') {
+          setProgress(10) // parsing
           const splat = await (SPLAT.Loader as any).LoadFromArrayBuffer(
-            modelSource.buffer, localScene as any, (p: number) => setProgress(Math.round(p * 100)),
+            modelSource.buffer, localScene as any,
           )
+          setProgress(100)
           if (!disposed && splat) {
             setSplatCount(splat.data?.vertexCount ?? 0)
           }
         } else {
           const splat = await SPLAT.Loader.LoadAsync(
-            modelSource.url, localScene as any, (p: number) => setProgress(Math.round(p * 100)),
+            modelSource.url, localScene as any,
+            (p: number) => setProgress(Math.round(p * 100)),
           )
           if (!disposed && splat) {
             setSplatCount(splat.data?.vertexCount ?? 0)
