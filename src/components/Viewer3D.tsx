@@ -1,572 +1,330 @@
-import { useEffect, useRef, useCallback, useState } from 'react'
-import { Link } from 'react-router-dom'
-import { useI18n } from '../i18n/I18nContext'
-import { motion } from 'framer-motion'
-import PerformancePanel from './PerformancePanel'
-import ControlsHelp from './ControlsHelp'
-import AnnotationMarker from './viewer/AnnotationMarker'
-import HotspotEditor from './editor/HotspotEditor'
-import CameraPathPanel from './editor/CameraPathPanel'
-import SplatLoadingScreen from './viewer/SplatLoadingScreen'
-import ShamianLoadingScreen from './viewer/ShamianLoadingScreen'
-import { worldToScreen, easeInOutCubic } from '../utils/math3d'
-import { syncOrbitControls } from '../utils/orbitSync'
-import {
-  getHotspots, addHotspot, updateHotspot, deleteHotspot,
-  loadHotspots, saveHotspotsRemote,
-  getInitialCamera, saveInitialCamera,
-} from '../store/modelStore'
+import { useEffect, useRef, useState, useCallback } from 'react'
+import { usePage } from '../App'
 import type { Hotspot, CameraPath } from '../types'
-import type { Scene, Camera, WebGLRenderer, OrbitControls, IntersectionTester } from 'gsplat'
-import { useCameraPathPlayer } from '../hooks/useCameraPathPlayer'
+import { worldToScreen, easeInOutCubic } from '../math3d'
+import { getInitialCamera, saveInitialCamera, getHotspots as fetchHotspots } from '../store'
+import { useSceneInit } from '../hooks/useSceneInit'
+import { useHotspots } from '../hooks/useHotspots'
+import { usePathPlayer } from '../hooks/usePathPlayer'
+import HotspotEditor from './HotspotEditor'
+import CameraPathPanel from './CameraPathPanel'
+import ControlsHelp from './ControlsHelp'
+import LoadingScreen from './LoadingScreen'
 
 interface Props {
-  modelUrl?: string           // URL for LoadAsync (http/https models)
-  modelBuffer?: ArrayBuffer   // Buffer for LoadFromArrayBuffer (local/cached models)
+  modelSource: { type: 'url'; url: string } | { type: 'buffer'; buffer: ArrayBuffer }
   modelName: string
   modelId: string
   readOnly?: boolean
-  /** External download progress (0–100) when model is pre-fetched */
   downloadProgress?: number
 }
 
-export default function Viewer3D({ modelUrl, modelBuffer, modelName, modelId, readOnly, downloadProgress }: Props) {
-  const { lang } = useI18n()
+const SPEED_MIN = 5; const SPEED_MAX = 150
+
+export default function Viewer3D({ modelSource, modelName, modelId, readOnly, downloadProgress }: Props) {
+  const { go } = usePage()
   const containerRef = useRef<HTMLDivElement>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
+  const overlayRef = useRef<HTMLDivElement>(null)
   const animRef = useRef<number>(0)
 
-  // GSplat refs
-  const rendererRef = useRef<WebGLRenderer | null>(null)
-  const sceneRef = useRef<Scene | null>(null)
-  const cameraRef = useRef<Camera | null>(null)
-  const controlsRef = useRef<OrbitControls | null>(null)
-  const splatModuleRef = useRef<typeof import('gsplat') | null>(null)
-  const intersectionTesterRef = useRef<IntersectionTester | null>(null)
+  // Scene init
+  const {
+    cameraRef, controlsRef, splatModuleRef, intersectionTesterRef,
+    isLoading, progress, error, splatCount, fps,
+  } = useSceneInit({ canvasRef, containerRef, modelSource })
 
-  // WASD flight control refs
-  const keysRef = useRef<Set<string>>(new Set())
-  const lastTimeRef = useRef<number>(0)
-  const SPEED_KEY = 'gs_flight_speed'
-  const SPEED_MIN = 5
-  const SPEED_MAX = 150
-  const [flightSpeed, setFlightSpeed] = useState(() => {
-    try {
-      const stored = localStorage.getItem(SPEED_KEY)
-      if (stored) {
-        const v = parseInt(stored, 10)
-        return v >= SPEED_MIN && v <= SPEED_MAX ? v : 25
-      }
-      return 25
-    } catch { return 25 }
-  })
-  const flightSpeedRef = useRef(flightSpeed)
-  useEffect(() => {
-    flightSpeedRef.current = flightSpeed
-    localStorage.setItem(SPEED_KEY, String(flightSpeed))
-  }, [flightSpeed])
+  // Hotspots
+  const {
+    hotspots, selectedHotspot, editingHotspot, isPlacingHotspot,
+    selectHotspot, editHotspot, startPlacing, cancelPlacing, placeHotspot,
+    updateHotspot, deleteHotspot, hotspotsRef,
+  } = useHotspots(modelId)
 
-  // View state
-  const [isLoading, setIsLoading] = useState(true)
-  const [progress, setProgress] = useState(0)
-  const [error, setError] = useState<string | null>(null)
-  const [splatCount, setSplatCount] = useState(0)
-  const [fps, setFps] = useState(0)
-  const fpsFrames = useRef<number[]>([])
-
-  // UI state
+  // Camera path
+  const [activePath, setActivePath] = useState<CameraPath | null>(null)
+  const [activePathId, setActivePathId] = useState<string | null>(null)
   const [showControls, setShowControls] = useState(true)
   const [showHotspotEditor, setShowHotspotEditor] = useState(false)
-  const [selectedHotspot, setSelectedHotspot] = useState<Hotspot | null>(null)
-  const [editingHotspot, setEditingHotspot] = useState<Hotspot | null>(null)
-  const [isPlacingHotspot, setIsPlacingHotspot] = useState(false) // waiting for user to click on canvas
-
-  // Camera path state — refs owned by Viewer3D so render loop reads them directly
-  const [activePathId, setActivePathId] = useState<string | null>(null)
-  const [activePath, setActivePath] = useState<CameraPath | null>(null)
   const [showCameraPathPanel, setShowCameraPathPanel] = useState(false)
+  const [showPerf, setShowPerf] = useState(false)
   const isPathPlayingRef = useRef(false)
   const pathUpdateRef = useRef<(() => void) | null>(null)
-  const playback = useCameraPathPlayer(activePath, cameraRef, controlsRef, splatModuleRef, isPathPlayingRef, pathUpdateRef)
-  const handleSelectPath = useCallback((path: CameraPath | null) => {
-    setActivePathId(path?.id ?? null)
-    setActivePath(path)
-  }, [])
+  const playback = usePathPlayer(activePath, cameraRef, controlsRef, splatModuleRef, isPathPlayingRef, pathUpdateRef)
 
-  // Data state
-  const [hotspots, setHotspots] = useState<Hotspot[]>([])
-  const hotspotsRef = useRef<Hotspot[]>([])
-  const isLoadingRef = useRef(true)
-  const selectedHotspotRef = useRef<Hotspot | null>(null)
-  const [showPerf, setShowPerf] = useState(false)
-  const [isFirstVisit, setIsFirstVisit] = useState(false)
-  const editingHotspotRef = useRef<Hotspot | null>(null)
-  const showHotspotEditorRef = useRef(false)
+  // WASD flight
+  const keysRef = useRef<Set<string>>(new Set())
+  const lastTimeRef = useRef(0)
+  const [flightSpeed, setFlightSpeed] = useState(() => {
+    try { const v = parseInt(localStorage.getItem('gs_flight_speed') || '25', 10); return v >= SPEED_MIN && v <= SPEED_MAX ? v : 25 }
+    catch { return 25 }
+  })
+  const flightSpeedRef = useRef(flightSpeed)
+  useEffect(() => { flightSpeedRef.current = flightSpeed; localStorage.setItem('gs_flight_speed', String(flightSpeed)) }, [flightSpeed])
 
-  // Fly-to animation refs
+  // Fly-to state
   const isFlyingRef = useRef(false)
-
-  // Fly animation state — driven by main rAF loop for smooth rendering
-  const flyStateRef = useRef<{
-    startPos: { x: number; y: number; z: number }
-    endPos: { x: number; y: number; z: number }
-    endLookAt: { x: number; y: number; z: number }
-    startTime: number
-    duration: number
-  } | null>(null)
+  const flyStateRef = useRef<{ startPos: Vector3; endPos: Vector3; endLookAt: Vector3; startTime: number; duration: number } | null>(null)
+  type Vector3 = { x: number; y: number; z: number }
 
   const flyToHotspot = useCallback((hs: Hotspot) => {
     const cam = cameraRef.current; const ctrl = controlsRef.current
-    const SPLAT = splatModuleRef.current
-    if (!cam || !ctrl || !SPLAT) { setSelectedHotspot(hs); return }
-
-    setSelectedHotspot(hs)
+    if (!cam || !ctrl) { selectHotspot(hs); return }
+    selectHotspot(hs)
 
     const startPos = { x: cam.position.x, y: cam.position.y, z: cam.position.z }
-
-    const hasSavedCamera = hs.cameraPosition && hs.cameraTarget &&
-      (hs.cameraPosition.x !== 0 || hs.cameraPosition.y !== 0 || hs.cameraPosition.z !== 0)
-    const endPos = hasSavedCamera
+    const hasSaved = hs.cameraPosition && (hs.cameraPosition.x !== 0 || hs.cameraPosition.y !== 0 || hs.cameraPosition.z !== 0)
+    const endPos = hasSaved
       ? { x: hs.cameraPosition!.x, y: hs.cameraPosition!.y, z: hs.cameraPosition!.z }
       : (() => {
-          const d = Math.sqrt((startPos.x-hs.position.x)**2 + (startPos.y-hs.position.y)**2 + (startPos.z-hs.position.z)**2)
+          const d = Math.sqrt((startPos.x - hs.position.x) ** 2 + (startPos.y - hs.position.y) ** 2 + (startPos.z - hs.position.z) ** 2)
           const cd = 1.5
-          if (d < 0.01) return { x: hs.position.x+2, y: hs.position.y+1, z: hs.position.z+1.5 }
-          return { x: hs.position.x + (startPos.x-hs.position.x)/d*cd, y: hs.position.y + (startPos.y-hs.position.y)/d*cd, z: hs.position.z + (startPos.z-hs.position.z)/d*cd }
+          if (d < 0.01) return { x: hs.position.x + 2, y: hs.position.y + 1, z: hs.position.z + 1.5 }
+          const f = cd / d
+          return { x: hs.position.x + (startPos.x - hs.position.x) * f, y: hs.position.y + (startPos.y - hs.position.y) * f, z: hs.position.z + (startPos.z - hs.position.z) * f }
         })()
-    const endLookAt = hasSavedCamera
+    const endLookAt = hasSaved
       ? { x: hs.cameraTarget!.x, y: hs.cameraTarget!.y, z: hs.cameraTarget!.z }
       : { x: hs.position.x, y: hs.position.y, z: hs.position.z }
 
-    // Set fly state — driven by main rAF loop below
     flyStateRef.current = { startPos, endPos, endLookAt, startTime: performance.now(), duration: 0.6 }
     isFlyingRef.current = true
     ctrl.dampening = 0
-  }, [])
+  }, [cameraRef, controlsRef, selectHotspot])
 
-  // Hotspot screen positions — stored in ref to avoid React re-render per frame.
-  // Updated directly in the render loop via DOM manipulation for 60fps smoothness.
+  // Hotspot screen positions — updated via DOM for 60fps
   const hotspotScreensRef = useRef<Map<string, { x: number; y: number; visible: boolean; scale: number }>>(new Map())
-  const overlayRef = useRef<HTMLDivElement>(null)
-
-  // Load hotspots from store (Supabase if remote, localStorage fallback)
-  useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- loading data on model change
-    loadHotspots(modelId, modelUrl).then(hs => {
-      setHotspots(hs)
-    })
-    setSelectedHotspot(null)
-    setEditingHotspot(null)
-    setShowHotspotEditor(false)
-  }, [modelId, modelUrl])
-
-  // Keep refs in sync with state for render loop / event handler closure
-  useEffect(() => { hotspotsRef.current = hotspots }, [hotspots])
-  useEffect(() => { editingHotspotRef.current = editingHotspot }, [editingHotspot])
-  useEffect(() => { showHotspotEditorRef.current = showHotspotEditor }, [showHotspotEditor])
-  useEffect(() => { isLoadingRef.current = isLoading }, [isLoading])
+  const selectedHotspotRef = useRef<Hotspot | null>(null)
   useEffect(() => { selectedHotspotRef.current = selectedHotspot }, [selectedHotspot])
 
-  // First-visit: auto-dim the controls help after 8 seconds
+  // Main render loop
   useEffect(() => {
-    if (!isFirstVisit) return
-    const timer = setTimeout(() => {
-      setIsFirstVisit(false)
-      localStorage.setItem('gs_viewer_visited', '1')
-    }, 8000)
-    return () => clearTimeout(timer)
-  }, [isFirstVisit])
-
-  // --- Init & Load ---
-  const initAndLoad = useCallback(async () => {
-    const canvas = canvasRef.current
     const container = containerRef.current
-    if (!canvas || !container) return
+    if (!container) return
 
-    try {
-      const SPLAT = await import('gsplat')
-      splatModuleRef.current = SPLAT
+    const animate = () => {
+      const now = performance.now()
+      const cam = cameraRef.current
+      const ctrl = controlsRef.current
+      const SPLAT = splatModuleRef.current
 
-      const scene = new SPLAT.Scene()
-      const camera = new SPLAT.Camera()
-      const renderer = new SPLAT.WebGLRenderer(canvas)
-      const controls = new SPLAT.OrbitControls(camera, canvas, undefined, undefined, undefined, false)
+      if (!cam || !ctrl) { animRef.current = requestAnimationFrame(animate); return }
 
-      sceneRef.current = scene
-      cameraRef.current = camera
-      rendererRef.current = renderer
-      controlsRef.current = controls
-
-      const resize = () => {
-        const { width, height } = container.getBoundingClientRect()
-        const dpr = Math.min(window.devicePixelRatio, 2)
-        canvas.width = width * dpr
-        canvas.height = height * dpr
-        canvas.style.width = '100%'
-        canvas.style.height = '100%'
-        renderer.setSize(width * dpr, height * dpr)
-      }
-      resize()
-      const ro = new ResizeObserver(resize)
-      ro.observe(container)
-
-      // Render loop
-      const animate = () => {
-        const now = performance.now()
-
-        // ── Fly animation: driven by main rAF for smooth rendering ──
-        if (isFlyingRef.current) {
-          const fly = flyStateRef.current
-          const SPLAT = splatModuleRef.current
-          if (fly && SPLAT) {
-            const elapsed = (now - fly.startTime) / 1000
-            const t = Math.min(elapsed / fly.duration, 1)
-            const ease = easeInOutCubic(t)
-            const px = fly.startPos.x + (fly.endPos.x - fly.startPos.x) * ease
-            const py = fly.startPos.y + (fly.endPos.y - fly.startPos.y) * ease
-            const pz = fly.startPos.z + (fly.endPos.z - fly.startPos.z) * ease
-            const dir = new SPLAT.Vector3(fly.endLookAt.x - px, fly.endLookAt.y - py, fly.endLookAt.z - pz)
-            camera.position = new SPLAT.Vector3(px, py, pz)
-            camera.rotation = SPLAT.Quaternion.LookRotation(dir)
-            if (t >= 1) {
-              isFlyingRef.current = false
-              flyStateRef.current = null
-              syncOrbitControls(controls, SPLAT, fly.endLookAt.x, fly.endLookAt.y, fly.endLookAt.z)
-            }
-          }
-        } else if (isPathPlayingRef.current) {
-          // Camera driven by path playback engine — update then render
-          pathUpdateRef.current?.()
-        } else {
-          // ── WASD direct camera flight ──
-          const keys = keysRef.current
-          const hasFlightKeys = keys.size > 0
-          if (hasFlightKeys) {
-            const dt = Math.min((now - lastTimeRef.current) / 1000, 0.1)
-            if (lastTimeRef.current > 0 && dt > 0) {
-              const cp = camera.position
-              const fwd = camera.forward
-              // Right vector = cross(forward, worldUp)
-              const rx = 1 * fwd.z - 0 * fwd.y  // worldUp=(0,1,0)
-              const ry = 0 * fwd.x - 0 * fwd.z
-              const rz = 0 * fwd.y - 1 * fwd.x
-              const rLen = Math.sqrt(rx * rx + ry * ry + rz * rz)
-              const rightX = rLen > 0.0001 ? rx / rLen : 1
-              const rightY = rLen > 0.0001 ? ry / rLen : 0
-              const rightZ = rLen > 0.0001 ? rz / rLen : 0
-
-              const speed = flightSpeedRef.current * dt
-
-              let moveX = 0, moveY = 0, moveZ = 0
-              if (keys.has('KeyW')) { moveX += fwd.x * speed; moveY += fwd.y * speed; moveZ += fwd.z * speed }
-              if (keys.has('KeyS')) { moveX -= fwd.x * speed; moveY -= fwd.y * speed; moveZ -= fwd.z * speed }
-              if (keys.has('KeyA')) { moveX -= rightX * speed; moveY -= rightY * speed; moveZ -= rightZ * speed }
-              if (keys.has('KeyD')) { moveX += rightX * speed; moveY += rightY * speed; moveZ += rightZ * speed }
-              if (keys.has('KeyQ')) { moveY -= speed }
-              if (keys.has('KeyE')) { moveY += speed }
-
-              if (moveX !== 0 || moveY !== 0 || moveZ !== 0) {
-                const SPLAT = splatModuleRef.current
-                if (SPLAT) {
-                  // Compute new camera position and look-at target
-                  const newX = cp.x + moveX
-                  const newY = cp.y + moveY
-                  const newZ = cp.z + moveZ
-                  const lookDist = 3
-                  const newTx = newX + fwd.x * lookDist
-                  const newTy = newY + fwd.y * lookDist
-                  const newTz = newZ + fwd.z * lookDist
-
-                  // Set position FIRST so setCameraTarget computes
-                  // correct spherical state from the actual position,
-                  // then controls.update() processes mouse rotation
-                  // in sync with the new position.
-                  camera.position = new SPLAT.Vector3(newX, newY, newZ)
-                  controls.setCameraTarget(
-                    new SPLAT.Vector3(newTx, newTy, newTz))
-                }
-              }
-            }
-            lastTimeRef.current = now
-
-            // Always process mouse rotation during WASD flight.
-            // dampening=1 means immediate sync (0 means "never update").
-            const savedDamp = controls.dampening
-            controls.dampening = 1
-            controls.update()
-            controls.dampening = savedDamp
-          } else {
-            // Normal orbit controls (no WASD active)
-            controls.update()
+      // 1. Fly animation
+      if (isFlyingRef.current) {
+        const fly = flyStateRef.current
+        if (fly && SPLAT) {
+          const t = Math.min((now - fly.startTime) / 1000 / fly.duration, 1)
+          const ease = easeInOutCubic(t)
+          cam.position = new SPLAT.Vector3(
+            fly.startPos.x + (fly.endPos.x - fly.startPos.x) * ease,
+            fly.startPos.y + (fly.endPos.y - fly.startPos.y) * ease,
+            fly.startPos.z + (fly.endPos.z - fly.startPos.z) * ease,
+          )
+          const dir = new SPLAT.Vector3(fly.endLookAt.x - (cam.position.x), fly.endLookAt.y - (cam.position.y), fly.endLookAt.z - (cam.position.z))
+          cam.rotation = SPLAT.Quaternion.LookRotation(dir)
+          if (t >= 1) {
+            isFlyingRef.current = false
+            flyStateRef.current = null
+            ctrl.setCameraTarget(new SPLAT.Vector3(fly.endLookAt.x, fly.endLookAt.y, fly.endLookAt.z))
+            ctrl.dampening = 1; ctrl.update(); ctrl.dampening = 0.2
           }
         }
+      }
+      // 2. Path playback
+      else if (isPathPlayingRef.current) {
+        pathUpdateRef.current?.()
+      }
+      // 3. WASD flight
+      else {
+        const keys = keysRef.current
+        if (keys.size > 0) {
+          const dt = Math.min((now - lastTimeRef.current) / 1000, 0.1)
+          if (lastTimeRef.current > 0 && dt > 0 && SPLAT) {
+            const cp = cam.position
+            const fwd = cam.forward
+            const rx = fwd.z; const rz = -fwd.x
+            const rLen = Math.sqrt(rx * rx + rz * rz)
+            const rightX = rLen > 0.0001 ? rx / rLen : 1
+            const rightZ = rLen > 0.0001 ? rz / rLen : 0
+            const spd = flightSpeedRef.current * dt
 
-        renderer.render(scene, camera)
+            let mx = 0, my = 0, mz = 0
+            if (keys.has('KeyW')) { mx += fwd.x * spd; my += fwd.y * spd; mz += fwd.z * spd }
+            if (keys.has('KeyS')) { mx -= fwd.x * spd; my -= fwd.y * spd; mz -= fwd.z * spd }
+            if (keys.has('KeyA')) { mx -= rightX * spd; mz -= rightZ * spd }
+            if (keys.has('KeyD')) { mx += rightX * spd; mz += rightZ * spd }
+            if (keys.has('KeyQ')) my -= spd
+            if (keys.has('KeyE')) my += spd
 
-        fpsFrames.current.push(now)
-        while (fpsFrames.current.length > 0 && fpsFrames.current[0] < now - 1000) fpsFrames.current.shift()
-        setFps(fpsFrames.current.length)
-
-        // Update hotspot positions using gsplat's actual view-projection matrix
-        const currentHotspots = hotspotsRef.current
-        // Include pending hotspot (being created) in position updates
-        const pending = showHotspotEditorRef.current && editingHotspotRef.current && editingHotspotRef.current.id === '__pending__' && editingHotspotRef.current.position
-          ? editingHotspotRef.current : null
-        const allHotspots = pending ? [...currentHotspots, pending] : currentHotspots
-        if (allHotspots.length > 0) {
-          const newScreens = new Map<string, { x: number; y: number; visible: boolean; scale: number }>()
-          const camPos = camera.position
-          const vp = camera.data?.viewProj
-          const vpBuffer: number[] | undefined = vp?.buffer
-          const rect = container.getBoundingClientRect()
-          const sw = rect.width; const sh = rect.height
-          for (const hs of allHotspots) {
-            if (!vpBuffer) {
-              // Fallback to simple projection
-              const fwd = camera.forward
-              const cd = camera.data
-              const fov = cd ? 2 * Math.atan(cd.height / (2 * cd.fy)) * (180 / Math.PI) : 50
-              const screen = worldToScreen(hs.position, camPos, fwd, fov, sw, sh)
-              if (screen) {
-                const dist = Math.sqrt((hs.position.x - camPos.x) ** 2 + (hs.position.y - camPos.y) ** 2 + (hs.position.z - camPos.z) ** 2)
-                newScreens.set(hs.id, { x: screen.x, y: screen.y, visible: screen.visible, scale: Math.max(0.4, Math.min(1.5, 5 / dist)) })
-              }
-              continue
+            if (mx !== 0 || my !== 0 || mz !== 0) {
+              const nx = cp.x + mx; const ny = cp.y + my; const nz = cp.z + mz
+              const ld = 3
+              cam.position = new SPLAT.Vector3(nx, ny, nz)
+              ctrl.setCameraTarget(new SPLAT.Vector3(nx + fwd.x * ld, ny + fwd.y * ld, nz + fwd.z * ld))
             }
-            // Transform world point by view-projection matrix
-            const wx = hs.position.x, wy = hs.position.y, wz = hs.position.z
-            const cx = vpBuffer[0] * wx + vpBuffer[4] * wy + vpBuffer[8]  * wz + vpBuffer[12]
-            const cy = vpBuffer[1] * wx + vpBuffer[5] * wy + vpBuffer[9]  * wz + vpBuffer[13]
+          }
+          lastTimeRef.current = now
+          const saved = ctrl.dampening; ctrl.dampening = 1; ctrl.update(); ctrl.dampening = saved
+        } else {
+          ctrl.update()
+        }
+      }
+
+      // 4. Render — scene renders via useSceneInit
+      if (!isFlyingRef.current && !isPathPlayingRef.current && keysRef.current.size === 0) {
+        ctrl.update()
+      }
+
+      // 5. Hotspot projection
+      const currentHotspots = hotspotsRef.current
+      const pending = editingHotspot?.id === '__pending__' && editingHotspot.position ? editingHotspot : null
+      const allHotspots = pending ? [...currentHotspots, pending] : currentHotspots
+      if (allHotspots.length > 0 && container) {
+        const newScreens = new Map<string, { x: number; y: number; visible: boolean; scale: number }>()
+        const camPos = cam.position
+        const rect = container.getBoundingClientRect()
+        const sw = rect.width; const sh = rect.height
+
+        // Try gsplat view-projection matrix first
+        const vp = (cam as any).data?.viewProj
+        const vpBuffer: number[] | undefined = vp?.buffer
+
+        for (const hs of allHotspots) {
+          if (vpBuffer) {
+            const wx = hs.position.x; const wy = hs.position.y; const wz = hs.position.z
+            const cx = vpBuffer[0] * wx + vpBuffer[4] * wy + vpBuffer[8] * wz + vpBuffer[12]
+            const cy = vpBuffer[1] * wx + vpBuffer[5] * wy + vpBuffer[9] * wz + vpBuffer[13]
             const cz = vpBuffer[2] * wx + vpBuffer[6] * wy + vpBuffer[10] * wz + vpBuffer[14]
             const cw = vpBuffer[3] * wx + vpBuffer[7] * wy + vpBuffer[11] * wz + vpBuffer[15]
-            if (cw <= 0.0001) continue // Behind or at camera
-            // Perspective divide + NDC to screen
-            const ndcX = cx / cw
-            const ndcY = cy / cw
-            const screenX = (ndcX * 0.5 + 0.5) * sw
-            const screenY = (-ndcY * 0.5 + 0.5) * sh // Flip Y: NDC up -> screen down
-            const visible = ndcX >= -1.2 && ndcX <= 1.2 && ndcY >= -1.2 && ndcY <= 1.2 && cz > 0
+            if (cw <= 0.0001) continue
+            const sx = (cx / cw * 0.5 + 0.5) * sw
+            const sy = (-cy / cw * 0.5 + 0.5) * sh
+            const visible = Math.abs(cx / cw) <= 1.2 && Math.abs(cy / cw) <= 1.2 && cz > 0
             const dist = Math.sqrt((wx - camPos.x) ** 2 + (wy - camPos.y) ** 2 + (wz - camPos.z) ** 2)
-            newScreens.set(hs.id, { x: screenX, y: screenY, visible, scale: Math.max(0.4, Math.min(1.5, 5 / dist)) })
-          }
-          // Store in ref and update DOM directly — bypass React for 60fps smoothness
-          hotspotScreensRef.current = newScreens
-          const overlay = overlayRef.current
-          if (overlay) {
-            overlay.querySelectorAll<HTMLElement>('[data-hotspot]').forEach(el => {
-              const id = el.dataset.hotspot
-              if (!id) return
-              const screen = newScreens.get(id)
-              if (screen?.visible) {
-                el.style.display = ''
-                el.style.transform = `translate(0, -50%) scale(${screen.scale})`
-                el.style.left = `${screen.x}px`
-                el.style.top = `${screen.y}px`
-              } else {
-                el.style.display = 'none'
-              }
-            })
+            newScreens.set(hs.id, { x: sx, y: sy, visible, scale: Math.max(0.4, Math.min(1.5, 5 / dist)) })
+          } else {
+            // Fallback to simple projection
+            const fwd = cam.forward
+            const cd = (cam as any).data
+            const fov = cd ? 2 * Math.atan(cd.height / (2 * cd.fy)) * (180 / Math.PI) : 50
+            const screen = worldToScreen(hs.position, camPos, fwd, fov, sw, sh)
+            if (screen) {
+              const dist = Math.sqrt((hs.position.x - camPos.x) ** 2 + (hs.position.y - camPos.y) ** 2 + (hs.position.z - camPos.z) ** 2)
+              newScreens.set(hs.id, { x: screen.x, y: screen.y, visible: screen.visible, scale: Math.max(0.4, Math.min(1.5, 5 / dist)) })
+            }
           }
         }
 
-        animRef.current = requestAnimationFrame(animate)
-      }
-      requestAnimationFrame(animate)
-
-      // Load model
-      setIsLoading(true); setProgress(0)
-
-      if (modelBuffer) {
-        // Synchronous load from pre-fetched ArrayBuffer.
-        // Yield one microtask so React renders the loading screen before
-        // Deserialize blocks the main thread (200-500ms for 90MB models).
-        await new Promise(r => setTimeout(r, 0))
-        const splat = SPLAT.Loader.LoadFromArrayBuffer(modelBuffer, scene)
-        setProgress(100)
-        setSplatCount(splat?.data?.vertexCount ?? 0)
-      } else if (modelUrl) {
-        // Async load from URL — gsplat handles fetch + deserialize with progress
-        const splat = await SPLAT.Loader.LoadAsync(modelUrl, scene, (p: number) => setProgress(Math.round(p * 100)))
-        setSplatCount(splat?.data?.vertexCount ?? 0)
-      } else {
-        throw new Error('No model source provided (neither modelUrl nor modelBuffer)')
-      }
-
-      // Initialize intersection tester for click-to-place
-      try {
-        intersectionTesterRef.current = new SPLAT.IntersectionTester(renderer.renderProgram, 5, 1)
-      } catch { /* Intersection tester not critical */ }
-
-      setIsLoading(false)
-
-      // First-visit hint: show controls fully for 8 seconds
-      if (!localStorage.getItem('gs_viewer_visited')) {
-        setIsFirstVisit(true)
-        setShowControls(true)
-      }
-
-      const onKeyDown = (e: KeyboardEvent) => {
-        // Don't handle keys if user is typing in a text input — but allow range sliders
-        const el = e.target as HTMLElement
-        const tag = el?.tagName
-        if (tag === 'TEXTAREA' || tag === 'SELECT') return
-        if (tag === 'INPUT' && (el as HTMLInputElement).type !== 'range') return
-        // Track WASD/QE flight keys
-        if (['KeyW','KeyA','KeyS','KeyD','KeyQ','KeyE'].includes(e.code)) {
-          keysRef.current.add(e.code)
-        }
-        if (e.key === 'r' || e.key === 'R') {
-          const cam = cameraRef.current; const ctrl = controlsRef.current
-          if (cam && ctrl) {
-            cam.position = new SPLAT.Vector3(0, 0, 5)
-            ctrl.setCameraTarget(new SPLAT.Vector3(0, 0, 0))
-            ctrl.update()
-          }
-        }
-        if (e.key === 'h' || e.key === 'H') setShowControls(prev => !prev)
-        // Arrow key hotspot navigation (guided tour)
-        const currentHotspots = hotspotsRef.current
-        if (!isLoadingRef.current && currentHotspots.length > 0) {
-          if (e.key === 'ArrowLeft') {
-            e.preventDefault()
-            const sel = selectedHotspotRef.current
-            const idx = sel ? currentHotspots.findIndex(h => h.id === sel.id) : -1
-            const prev = idx > 0 ? currentHotspots[idx - 1] : currentHotspots[currentHotspots.length - 1]
-            flyToHotspot(prev)
-          }
-          if (e.key === 'ArrowRight') {
-            e.preventDefault()
-            const sel = selectedHotspotRef.current
-            const idx = sel ? currentHotspots.findIndex(h => h.id === sel.id) : -1
-            const next = idx < currentHotspots.length - 1 ? currentHotspots[idx + 1] : currentHotspots[0]
-            flyToHotspot(next)
-          }
+        hotspotScreensRef.current = newScreens
+        const overlay = overlayRef.current
+        if (overlay) {
+          overlay.querySelectorAll<HTMLElement>('[data-hotspot]').forEach(el => {
+            const id = el.dataset.hotspot
+            if (!id) return
+            const screen = newScreens.get(id)
+            if (screen?.visible) {
+              el.style.display = ''
+              el.style.transform = `translate(0, -50%) scale(${screen.scale})`
+              el.style.left = `${screen.x}px`
+              el.style.top = `${screen.y}px`
+            } else {
+              el.style.display = 'none'
+            }
+          })
         }
       }
-      const onKeyUp = (e: KeyboardEvent) => {
-        keysRef.current.delete(e.code)
-      }
-      window.addEventListener('keydown', onKeyDown)
-      window.addEventListener('keyup', onKeyUp)
 
-      return () => {
-        cancelAnimationFrame(animRef.current)
-        ro.disconnect()
-        window.removeEventListener('keydown', onKeyDown)
-        window.removeEventListener('keyup', onKeyUp)
-        renderer.dispose()
-      }
-    } catch (err: unknown) {
-      console.error('Viewer error:', err)
-      setError(err instanceof Error ? err.message : 'Failed to load model')
-      setIsLoading(false)
-      return () => { cancelAnimationFrame(animRef.current); rendererRef.current?.dispose() }
+      animRef.current = requestAnimationFrame(animate)
     }
-  }, [modelUrl, modelBuffer, modelId, flyToHotspot])
 
+    animRef.current = requestAnimationFrame(animate)
+    return () => cancelAnimationFrame(animRef.current)
+  }, [cameraRef, controlsRef, splatModuleRef, hotspotsRef, editingHotspot])
+
+  // Keyboard
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- init external WebGL system
-    const cleanup = initAndLoad()
-    return () => { cleanup.then((fn) => { if (typeof fn === 'function') fn() }) }
-  }, [initAndLoad])
+    const onKeyDown = (e: KeyboardEvent) => {
+      const tag = (e.target as HTMLElement)?.tagName
+      if (tag === 'TEXTAREA' || tag === 'SELECT') return
+      if (tag === 'INPUT' && (e.target as HTMLInputElement).type !== 'range') return
+      if (['KeyW', 'KeyA', 'KeyS', 'KeyD', 'KeyQ', 'KeyE'].includes(e.code)) {
+        keysRef.current.add(e.code)
+      }
+      if (e.key === 'h' || e.key === 'H') setShowControls(prev => !prev)
+      if (e.key === 'r' || e.key === 'R') {
+        const cam = cameraRef.current; const ctrl = controlsRef.current; const SPLAT = splatModuleRef.current
+        if (cam && ctrl && SPLAT) {
+          cam.position = new SPLAT.Vector3(0, 0, 5)
+          ctrl.setCameraTarget(new SPLAT.Vector3(0, 0, 0)); ctrl.update()
+        }
+      }
+      // Arrow navigation between hotspots
+      const current = hotspotsRef.current
+      if (current.length > 0 && !isLoading) {
+        if (e.key === 'ArrowLeft') {
+          e.preventDefault()
+          const sel = selectedHotspotRef.current
+          const idx = sel ? current.findIndex(h => h.id === sel.id) : -1
+          flyToHotspot(idx > 0 ? current[idx - 1] : current[current.length - 1])
+        }
+        if (e.key === 'ArrowRight') {
+          e.preventDefault()
+          const sel = selectedHotspotRef.current
+          const idx = sel ? current.findIndex(h => h.id === sel.id) : -1
+          flyToHotspot(idx < current.length - 1 ? current[idx + 1] : current[0])
+        }
+      }
+    }
+    const onKeyUp = (e: KeyboardEvent) => { keysRef.current.delete(e.code) }
+    window.addEventListener('keydown', onKeyDown)
+    window.addEventListener('keyup', onKeyUp)
+    return () => { window.removeEventListener('keydown', onKeyDown); window.removeEventListener('keyup', onKeyUp) }
+  }, [cameraRef, controlsRef, splatModuleRef, hotspotsRef, isLoading, flyToHotspot])
 
-  // Apply saved initial camera after scene is fully loaded
+  // Apply initial camera
   useEffect(() => {
     if (isLoading) return
-    const savedCam = getInitialCamera(modelId)
-    if (!savedCam) return
-    const cam = cameraRef.current
-    const ctrl = controlsRef.current
-    const SPLAT = splatModuleRef.current
+    const saved = getInitialCamera(modelId)
+    if (!saved) return
+    const cam = cameraRef.current; const ctrl = controlsRef.current; const SPLAT = splatModuleRef.current
     if (!cam || !ctrl || !SPLAT) return
-
-    // Set target first — this updates internal spherical coordinates
-    ctrl.setCameraTarget(new SPLAT.Vector3(savedCam.target.x, savedCam.target.y, savedCam.target.z))
-    // Set camera position directly
-    cam.position = new SPLAT.Vector3(savedCam.position.x, savedCam.position.y, savedCam.position.z)
-    // Set rotation
-    const dx = savedCam.target.x - savedCam.position.x
-    const dy = savedCam.target.y - savedCam.position.y
-    const dz = savedCam.target.z - savedCam.position.z
-    if (Math.sqrt(dx*dx+dy*dy+dz*dz) > 0.001) {
+    ctrl.setCameraTarget(new SPLAT.Vector3(saved.target.x, saved.target.y, saved.target.z))
+    cam.position = new SPLAT.Vector3(saved.position.x, saved.position.y, saved.position.z)
+    const dx = saved.target.x - saved.position.x; const dy = saved.target.y - saved.position.y; const dz = saved.target.z - saved.position.z
+    if (Math.sqrt(dx * dx + dy * dy + dz * dz) > 0.001) {
       cam.rotation = SPLAT.Quaternion.LookRotation(new SPLAT.Vector3(dx, dy, dz))
     }
-    // Force OrbitControls to sync internal state from our camera position
-    // dampening=1 tells controls.update() to snap instantly (no lerp)
-    ctrl.dampening = 1
-    ctrl.update()
-    ctrl.dampening = 0.2
-  }, [isLoading, modelId])
+    ctrl.dampening = 1; ctrl.update(); ctrl.dampening = 0.2
+  }, [isLoading, modelId, cameraRef, controlsRef, splatModuleRef])
 
-  // --- Hotspot handlers ---
-  const handleSaveHotspot = useCallback((data: { title: string; titleEn: string; description: string; descriptionEn: string }) => {
+  // Hotspot editor handlers
+  const handleSaveHotspot = useCallback((data: { title: string; description: string }) => {
     if (!data.title.trim()) return
     if (editingHotspot?.id && editingHotspot.id !== '__pending__') {
-      updateHotspot(modelId, editingHotspot.id, { ...data, note: data.description || data.descriptionEn })
+      updateHotspot(editingHotspot.id, data)
     } else if (editingHotspot?.position) {
-      const hsData = {
-        title: data.title, titleEn: data.titleEn,
-        description: data.description, descriptionEn: data.descriptionEn,
-        note: data.description || data.descriptionEn,
-        position: editingHotspot.position,
-        order: editingHotspot.order || hotspots.length + 1,
-        cameraPosition: editingHotspot.cameraPosition || { x: 0, y: 0, z: 5 },
-        cameraTarget: editingHotspot.cameraTarget || { x: 0, y: 0, z: 0 },
-      }
-      addHotspot(modelId, hsData)
+      placeHotspot(editingHotspot.position, editingHotspot.cameraPosition || { x: 0, y: 0, z: 5 }, editingHotspot.cameraTarget || { x: 0, y: 0, z: 0 })
+      // Update the newly placed hotspot with title/description
+      const updated = getHotspotsForUpdate(modelId)
+      updated.then(hsList => {
+        const latest = hsList[hsList.length - 1]
+        if (latest) updateHotspot(latest.id, data)
+      })
     }
-    const updated = getHotspots(modelId)
-    setHotspots(updated)
-    saveHotspotsRemote(modelId, updated, modelUrl).catch(() => {})
-    setShowHotspotEditor(false); setEditingHotspot(null)
-  }, [modelId, editingHotspot, hotspots.length, modelUrl])
+    setShowHotspotEditor(false)
+  }, [editingHotspot, updateHotspot, placeHotspot, modelId])
 
   const handleDeleteHotspot = useCallback((id: string) => {
-    deleteHotspot(modelId, id)
-    const updated = getHotspots(modelId)
-    setHotspots(updated)
-    saveHotspotsRemote(modelId, updated, modelUrl).catch(() => {})
-    setSelectedHotspot(null); setEditingHotspot(null); setShowHotspotEditor(false)
-  }, [modelId, modelUrl])
+    deleteHotspot(id)
+    setShowHotspotEditor(false)
+  }, [deleteHotspot])
 
-  // --- Annotation overlay — markers positioned by React, screen positions
-  //     updated directly in DOM via rAF loop for 60fps smoothness ---
-  const hotspotElements = [
-    ...hotspots.map((hs, idx) => (
-      <AnnotationMarker
-        key={hs.id}
-        hotspotId={hs.id}
-        screenX={0} screenY={0}
-        number={hs.order || idx + 1}
-        title={lang === 'zh' ? hs.title : hs.titleEn || hs.title}
-        note={hs.note || hs.description || (lang === 'zh' ? hs.description : hs.descriptionEn) || ''}
-        isSelected={selectedHotspot?.id === hs.id}
-        scale={1}
-        onSelect={() => { flyToHotspot(hs) }}
-        onEdit={() => { setEditingHotspot(hs); setShowHotspotEditor(true) }}
-      />
-    )),
-    // Pending hotspot being placed/edited — shown while editor is open
-    ...(showHotspotEditor && editingHotspot && editingHotspot.id === '__pending__' && editingHotspot.position ? [
-      <AnnotationMarker
-        key="__pending__"
-        hotspotId="__pending__"
-        screenX={0} screenY={0}
-        number={editingHotspot.order || hotspots.length + 1}
-        title="新标注"
-        note="填写信息后保存"
-        isSelected={true}
-        scale={1.1}
-        onSelect={() => {}}
-        onEdit={() => {}}
-      />
-    ] : []),
-  ]
+  async function getHotspotsForUpdate(modelId: string) { return fetchHotspots(modelId) }
 
   return (
     <div ref={containerRef} className="relative w-full h-full bg-black overflow-hidden"
       onClick={(e) => {
-        // Hotspot placement mode — raycast from mouse click
         if (isPlacingHotspot && (e.target as HTMLElement).tagName === 'CANVAS') {
           const canvas = canvasRef.current; const cam = cameraRef.current
           if (!canvas || !cam) return
@@ -575,214 +333,159 @@ export default function Viewer3D({ modelUrl, modelBuffer, modelName, modelId, re
           const tester = intersectionTesterRef.current
           let pos = { x: cam.position.x + cam.forward.x * 3, y: cam.position.y + cam.forward.y * 3, z: cam.position.z + cam.forward.z * 3 }
           if (tester?.testPoint(x, y)) {
-            const rayDir = cam.screenPointToRay(x, y)
-            const cp = cam.position; const vp = cam.data.viewProj.buffer
-            const { width: w, height: h } = cam.data
-            for (let d = 0.5; d <= 80; d += 0.5) {
-              const wx = cp.x + rayDir.x * d; const wy = cp.y + rayDir.y * d; const wz = cp.z + rayDir.z * d
-              const cw = vp[3] * wx + vp[7] * wy + vp[11] * wz + vp[15]
-              if (cw <= 0.001) continue
-              const sx = ((vp[0] * wx + vp[4] * wy + vp[8] * wz + vp[12]) / cw * 0.5 + 0.5) * w
-              const sy = ((-(vp[1] * wx + vp[5] * wy + vp[9] * wz + vp[13]) / cw) * 0.5 + 0.5) * h
-              if (Math.abs(sx - x) < 3 && Math.abs(sy - y) < 3) { pos = { x: wx, y: wy, z: wz }; break }
-            }
+            // Raycast through gsplat
+            try {
+              const rayDir = (cam as any).screenPointToRay(x, y)
+              const cp = cam.position; const vp = (cam as any).data.viewProj.buffer
+              const { width: w, height: h } = (cam as any).data
+              for (let d = 0.5; d <= 80; d += 0.5) {
+                const wx = cp.x + rayDir.x * d; const wy = cp.y + rayDir.y * d; const wz = cp.z + rayDir.z * d
+                const cw = vp[3] * wx + vp[7] * wy + vp[11] * wz + vp[15]
+                if (cw <= 0.001) continue
+                const sx = ((vp[0] * wx + vp[4] * wy + vp[8] * wz + vp[12]) / cw * 0.5 + 0.5) * w
+                const sy = ((-(vp[1] * wx + vp[5] * wy + vp[9] * wz + vp[13]) / cw) * 0.5 + 0.5) * h
+                if (Math.abs(sx - x) < 3 && Math.abs(sy - y) < 3) { pos = { x: wx, y: wy, z: wz }; break }
+              }
+            } catch { /* fallback to default pos */ }
           }
-          const camTgt = {
-            x: cam.position.x + cam.forward.x * 3,
-            y: cam.position.y + cam.forward.y * 3,
-            z: cam.position.z + cam.forward.z * 3,
-          }
-          const nextOrder = hotspots.length + 1
-          setEditingHotspot({ id: '__pending__', position: pos, title: '', titleEn: '', description: '', descriptionEn: '', note: '', order: nextOrder, cameraPosition: { x: cam.position.x, y: cam.position.y, z: cam.position.z }, cameraTarget: camTgt })
+          const camTgt = { x: cam.position.x + cam.forward.x * 3, y: cam.position.y + cam.forward.y * 3, z: cam.position.z + cam.forward.z * 3 }
+          const camPos = { x: cam.position.x, y: cam.position.y, z: cam.position.z }
+          placeHotspot(pos, camPos, camTgt)
           setShowHotspotEditor(true)
-          setIsPlacingHotspot(false)
           return
         }
-        // Deselect hotspot when clicking empty canvas space
         if ((e.target as HTMLElement).tagName === 'CANVAS') {
-          setSelectedHotspot(null); setIsPlacingHotspot(false)
+          selectHotspot(null); cancelPlacing()
         }
       }}
     >
       <canvas ref={canvasRef} className="gsplat-canvas absolute inset-0" tabIndex={-1} />
 
+      {/* Hotspot markers */}
       <div ref={overlayRef} className="absolute inset-0 pointer-events-none">
-        {hotspotElements}
+        {hotspots.map((hs, idx) => (
+          <HotspotMarker
+            key={hs.id}
+            hotspotId={hs.id}
+            number={hs.order || idx + 1}
+            title={hs.title || '未命名'}
+            isSelected={selectedHotspot?.id === hs.id}
+            onSelect={() => flyToHotspot(hs)}
+            onEdit={() => { editHotspot(hs); setShowHotspotEditor(true) }}
+          />
+        ))}
+        {editingHotspot?.id === '__pending__' && editingHotspot.position && (
+          <HotspotMarker
+            key="__pending__"
+            hotspotId="__pending__"
+            number={hotspots.length + 1}
+            title="新标注"
+            isSelected={true}
+            onSelect={() => {}}
+            onEdit={() => {}}
+          />
+        )}
       </div>
 
-      {/* Loading — model-specific loading screens */}
-      {isLoading && (
-        modelId === 'shamian' || modelName.includes('沙面') ? (
-          <ShamianLoadingScreen
-            progress={downloadProgress !== undefined ? Math.max(progress, downloadProgress) : progress}
-            isDownloading={downloadProgress !== undefined && downloadProgress < 100}
-          />
-        ) : (
-          <SplatLoadingScreen
-            progress={downloadProgress !== undefined ? Math.max(progress, downloadProgress) : progress}
-            isDownloading={downloadProgress !== undefined && downloadProgress < 100}
-          />
-        )
-      )}
+      {/* Loading */}
+      {isLoading && <LoadingScreen progress={downloadProgress !== undefined ? Math.max(progress, downloadProgress) : progress} />}
 
       {/* Error */}
       {error && (
         <div className="absolute inset-0 flex items-center justify-center bg-black/80 z-20">
-          <div className="text-center p-8"><div className="text-red-400 text-4xl mb-4">⚠</div><p className="text-red-300 mb-2 font-semibold">加载失败</p><p className="text-white/40 text-sm max-w-md">{error}</p></div>
+          <div className="text-center p-8">
+            <div className="text-red-400 text-4xl mb-4">⚠</div>
+            <p className="text-red-300 mb-2 font-semibold">加载失败</p>
+            <p className="text-white/40 text-sm max-w-md">{error}</p>
+          </div>
         </div>
       )}
 
-      {/* Top toolbar */}
+      {/* Toolbar */}
       {!isLoading && !error && (
-        <motion.div
-          initial={{ opacity: 0, y: -8 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, delay: 0.8, ease: [0.22, 1, 0.36, 1] }}
-          className="absolute top-4 left-4 flex items-center gap-2 z-10 flex-wrap">
-          {/* Unified glass bar: back | model name | speed slider | screenshot */}
-          <div className="glass rounded-xl flex items-center gap-0 px-1.5 py-1.5 group/toolbar">
-            {/* Back */}
-            <Link to="/gallery" className="px-2.5 py-1.5 text-sm text-white/40 hover:text-white/70 transition-colors rounded-lg hover:bg-white/[0.03]" title="返回画廊">←</Link>
+        <div className="absolute top-4 left-4 flex items-center gap-2 z-10 flex-wrap animate-fade-in">
+          <div className="glass rounded-xl flex items-center gap-0 px-1.5 py-1.5">
+            <button onClick={() => go({ route: 'gallery' })} className="px-2.5 py-1.5 text-sm text-white/40 hover:text-white/70 transition-colors rounded-lg hover:bg-white/[0.03] bg-transparent border-none cursor-pointer" title="返回画廊">←</button>
             <span className="w-px h-4 bg-[rgba(199,185,156,0.10)]" />
-
-            {/* Model name */}
             <span className="px-2.5 py-1.5 text-[13px] font-medium text-[#d4c5a9]/80 select-none">{modelName}</span>
             <span className="w-px h-4 bg-[rgba(199,185,156,0.10)]" />
-
-            {/* Speed slider — track only visible on toolbar hover */}
-            <div className="flex items-center gap-1.5 pl-2 pr-1" title={`移动速度: ${flightSpeed}`}>
-              <span className="text-[9px] text-[#a09888]/0 group-hover/toolbar:text-[#a09888]/25 shrink-0 select-none font-medium uppercase tracking-wider transition-colors duration-300">Spd</span>
+            <div className="flex items-center gap-1.5 pl-2 pr-1">
+              <span className="text-[9px] text-white/25 font-medium uppercase">Spd</span>
               <input
-                type="range"
-                min={SPEED_MIN}
-                max={SPEED_MAX}
-                value={flightSpeed}
+                type="range" min={SPEED_MIN} max={SPEED_MAX} value={flightSpeed}
                 onChange={e => setFlightSpeed(Number(e.target.value))}
-                onMouseUp={e => (e.target as HTMLInputElement).blur()}
-                className="w-12 h-[2px] appearance-none rounded-full outline-none cursor-pointer
-                  bg-white/[0.03] group-hover/toolbar:bg-white/[0.07] transition-colors duration-300
-                  [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-2 [&::-webkit-slider-thumb]:h-2
-                  [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-[#c9a96e]/70
-                  [&::-webkit-slider-thumb]:shadow-[0_0_4px_rgba(201,169,110,0.25)]
-                  group-hover/toolbar:[&::-webkit-slider-thumb]:bg-[#c9a96e]
-                  group-hover/toolbar:[&::-webkit-slider-thumb]:shadow-[0_0_8px_rgba(201,169,110,0.4)]
-                  [&::-webkit-slider-thumb]:transition-all"
+                className="w-12 h-[2px] appearance-none rounded-full outline-none cursor-pointer bg-white/[0.07] [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-2 [&::-webkit-slider-thumb]:h-2 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-[#c9a96e]/70"
                 style={{ cursor: 'pointer' }}
               />
             </div>
-
             <span className="w-px h-4 bg-[rgba(199,185,156,0.10)]" />
-
-            {/* Screenshot — integrated into the bar */}
             <button
               onClick={() => {
                 const canvas = canvasRef.current
                 if (!canvas) return
                 try {
                   const dataUrl = canvas.toDataURL('image/jpeg', 0.85)
-                  import('../utils/fileStorage').then(({ storeThumbnail }) => {
-                    storeThumbnail(modelId, dataUrl).then(() => {
-                      const el = document.createElement('div')
-                      el.className = 'fixed top-4 left-1/2 -translate-x-1/2 glass rounded-xl px-4 py-2 text-xs text-accent-2 z-[100] animate-fade-in'
-                      el.textContent = '✅ 封面已保存'
-                      document.body.appendChild(el)
-                      setTimeout(() => el.remove(), 2000)
-                    }).catch((e: unknown) => {
-                      console.error('Screenshot save failed:', e)
-                      const el = document.createElement('div')
-                      el.className = 'fixed top-4 left-1/2 -translate-x-1/2 glass rounded-xl px-4 py-2 text-xs text-red-400 z-[100] animate-fade-in'
-                      el.textContent = '✕ 封面保存失败'
-                      document.body.appendChild(el)
-                      setTimeout(() => el.remove(), 2000)
-                    })
-                  }).catch((e: unknown) => {
-                    console.error('Screenshot import failed:', e)
-                  })
-                } catch (e: unknown) {
-                  console.error('Screenshot capture failed:', e)
-                  const el = document.createElement('div')
-                  el.className = 'fixed top-4 left-1/2 -translate-x-1/2 glass rounded-xl px-4 py-2 text-xs text-red-400 z-[100] animate-fade-in'
-                  el.textContent = '✕ 截图失败'
-                  document.body.appendChild(el)
-                  setTimeout(() => el.remove(), 2000)
-                }
+                  // Store screenshot via IndexedDB is gone — just download
+                  const a = document.createElement('a')
+                  a.href = dataUrl; a.download = `${modelId}-screenshot.jpg`; a.click()
+                } catch { /* ignore */ }
               }}
-              className="px-2.5 py-1.5 text-sm text-white/25 hover:text-white/65 transition-colors rounded-lg hover:bg-white/[0.03] cursor-pointer border-none bg-none"
+              className="px-2.5 py-1.5 text-sm text-white/25 hover:text-white/65 transition-colors rounded-lg hover:bg-white/[0.03] bg-transparent border-none cursor-pointer"
               style={{ cursor: 'pointer' }}
-              title="保存当前画面为封面"
+              title="截图"
             >📷</button>
           </div>
 
-          {/* Annotation tools — only in edit pages */}
           {!readOnly && (
             <>
               <div className="w-px h-6 bg-white/10" />
-              {/* Add annotation button — enters placement mode */}
               <button
-                onClick={() => {
-                  setIsPlacingHotspot(true)
-                  setShowHotspotEditor(false)
-                }}
-                className={`rounded-xl px-3 py-2.5 text-xs font-medium transition-all cursor-pointer ${
-                  isPlacingHotspot
-                    ? 'bg-accent-1/25 text-accent-1 border border-accent-1/40'
-                    : 'glass text-white/70 hover:text-white hover:bg-white/[0.06]'
-                }`}
+                onClick={() => { startPlacing(); setShowHotspotEditor(false) }}
+                className={`rounded-xl px-3 py-2.5 text-xs font-medium transition-all bg-transparent cursor-pointer ${isPlacingHotspot ? 'bg-accent-1/25 text-accent-1 border border-accent-1/40' : 'glass text-white/70 hover:text-white'}`}
                 style={{ cursor: 'pointer' }}
-              >📌 {isPlacingHotspot ? '点击画布放置标注...' : '添加标注'}</button>
-
+              >📌 {isPlacingHotspot ? '点击画布放置...' : '添加标注'}</button>
               <div className="w-px h-6 bg-white/10" />
-              {/* Camera path button */}
               <button
                 onClick={() => setShowCameraPathPanel(prev => !prev)}
-                className={`rounded-xl px-3 py-2.5 text-xs font-medium transition-all cursor-pointer ${
-                  showCameraPathPanel
-                    ? 'bg-accent-1/20 text-accent-1 border border-accent-1/30'
-                    : 'glass text-white/70 hover:text-white hover:bg-white/[0.06]'
-                }`}
+                className={`rounded-xl px-3 py-2.5 text-xs font-medium transition-all bg-transparent cursor-pointer ${showCameraPathPanel ? 'bg-accent-1/20 text-accent-1 border border-accent-1/30' : 'glass text-white/70 hover:text-white'}`}
                 style={{ cursor: 'pointer' }}
-              >🎥 {lang === 'zh' ? '相机路径' : 'Cam Path'}</button>
-
+              >🎥 相机路径</button>
               <div className="w-px h-6 bg-white/10" />
-              {/* Set initial camera button */}
               <button
                 onClick={() => {
                   const cam = cameraRef.current
                   if (!cam) return
                   const pos = { x: cam.position.x, y: cam.position.y, z: cam.position.z }
                   const fwd = cam.forward
-                  const tgt = { x: pos.x + fwd.x * 3, y: pos.y + fwd.y * 3, z: pos.z + fwd.z * 3 }
-                  saveInitialCamera(modelId, pos, tgt)
-                  const el = document.createElement('div')
-                  el.className = 'fixed top-4 left-1/2 -translate-x-1/2 glass rounded-xl px-4 py-2 text-xs text-accent-2 z-[100] animate-fade-in'
-                  el.textContent = '✅ 初始视角已保存'
-                  document.body.appendChild(el)
-                  setTimeout(() => el.remove(), 2000)
+                  saveInitialCamera(modelId, pos, { x: pos.x + fwd.x * 3, y: pos.y + fwd.y * 3, z: pos.z + fwd.z * 3 })
                 }}
-                className="rounded-xl px-3 py-2.5 text-xs font-medium glass text-white/70 hover:text-white hover:bg-white/[0.06] transition-all cursor-pointer"
+                className="rounded-xl px-3 py-2.5 text-xs font-medium glass text-white/70 hover:text-white bg-transparent cursor-pointer transition-all"
                 style={{ cursor: 'pointer' }}
-                title="保存当前视角为默认视角"
-              >🎯 {lang === 'zh' ? '设初始视角' : 'Set View'}</button>
+              >🎯 设初始视角</button>
             </>
           )}
-        </motion.div>
+        </div>
       )}
 
-      <PerformancePanel fps={fps} splatCount={splatCount} isVisible={showPerf && !isLoading && !error} />
+      {/* FPS counter */}
+      {showPerf && !isLoading && !error && (
+        <div className="absolute top-4 right-4 glass rounded-lg px-3 py-2 text-xs text-white/50 font-mono z-10">
+          {fps} fps · {splatCount.toLocaleString()} 点
+        </div>
+      )}
 
-      {/* Hotspot editor — only in edit pages */}
+      {/* Hotspot editor */}
       {!readOnly && (
         <HotspotEditor
           isOpen={showHotspotEditor}
-          mode={editingHotspot?.id && editingHotspot.id !== '__pending__' ? 'edit' : 'add'}
-          editingHotspot={editingHotspot}
+          hotspot={editingHotspot}
           onSave={handleSaveHotspot}
           onDelete={editingHotspot?.id && editingHotspot.id !== '__pending__' ? () => handleDeleteHotspot(editingHotspot!.id) : undefined}
-          onClose={() => { setShowHotspotEditor(false); setEditingHotspot(null) }}
+          onClose={() => { setShowHotspotEditor(false); editHotspot(null) }}
         />
       )}
 
-      {/* Camera path panel — only in edit pages */}
+      {/* Camera path panel */}
       {!readOnly && (
         <CameraPathPanel
           modelId={modelId}
@@ -791,7 +494,7 @@ export default function Viewer3D({ modelUrl, modelBuffer, modelName, modelId, re
           splatModuleRef={splatModuleRef}
           playback={playback}
           activePathId={activePathId}
-          onSelectPath={handleSelectPath}
+          onSelectPath={(p) => { setActivePathId(p?.id ?? null); setActivePath(p) }}
           visible={showCameraPathPanel}
           onClose={() => setShowCameraPathPanel(false)}
         />
@@ -799,27 +502,50 @@ export default function Viewer3D({ modelUrl, modelBuffer, modelName, modelId, re
 
       <ControlsHelp
         isVisible={showControls && !isLoading && !error}
-        onClose={() => {
-          setShowControls(false)
-          if (isFirstVisit) {
-            setIsFirstVisit(false)
-            localStorage.setItem('gs_viewer_visited', '1')
-          }
-        }}
+        onClose={() => setShowControls(false)}
         showPerf={showPerf}
         onTogglePerf={() => setShowPerf(!showPerf)}
-        forceVisible={isFirstVisit}
       />
 
-
       {!isLoading && !error && !showControls && (
-        <motion.button initial={{ opacity: 0 }} animate={{ opacity: 1 }}
+        <button
           onClick={() => setShowControls(true)}
-          className="absolute bottom-4 left-4 glass rounded-lg px-3 py-1.5 text-xs text-white/40 hover:text-white/70 transition-colors z-10"
-        >
-          H: 操作帮助
-        </motion.button>
+          className="absolute bottom-4 left-4 glass rounded-lg px-3 py-1.5 text-xs text-white/40 hover:text-white/70 transition-colors z-10 bg-transparent border-none cursor-pointer"
+        >H: 操作帮助</button>
       )}
+    </div>
+  )
+}
+
+// ── Hotspot Marker ──
+
+function HotspotMarker({ hotspotId, number, title, isSelected, onSelect, onEdit }: {
+  hotspotId: string; number: number; title: string; isSelected: boolean; onSelect: () => void; onEdit: () => void
+}) {
+  return (
+    <div
+      data-hotspot={hotspotId}
+      className="absolute pointer-events-auto"
+      style={{ left: 0, top: 0, transform: 'translate(0, -50%)' }}
+    >
+      <button
+        onClick={onSelect}
+        onDoubleClick={onEdit}
+        className="relative flex items-center gap-1.5 group bg-transparent border-none cursor-pointer"
+        style={{ cursor: 'pointer' }}
+        title={title}
+      >
+        {/* Circle */}
+        <div className={`shrink-0 rounded-full flex items-center justify-center transition-all duration-200 ${
+          isSelected ? 'w-[52px] h-[52px] border-[2px] border-white/80 shadow-[0_0_20px_rgba(255,255,255,0.3)]' : 'w-[42px] h-[42px] border-[1.5px] border-white/40 shadow-[0_0_8px_rgba(255,255,255,0.1)] group-hover:border-white/60'
+        }`}>
+          <span className={`font-mono font-bold select-none ${isSelected ? 'text-[16px] text-white' : 'text-[13px] text-white/80'}`}>{number}</span>
+        </div>
+        {/* Label */}
+        {isSelected && title && (
+          <span className="text-[14px] font-medium text-white bg-black/50 px-2 py-0.5 rounded select-none whitespace-nowrap">{title}</span>
+        )}
+      </button>
     </div>
   )
 }

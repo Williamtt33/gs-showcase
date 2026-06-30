@@ -1,85 +1,61 @@
-import { useState, useCallback, useEffect, createContext, useContext } from 'react'
-import { motion, AnimatePresence } from 'framer-motion'
+import { createContext, useContext, useState, useCallback, type ReactNode } from 'react'
 
-interface ToastItem {
+interface Toast {
   id: number
   message: string
-  type: 'success' | 'error' | 'info'
+  type: 'info' | 'success' | 'error'
 }
 
-interface ToastCtx {
-  toast: (message: string, type?: ToastItem['type']) => void
+interface ToastCtxValue {
+  addToast: (message: string, type?: Toast['type']) => void
 }
 
-const ToastContext = createContext<ToastCtx>({ toast: () => {} })
+const Ctx = createContext<ToastCtxValue>(null!)
 
-// eslint-disable-next-line react-refresh/only-export-components
+let nextId = 0
+
 export function useToast() {
-  return useContext(ToastContext)
+  return useContext(Ctx)
 }
 
-let _nextId = 0
-let _globalToast: ToastCtx['toast'] = () => {}
+export default function ToastProvider({ children }: { children: ReactNode }) {
+  const [toasts, setToasts] = useState<Toast[]>([])
 
-/** Imperative API — call from anywhere (outside React tree) */
-// eslint-disable-next-line react-refresh/only-export-components
-export function showToast(message: string, type: ToastItem['type'] = 'info') {
-  _globalToast(message, type)
-}
-
-export function ToastProvider({ children }: { children: React.ReactNode }) {
-  const [toasts, setToasts] = useState<ToastItem[]>([])
-
-  const addToast = useCallback((message: string, type: ToastItem['type'] = 'info') => {
-    const id = ++_nextId
-    setToasts(prev => [...prev.slice(-4), { id, message, type }])
-    setTimeout(() => setToasts(prev => prev.filter(t => t.id !== id)), 3000)
+  const addToast = useCallback((message: string, type: Toast['type'] = 'info') => {
+    const id = nextId++
+    setToasts(prev => [...prev, { id, message, type }])
+    setTimeout(() => {
+      setToasts(prev => prev.filter(t => t.id !== id))
+    }, 3500)
   }, [])
 
-  useEffect(() => {
-    _globalToast = addToast
-    return () => { _globalToast = () => {} }
-  }, [addToast])
-
-  const icons: Record<ToastItem['type'], string> = {
-    success: '✓',
-    error: '✕',
-    info: 'ℹ',
-  }
-
-  const colors: Record<ToastItem['type'], string> = {
-    success: 'border-accent-2/30 bg-accent-2/[0.06]',
-    error: 'border-accent-3/30 bg-accent-3/[0.06]',
-    info: 'border-accent-1/30 bg-accent-1/[0.06]',
-  }
-
   return (
-    <ToastContext.Provider value={{ toast: addToast }}>
+    <Ctx.Provider value={{ addToast }}>
       {children}
-      {/* Toast container — fixed bottom-center */}
-      <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[200] flex flex-col items-center gap-2 pointer-events-none">
-        <AnimatePresence>
-          {toasts.map(t => (
-            <motion.div
-              key={t.id}
-              initial={{ opacity: 0, y: 16, scale: 0.95 }}
-              animate={{ opacity: 1, y: 0, scale: 1 }}
-              exit={{ opacity: 0, y: -8, scale: 0.95 }}
-              transition={{ duration: 0.25, ease: [0.22, 1, 0.36, 1] }}
-              className={`pointer-events-auto flex items-center gap-2.5 px-4 py-2.5 rounded-xl border ${colors[t.type]} glass text-[13px] text-text-2 shadow-lg`}
-            >
-              <span className={`text-[11px] font-bold ${
-                t.type === 'success' ? 'text-accent-2/70' :
-                t.type === 'error' ? 'text-accent-3/70' :
-                'text-accent-1/70'
-              }`}>
-                {icons[t.type]}
-              </span>
-              <span>{t.message}</span>
-            </motion.div>
-          ))}
-        </AnimatePresence>
+      {/* Toast container */}
+      <div className="fixed top-20 right-6 z-[100] flex flex-col gap-2 pointer-events-none">
+        {toasts.map(toast => (
+          <div
+            key={toast.id}
+            className="pointer-events-auto animate-scale-in"
+            style={{
+              background: toast.type === 'error' ? 'rgba(201,79,42,0.95)' :
+                          toast.type === 'success' ? 'rgba(141,163,145,0.95)' :
+                          'rgba(51,46,42,0.9)',
+              color: '#F8F5F0',
+              padding: '10px 20px',
+              borderRadius: '0.75rem',
+              fontSize: '13px',
+              fontWeight: 500,
+              backdropFilter: 'blur(12px)',
+              maxWidth: '360px',
+              boxShadow: '0 8px 32px rgba(0,0,0,0.2)',
+            }}
+          >
+            {toast.message}
+          </div>
+        ))}
       </div>
-    </ToastContext.Provider>
+    </Ctx.Provider>
   )
 }

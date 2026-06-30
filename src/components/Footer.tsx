@@ -1,8 +1,4 @@
-import { useI18n } from '../i18n/I18nContext'
-
 export default function Footer() {
-  const { t } = useI18n()
-
   return (
     <footer className="border-t border-border-1 bg-surface-0">
       <div className="max-w-6xl mx-auto px-6 py-8">
@@ -11,9 +7,9 @@ export default function Footer() {
             <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-accent-1 to-accent-2 flex items-center justify-center text-[9px] font-bold text-black">
               3D
             </div>
-            <span className="text-[12px] text-text-3">{t.footer.copyright}</span>
+            <span className="text-[12px] text-text-3">© 2026 墨韵三维 · 历史街区数字化保护</span>
           </div>
-          <span className="text-[11px] text-text-3/50 font-mono">{t.footer.tech}</span>
+          <span className="text-[11px] text-text-3/50 font-mono">3DGS · WebGL</span>
         </div>
       </div>
     </footer>
