@@ -238,11 +238,11 @@ export async function resolveModelSource(model: ModelMeta): Promise<ModelSource>
     const plyBuffer = await sogUrlToPly(url)
     return { type: 'buffer', buffer: plyBuffer }
   }
-  // PLY files: stream directly via gsplat LoadAsync
-  if (file.toLowerCase().endsWith('.ply')) {
+  // PLY and SPLAT files: stream directly via gsplat LoadAsync (supports progress)
+  if (file.toLowerCase().endsWith('.ply') || file.toLowerCase().endsWith('.splat')) {
     return { type: 'url', url }
   }
-  // SPLAT files: pre-fetch as ArrayBuffer
+  // Unknown format — pre-fetch as buffer
   const res = await fetch(url)
   if (!res.ok) throw new Error(`加载模型失败: HTTP ${res.status}`)
   const buffer = await res.arrayBuffer()
