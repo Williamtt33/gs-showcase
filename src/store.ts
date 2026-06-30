@@ -23,8 +23,9 @@ export async function getBuiltinModels(): Promise<ModelMeta[]> {
     const url = `${import.meta.env.BASE_URL}models/manifest.json?v=${Date.now()}`
     const res = await fetch(url)
     if (!res.ok) throw new Error(`HTTP ${res.status}`)
-    builtinCache = await res.json()
-    return builtinCache ?? []
+    const data = await res.json()
+    builtinCache = Array.isArray(data) ? data : []
+    return builtinCache
   } catch (e) {
     warn('内置模型加载失败', e)
     return []

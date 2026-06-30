@@ -363,7 +363,7 @@ export default function Viewer3D({ modelSource, modelName, modelId, readOnly, do
 
       {/* Hotspot markers */}
       <div ref={overlayRef} className="absolute inset-0 pointer-events-none">
-        {hotspots.map((hs, idx) => (
+        {(hotspots ?? []).map((hs, idx) => (
           <HotspotMarker
             key={hs.id}
             hotspotId={hs.id}
