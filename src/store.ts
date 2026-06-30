@@ -29,57 +29,11 @@ export async function getBuiltinModels(): Promise<ModelMeta[]> {
   }
 }
 
-// ── Remote models (Supabase) ──
-
-async function fetchRemoteModels(): Promise<ModelMeta[]> {
-  if (!isSupabaseConfigured()) return []
-  try {
-    const { data, error } = await supabase.from('models').select('*').order('created_at', { ascending: false })
-    if (error) throw error
-    return ((data ?? []) as any[]).map((db: any) => ({
-      id: db.id,
-      name: db.name,
-      description: db.description,
-      file: db.file,
-      thumbnail: db.thumbnail,
-      tags: db.tags ?? [],
-      pointCount: db.point_count ?? '',
-      size: db.size ?? '',
-      featured: db.featured ?? false,
-      hotspots: [],
-    }))
-  } catch (e) {
-    warn('远程模型加载失败', e)
-    return []
-  }
-}
-
-// ── Custom models (localStorage fallback) ──
-
-function getLocalModels(): ModelMeta[] {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY_CUSTOM_MODELS)
-    return raw ? JSON.parse(raw) : []
-  } catch { return [] }
-}
-
-function saveLocalModels(models: ModelMeta[]) {
-  localStorage.setItem(STORAGE_KEY_CUSTOM_MODELS, JSON.stringify(models))
-}
-
 // ── Public API: Models ──
 
 export async function getAllModels(): Promise<ModelMeta[]> {
-  const [builtin, remote] = await Promise.all([getBuiltinModels(), fetchRemoteModels()])
-  // Merge with localStorage custom models if Supabase unavailable
-  const local = isSupabaseConfigured() ? [] : getLocalModels()
-  // Deduplicate by id
-  const seen = new Set<string>()
-  const all: ModelMeta[] = []
-  for (const m of [...remote, ...local, ...builtin]) {
-    if (!seen.has(m.id)) { seen.add(m.id); all.push(m) }
-  }
-  return all
+  // Only use built-in models from manifest.json — no remote fetching
+  return getBuiltinModels()
 }
 
 export async function getModelById(id: string): Promise<ModelMeta | null> {
@@ -89,40 +43,23 @@ export async function getModelById(id: string): Promise<ModelMeta | null> {
 
 export async function saveModel(model: Omit<ModelMeta, 'id'> & { id?: string }): Promise<string> {
   const id = model.id || uid()
-  const m = { ...model, id, hotspots: (model as any).hotspots ?? [] }
-
-  if (isSupabaseConfigured()) {
-    const { error } = await supabase.from('models').upsert({
-      id, name: m.name, description: m.description,
-      file: m.file, thumbnail: m.thumbnail,
-      tags: m.tags, point_count: m.pointCount, size: m.size, featured: m.featured,
-    })
-    if (error) throw new Error(`保存模型失败: ${error.message}`)
-  } else {
-    const models = getLocalModels().filter(x => x.id !== id)
-    models.unshift(m)
-    saveLocalModels(models)
-  }
+  // Save to localStorage only (Supabase is down)
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY_CUSTOM_MODELS)
+    const models: ModelMeta[] = raw ? JSON.parse(raw) : []
+    const filtered = models.filter(x => x.id !== id)
+    filtered.unshift({ ...model, id, hotspots: (model as any).hotspots ?? [] })
+    localStorage.setItem(STORAGE_KEY_CUSTOM_MODELS, JSON.stringify(filtered))
+  } catch { /* localStorage not available */ }
   return id
 }
 
 export async function deleteModel(id: string): Promise<void> {
-  if (isSupabaseConfigured()) {
-    // Delete files from storage
-    for (const bucket of ['splat-files', 'thumbnails']) {
-      try {
-        const { data: files } = await supabase.storage.from(bucket).list(id)
-        if (files?.length) {
-          await supabase.storage.from(bucket).remove(files.map(f => `${id}/${f.name}`))
-        }
-      } catch { /* files might not exist */ }
-    }
-    const { error } = await supabase.from('models').delete().eq('id', id)
-    if (error) throw new Error(`删除模型失败: ${error.message}`)
-  } else {
-    const models = getLocalModels().filter(x => x.id !== id)
-    saveLocalModels(models)
-  }
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY_CUSTOM_MODELS)
+    const models: ModelMeta[] = raw ? JSON.parse(raw) : []
+    localStorage.setItem(STORAGE_KEY_CUSTOM_MODELS, JSON.stringify(models.filter(x => x.id !== id)))
+  } catch { /* localStorage not available */ }
 }
 
 // ── Public API: Hotspots ──
