@@ -388,7 +388,7 @@ export default function Viewer3D({ modelSource, modelName, modelId, readOnly, do
       </div>
 
       {/* Loading */}
-      {isLoading && <LoadingScreen progress={progress > 0 ? progress : (downloadProgress ?? 0)} />}
+      {isLoading && <LoadingScreen progress={downloadProgress !== undefined ? Math.max(progress, downloadProgress) : progress} />}
 
       {/* Error */}
       {error && (

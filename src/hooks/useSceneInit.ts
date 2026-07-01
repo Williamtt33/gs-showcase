@@ -96,7 +96,7 @@ export function useSceneInit({ canvasRef, containerRef, modelSource }: UseSceneI
           setProgress(10) // parsing
           const isPly = modelSource.format === 'ply'
           const loader = isPly ? SPLAT.PLYLoader : SPLAT.Loader
-          const splat = (loader as any).LoadFromArrayBuffer(
+          const splat = await (loader as any).LoadFromArrayBuffer(
             modelSource.buffer, localScene as any,
           )
           setProgress(100)
