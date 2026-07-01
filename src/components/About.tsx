@@ -32,7 +32,7 @@ export default function About() {
                 关于
               </div>
               <h1 className="text-4xl sm:text-5xl lg:text-6xl font-display tracking-tight mb-6 leading-[1.22]">
-                <span className="gradient-text">关于墨韵三维</span>
+                <span className="gradient-text">关于晶格视界</span>
               </h1>
               <p className="text-text-3/70 text-base sm:text-lg font-light max-w-lg mx-auto leading-[1.8]">
                 以纸墨之意，承三维之形
@@ -78,7 +78,7 @@ export default function About() {
                 相比传统的摄影测量和激光扫描，3DGS 重建速度快、文件体积小、渲染效果逼真。它能捕捉到复杂的光影变化和半透明材质，特别适合历史街区和文化遗产的数字化记录。
               </p>
               <p className="text-text-2/80 text-sm sm:text-base leading-[1.8]">
-                墨韵三维致力于用这项技术，为中国各地的历史街区建立数字档案，让古老的空间在虚拟世界中获得永恒的生命。
+                晶格视界致力于用这项技术，为中国各地的历史街区建立数字档案，让古老的空间在虚拟世界中获得永恒的生命。
               </p>
             </div>
           </div>
@@ -176,7 +176,7 @@ export default function About() {
               </h2>
               <div className="space-y-4">
                 <p className="text-text-2/80 text-sm sm:text-base leading-[1.8]">
-                  你可以上传自己的 .splat 文件到墨韵三维平台。支持主流 3DGS 训练工具（如 Nerfstudio、SuperSplat）导出的标准格式。
+                  你可以上传自己的 .splat 文件到晶格视界平台。支持主流 3DGS 训练工具（如 Nerfstudio、SuperSplat）导出的标准格式。
                 </p>
                 <p className="text-text-2/80 text-sm sm:text-base leading-[1.8]">
                   上传后的场景可以添加标注点（标记细节和历史信息）和相机路径（创建自动漫游动画），然后分享给任何人观看。

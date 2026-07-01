@@ -17,11 +17,11 @@ export default function Footer() {
               </div>
               <span className="text-[14px] font-medium tracking-[0.05em] text-text-2"
                 style={{ fontFamily: "'Noto Serif SC', serif" }}>
-                墨韵三维
+                晶格视界
               </span>
             </div>
             <span className="text-[11px] text-text-3/40">
-              历史街区数字化保护 · 以纸墨之意，承三维之形
+              历史街区数字化保护 · 晶格之间，视界无限
             </span>
           </div>
 
@@ -48,7 +48,7 @@ export default function Footer() {
         </div>
 
         <div className="mt-8 pt-6 border-t border-border-1/60 flex flex-col sm:flex-row items-center justify-between gap-3">
-          <span className="text-[11px] text-text-3/30">© 2026 墨韵三维</span>
+          <span className="text-[11px] text-text-3/30">© 2026 晶格视界</span>
           <span className="text-[10px] text-text-3/20 font-mono">乙巳年夏</span>
         </div>
       </div>

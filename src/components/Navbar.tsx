@@ -65,7 +65,7 @@ export default function Navbar() {
             </svg>
             <span className="font-medium tracking-[0.05em] leading-none hidden sm:inline whitespace-nowrap text-text-1/80"
               style={{ fontSize: scrolled ? 13 : 15 }}>
-              墨韵
+              晶格视界
             </span>
           </button>
         </div>
