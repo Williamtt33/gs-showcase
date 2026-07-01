@@ -3,6 +3,7 @@ import { usePage, setLocalFile } from '../App'
 import { getAllModels } from '../store'
 import ModelCard from './ModelCard'
 import PointCloudBackground from './PointCloudBackground'
+import ScrollRoller from './ScrollRoller'
 import type { ModelMeta } from '../types'
 
 const FOG_SEEDS = [
@@ -12,17 +13,6 @@ const FOG_SEEDS = [
   { x: '85%', y: '18%', s: 140, dx: -15, dy: 25, d: 30 },
   { x: '55%', y: '75%', s: 200, dx: 35, dy: -15, d: 26 },
 ]
-
-function ScrollRoller({ className = '' }: { className?: string }) {
-  return (
-    <div className={`flex items-center gap-3 ${className}`}>
-      <div className="flex-1 h-px bg-gradient-to-r from-transparent via-accent-1/25 to-transparent" />
-      <div className="w-8 h-[5px] rounded-full bg-accent-1/30" />
-      <div className="w-8 h-[5px] rounded-full bg-accent-1/25" />
-      <div className="flex-1 h-px bg-gradient-to-l from-transparent via-accent-1/25 to-transparent" />
-    </div>
-  )
-}
 
 export default function Home() {
   const { go } = usePage()
@@ -137,10 +127,10 @@ export default function Home() {
                 探索场景
               </button>
               <div className="flex items-center gap-6 sm:gap-8">
-                <button onClick={() => go({ route: 'gallery' })} className="text-[13px] text-text-3/50 hover:text-text-1 transition-colors duration-300 bg-transparent border-none cursor-pointer">
+                <button onClick={() => go({ route: 'gallery' })} className="text-[13px] text-text-2/60 hover:text-text-1 transition-colors duration-300 bg-transparent border-none cursor-pointer">
                   场景画廊
                 </button>
-                <button onClick={() => go({ route: 'upload' })} className="text-[13px] text-text-3/50 hover:text-text-1 transition-colors duration-300 bg-transparent border-none cursor-pointer">
+                <button onClick={() => go({ route: 'upload' })} className="text-[13px] text-text-2/60 hover:text-text-1 transition-colors duration-300 bg-transparent border-none cursor-pointer">
                   上传场景
                 </button>
                 <input
@@ -152,11 +142,11 @@ export default function Home() {
                 />
                 <button
                   onClick={() => fileInputRef.current?.click()}
-                  className="text-[13px] text-text-3/40 hover:text-text-1 transition-colors duration-300 bg-transparent border-none cursor-pointer"
+                  className="text-[13px] text-text-2/50 hover:text-text-1 transition-colors duration-300 bg-transparent border-none cursor-pointer"
                   style={{ cursor: 'pointer' }}
                   title="打开本地 .sog / .ply / .splat 文件"
                 >
-                  打开文件
+                  📂 打开文件
                 </button>
               </div>
             </div>
