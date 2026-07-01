@@ -5,13 +5,15 @@ interface Point3D {
   r: number
   a: number
   speed: number
+  color: 0 | 1
 }
 
-const POINT_COUNT = 280
+const POINT_COUNT = 340
 const SPHERE_RADIUS = 600
 const ROTATE_SPEED = 0.0003
 const LINE_DIST = 180
-const DOT_COLOR = '200, 169, 110'
+const DOT_COLOR_A = '124, 111, 240'   // crystal violet
+const DOT_COLOR_B = '0, 194, 217'     // ice cyan
 const LINE_ALPHA = 0.03
 const DOT_ALPHA_BASE = 0.12
 
@@ -40,6 +42,7 @@ export default function PointCloudBackground({ className = '' }: Props) {
         r: 0.8 + rand() * 2.2,
         a: DOT_ALPHA_BASE * (0.5 + rand() * 0.5),
         speed: 0.7 + rand() * 0.6,
+        color: (rand() > 0.4 ? 0 : 1) as 0 | 1,
       })
     }
     // Background scatter
@@ -54,6 +57,7 @@ export default function PointCloudBackground({ className = '' }: Props) {
         r: 0.5 + rand() * 1.2,
         a: DOT_ALPHA_BASE * (0.3 + rand() * 0.3),
         speed: 0.9 + rand() * 0.4,
+        color: (rand() > 0.6 ? 1 : 0) as 0 | 1,
       })
     }
     return points
@@ -116,15 +120,15 @@ export default function PointCloudBackground({ className = '' }: Props) {
       const cx = cw / 2; const cy = ch / 2
       const scale = Math.min(cw, ch) / 1200
 
-      const projected: { sx: number; sy: number; z: number; r: number; a: number }[] = []
+      const projected: { sx: number; sy: number; z: number; r: number; a: number; color: 0 | 1 }[] = []
       for (const p of points) {
         const fov = 800
         const sz = fov / (fov + p.z)
-        projected.push({ sx: cx + p.x * sz * scale, sy: cy + p.y * sz * scale, z: p.z, r: p.r * sz * scale * 1.5, a: p.a * sz })
+        projected.push({ sx: cx + p.x * sz * scale, sy: cy + p.y * sz * scale, z: p.z, r: p.r * sz * scale * 1.5, a: p.a * sz, color: p.color })
       }
       projected.sort((a, b) => a.z - b.z)
 
-      // Lines
+      // Lines — use violet for connections
       for (let i = 0; i < projected.length; i++) {
         for (let j = i + 1; j < projected.length; j++) {
           const dx = projected[i].sx - projected[j].sx
@@ -136,20 +140,21 @@ export default function PointCloudBackground({ className = '' }: Props) {
             ctx.beginPath()
             ctx.moveTo(projected[i].sx, projected[i].sy)
             ctx.lineTo(projected[j].sx, projected[j].sy)
-            ctx.strokeStyle = `rgba(${DOT_COLOR}, ${alpha})`
+            ctx.strokeStyle = `rgba(${DOT_COLOR_A}, ${alpha})`
             ctx.lineWidth = 0.3
             ctx.stroke()
           }
         }
       }
 
-      // Dots
+      // Dots — dual color: violet + cyan
       for (const p of projected) {
         if (p.r < 0.2) continue
+        const rgb = p.color === 0 ? DOT_COLOR_A : DOT_COLOR_B
         ctx.beginPath()
         ctx.arc(p.sx, p.sy, Math.max(0.3, p.r), 0, Math.PI * 2)
-        ctx.fillStyle = `rgba(${DOT_COLOR}, ${p.a})`
-        if (p.r > 2) { ctx.shadowColor = `rgba(${DOT_COLOR}, ${p.a * 0.5})`; ctx.shadowBlur = p.r * 2 }
+        ctx.fillStyle = `rgba(${rgb}, ${p.a})`
+        if (p.r > 2) { ctx.shadowColor = `rgba(${rgb}, ${p.a * 0.5})`; ctx.shadowBlur = p.r * 2 }
         ctx.fill()
         ctx.shadowColor = 'transparent'; ctx.shadowBlur = 0
       }

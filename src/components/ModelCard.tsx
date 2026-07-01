@@ -2,13 +2,13 @@ import { useMemo } from 'react'
 import type { ModelMeta } from '../types'
 import { usePage } from '../App'
 
-// Generate a consistent pastel gradient from a string (model id)
+// Generate a consistent crystalline gradient from a string (model id)
 function gradientFromId(id: string): string {
   let hash = 0
   for (let i = 0; i < id.length; i++) hash = (hash * 31 + id.charCodeAt(i)) & 0xffff
-  const hue1 = (hash % 60) + 25    // warm range 25–85
-  const hue2 = (hash % 40) + 180   // cool range 180–220
-  return `linear-gradient(135deg, hsl(${hue1}, 45%, 88%) 0%, hsl(${hue2}, 30%, 82%) 100%)`
+  const hue1 = (hash % 60) + 240   // violet-blue range 240–300
+  const hue2 = (hash % 40) + 180   // cyan range 180–220
+  return `linear-gradient(135deg, hsl(${hue1}, 40%, 85%) 0%, hsl(${hue2}, 35%, 80%) 100%)`
 }
 
 export default function ModelCard({ model, index }: { model: ModelMeta; index: number }) {
@@ -40,16 +40,17 @@ export default function ModelCard({ model, index }: { model: ModelMeta; index: n
             className="w-full h-full flex items-center justify-center relative"
             style={{ background: placeholderGradient }}
           >
-            {/* Subtle pattern overlay */}
+            {/* Subtle grid overlay */}
             <div className="absolute inset-0 opacity-[0.04]"
               style={{
-                backgroundImage: 'repeating-linear-gradient(0deg, transparent, transparent 3px, rgba(0,0,0,0.15) 3px, rgba(0,0,0,0.15) 4px)',
+                backgroundImage: 'repeating-linear-gradient(60deg, rgba(124,111,240,0.3) 0px, transparent 1px, transparent 20px, rgba(124,111,240,0.3) 21px), repeating-linear-gradient(-60deg, rgba(0,194,217,0.3) 0px, transparent 1px, transparent 20px, rgba(0,194,217,0.3) 21px)',
               }}
             />
-            <svg className="w-14 h-14 text-text-3/12 relative z-10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="0.8" strokeLinecap="round">
-              <path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
-              <path d="M9 22V12h6v10" />
-              <path d="M9 8h6" />
+            {/* Diamond icon */}
+            <svg className="w-12 h-12 text-text-3/10 relative z-10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="0.8" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M12 2L3 12L12 22L21 12Z" />
+              <path d="M12 2L12 22" />
+              <path d="M3 12L21 12" />
             </svg>
           </div>
         )}
@@ -86,7 +87,7 @@ export default function ModelCard({ model, index }: { model: ModelMeta; index: n
               <span
                 key={tag}
                 className="inline-block px-2 py-0.5 rounded-md text-[9px] font-medium tracking-[0.03em]"
-                style={{ background: 'rgba(141,163,145,0.08)', color: '#6B8B6E' }}
+                style={{ background: 'rgba(124,111,240,0.07)', color: '#7C6FF0' }}
               >
                 {tag}
               </span>

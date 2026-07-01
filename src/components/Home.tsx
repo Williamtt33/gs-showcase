@@ -85,10 +85,10 @@ export default function Home() {
         {/* Light halos */}
         <div className="absolute rounded-full blur-[120px] animate-fade-in"
           style={{ width: 'min(700px, 55vw)', height: 'min(700px, 55vw)', top: '-15%', left: '25%',
-            background: 'radial-gradient(circle, rgba(200,169,110,0.08) 0%, transparent 70%)', opacity: 0.15 }} />
+            background: 'radial-gradient(circle, rgba(124,111,240,0.08) 0%, transparent 70%)', opacity: 0.15 }} />
         <div className="absolute rounded-full blur-[100px]"
           style={{ width: 'min(500px, 38vw)', height: 'min(500px, 38vw)', top: '45%', right: '12%',
-            background: 'radial-gradient(circle, rgba(201,79,42,0.04) 0%, transparent 70%)', opacity: 0.1 }} />
+            background: 'radial-gradient(circle, rgba(0,194,217,0.05) 0%, transparent 70%)', opacity: 0.1 }} />
       </div>
 
       <div className="relative z-10">
@@ -101,8 +101,8 @@ export default function Home() {
           <div className="text-center max-w-4xl mx-auto animate-fade-up">
             {/* Pill badge */}
             <div className="inline-flex flex-wrap items-center justify-center gap-2 sm:gap-3 px-3.5 sm:px-5 py-2 sm:py-2.5 rounded-full text-[11px] sm:text-[13px] font-medium tracking-[0.04em] sm:tracking-[0.06em] mb-10 sm:mb-12 max-w-[92vw]"
-              style={{ background: 'rgba(255,255,255,0.5)', backdropFilter: 'blur(12px)', border: '1px solid rgba(200,169,110,0.15)', color: '#4A4744' }}>
-              <span className="w-1.5 h-1.5 rounded-full bg-accent-2/60 animate-pulse shrink-0" />
+              style={{ background: 'rgba(255,255,255,0.5)', backdropFilter: 'blur(12px)', border: '1px solid rgba(124,111,240,0.12)', color: '#3D4058' }}>
+              <span className="w-1.5 h-1.5 rounded-full bg-accent-1/60 animate-pulse shrink-0" />
               <span>历史文化街区</span>
               <span className="opacity-20">·</span>
               <span>数字化保护</span>
@@ -189,8 +189,11 @@ export default function Home() {
             <ScrollRoller />
           </div>
           <div className="flex justify-center gap-4">
-            <div className="inline-flex items-center justify-center w-8 h-8 rounded-sm border border-accent-3/40 text-accent-3/50 text-[8px] font-bold rotate-6 select-none"
-              style={{ fontFamily: "'Noto Serif SC', serif" }}>鉴</div>
+            <svg className="w-7 h-7 text-accent-1/40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M12 2L3 12L12 22L21 12Z" />
+              <path d="M12 2L12 22" />
+              <path d="M3 12L21 12" />
+            </svg>
             <span className="text-[10px] text-text-3/25 tracking-[0.2em] font-medium self-end"
               style={{ fontFamily: "'Noto Serif SC', serif" }}>
               历史街区数字化保护 · 乙巳年

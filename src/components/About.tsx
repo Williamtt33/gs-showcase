@@ -12,7 +12,7 @@ export default function About() {
           className="absolute inset-0 opacity-[0.02]"
           style={{
             backgroundImage: `
-              repeating-linear-gradient(0deg, transparent, transparent 6px, rgba(232,224,213,0.1) 6px, rgba(232,224,213,0.1) 7px)
+              repeating-linear-gradient(0deg, transparent, transparent 6px, rgba(124,111,240,0.08) 6px, rgba(124,111,240,0.08) 7px)
             `,
           }}
         />
@@ -26,16 +26,16 @@ export default function About() {
             <div className="text-center animate-fade-up">
               <div
                 className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full mb-8 text-[11px] font-medium tracking-[0.05em]"
-                style={{ background: 'rgba(255,255,255,0.8)', border: '1px solid rgba(141,163,145,0.12)', color: '#8DA391' }}
+                style={{ background: 'rgba(255,255,255,0.8)', border: '1px solid rgba(124,111,240,0.1)', color: '#7C6FF0' }}
               >
-                <span className="w-1.5 h-1.5 rounded-full bg-accent-2/60" />
+                <span className="w-1.5 h-1.5 rounded-full bg-accent-1/60" />
                 关于
               </div>
               <h1 className="text-4xl sm:text-5xl lg:text-6xl font-display tracking-tight mb-6 leading-[1.22]">
                 <span className="gradient-text">关于晶格视界</span>
               </h1>
               <p className="text-text-3/70 text-base sm:text-lg font-light max-w-lg mx-auto leading-[1.8]">
-                以纸墨之意，承三维之形
+                晶格之间，视界无限
               </p>
             </div>
           </div>
@@ -47,7 +47,7 @@ export default function About() {
             <div className="max-w-3xl animate-fade-up">
               <h2
                 className="text-lg sm:text-xl font-semibold mb-5 tracking-[0.06em]"
-                style={{ fontFamily: "'Noto Serif SC', serif", color: '#332E2A' }}
+                style={{ fontFamily: "'Noto Serif SC', serif", color: '#1B1D2A' }}
               >
                 什么是 3D Gaussian Splatting
               </h2>
@@ -70,7 +70,7 @@ export default function About() {
             <div className="max-w-3xl animate-fade-up">
               <h2
                 className="text-lg sm:text-xl font-semibold mb-5 tracking-[0.06em]"
-                style={{ fontFamily: "'Noto Serif SC', serif", color: '#332E2A' }}
+                style={{ fontFamily: "'Noto Serif SC', serif", color: '#1B1D2A' }}
               >
                 为什么选择高斯泼溅
               </h2>
@@ -89,7 +89,7 @@ export default function About() {
           <div className="max-w-6xl lg:max-w-7xl mx-auto px-6 sm:px-8 lg:px-10">
             <h2
               className="text-lg sm:text-xl font-semibold mb-8 tracking-[0.06em] text-center animate-fade-up"
-              style={{ fontFamily: "'Noto Serif SC', serif", color: '#332E2A' }}
+              style={{ fontFamily: "'Noto Serif SC', serif", color: '#1B1D2A' }}
             >
               如何探索场景
             </h2>
@@ -119,13 +119,13 @@ export default function About() {
                 >
                   <div
                     className="w-10 h-10 rounded-xl flex items-center justify-center mx-auto mb-4"
-                    style={{ background: 'rgba(200,169,110,0.08)', color: '#8B7332' }}
+                    style={{ background: 'rgba(124,111,240,0.08)', color: '#7C6FF0' }}
                   >
                     <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round">
                       {item.icon}
                     </svg>
                   </div>
-                  <h3 className="text-sm font-semibold mb-2 tracking-[0.03em]" style={{ color: '#332E2A' }}>{item.title}</h3>
+                  <h3 className="text-sm font-semibold mb-2 tracking-[0.03em]" style={{ color: '#1B1D2A' }}>{item.title}</h3>
                   <p className="text-xs text-text-3/60 leading-[1.7]">{item.desc}</p>
                 </div>
               ))}
@@ -138,7 +138,7 @@ export default function About() {
           <div className="max-w-6xl lg:max-w-7xl mx-auto px-6 sm:px-8 lg:px-10">
             <h2
               className="text-lg sm:text-xl font-semibold mb-8 tracking-[0.06em] text-center animate-fade-up"
-              style={{ fontFamily: "'Noto Serif SC', serif", color: '#332E2A' }}
+              style={{ fontFamily: "'Noto Serif SC', serif", color: '#1B1D2A' }}
             >
               五大优势
             </h2>
@@ -156,7 +156,7 @@ export default function About() {
                   className="ink-card rounded-2xl p-6 animate-fade-up"
                   style={{ animationDelay: `${i * 0.08}s` }}
                 >
-                  <h3 className="text-sm font-semibold mb-2 tracking-[0.03em]" style={{ color: '#332E2A' }}>{item.title}</h3>
+                  <h3 className="text-sm font-semibold mb-2 tracking-[0.03em]" style={{ color: '#1B1D2A' }}>{item.title}</h3>
                   <p className="text-xs text-text-3/60 leading-[1.7]">{item.desc}</p>
                 </div>
               ))}
@@ -170,7 +170,7 @@ export default function About() {
             <div className="max-w-3xl animate-fade-up">
               <h2
                 className="text-lg sm:text-xl font-semibold mb-5 tracking-[0.06em]"
-                style={{ fontFamily: "'Noto Serif SC', serif", color: '#332E2A' }}
+                style={{ fontFamily: "'Noto Serif SC', serif", color: '#1B1D2A' }}
               >
                 上传你的场景
               </h2>
@@ -195,7 +195,7 @@ export default function About() {
             <div className="max-w-3xl animate-fade-up">
               <h2
                 className="text-lg sm:text-xl font-semibold mb-5 tracking-[0.06em]"
-                style={{ fontFamily: "'Noto Serif SC', serif", color: '#332E2A' }}
+                style={{ fontFamily: "'Noto Serif SC', serif", color: '#1B1D2A' }}
               >
                 数字化保护的意义
               </h2>
@@ -217,10 +217,11 @@ export default function About() {
             <ScrollRoller />
           </div>
           <div className="flex justify-center gap-4">
-            <div
-              className="w-8 h-8 rounded-sm border border-accent-3/40 text-accent-3/50 text-[8px] font-bold rotate-6 select-none flex items-center justify-center"
-              style={{ fontFamily: "'Noto Serif SC', serif" }}
-            >鉴</div>
+            <svg className="w-7 h-7 text-accent-1/40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M12 2L3 12L12 22L21 12Z" />
+              <path d="M12 2L12 22" />
+              <path d="M3 12L21 12" />
+            </svg>
             <span
               className="text-[10px] text-text-3/25 tracking-[0.2em] font-medium self-end"
               style={{ fontFamily: "'Noto Serif SC', serif" }}

@@ -12,7 +12,7 @@ export default function Footer() {
           {/* Brand */}
           <div className="flex flex-col gap-3">
             <div className="flex items-center gap-2.5">
-              <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-accent-1 to-accent-2 flex items-center justify-center text-[9px] font-bold text-black select-none">
+              <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-accent-1 to-accent-2 flex items-center justify-center text-[9px] font-bold text-white select-none">
                 3D
               </div>
               <span className="text-[14px] font-medium tracking-[0.05em] text-text-2"

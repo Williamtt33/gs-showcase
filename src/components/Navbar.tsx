@@ -58,10 +58,9 @@ export default function Navbar() {
             style={{ font: 'inherit', color: 'inherit' }}
           >
             <svg className="w-5 h-5 sm:w-6 sm:h-6 text-accent-1/70" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M4 20 L4 10 Q8 4 12 10 L12 20" />
-              <path d="M20 20 L20 10 Q16 4 12 10" />
-              <path d="M7 20 L7 12 Q9 8 12 12 L12 20" />
-              <path d="M17 20 L17 12 Q15 8 12 12" />
+              <path d="M12 2L3 12L12 22L21 12Z" />
+              <path d="M12 2L12 22" />
+              <path d="M3 12L21 12" />
             </svg>
             <span className="font-medium tracking-[0.05em] leading-none hidden sm:inline whitespace-nowrap text-text-1/80"
               style={{ fontSize: scrolled ? 13 : 15 }}>
@@ -123,7 +122,7 @@ export default function Navbar() {
 
       {/* Bottom glow */}
       <div className="h-px w-full opacity-25"
-        style={{ background: 'linear-gradient(90deg, transparent 0%, rgba(200,169,110,0.3) 20%, rgba(200,169,110,0.5) 50%, rgba(200,169,110,0.3) 80%, transparent 100%)' }}
+        style={{ background: 'linear-gradient(90deg, transparent 0%, rgba(124,111,240,0.25) 20%, rgba(124,111,240,0.45) 50%, rgba(0,194,217,0.25) 80%, transparent 100%)' }}
       />
 
       {/* Mobile menu */}

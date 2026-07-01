@@ -1,26 +1,27 @@
 @import "tailwindcss";
 
 @theme {
-  --color-surface-0: #F8F5F0;
-  --color-surface-1: #F2EFE9;
-  --color-surface-2: #EBE6DD;
-  --color-surface-3: #E0D9CD;
-  --color-border-1: #E0D9CD;
-  --color-border-2: #CDC4B3;
-  --color-accent-1: #C8A96E;
-  --color-accent-2: #8DA391;
-  --color-accent-3: #C94F2A;
-  --color-text-1: #332E2A;
-  --color-text-2: #4A4744;
-  --color-text-3: #8B8782;
+  /* ── Crystalline Palette ── */
+  --color-surface-0: #F2F4FA;
+  --color-surface-1: #EBEEF5;
+  --color-surface-2: #E2E6F0;
+  --color-surface-3: #D4DAE8;
+  --color-border-1: #D8DCE8;
+  --color-border-2: #C4C9D8;
+  --color-accent-1: #7C6FF0;   /* crystal violet */
+  --color-accent-2: #00C2D9;   /* ice cyan */
+  --color-accent-3: #F062A6;   /* rose quartz */
+  --color-text-1: #1B1D2A;     /* deep crystal */
+  --color-text-2: #3D4058;     /* cool slate */
+  --color-text-3: #7B7F96;     /* muted ice */
 }
 
 * { margin: 0; padding: 0; box-sizing: border-box; }
 
 html {
   scroll-behavior: smooth;
-  background: #F8F5F0;
-  color: #332E2A;
+  background: #F2F4FA;
+  color: #1B1D2A;
 }
 
 body {
@@ -32,39 +33,47 @@ body {
   isolation: isolate;
 }
 
-/* Rice paper texture */
+/* Crystal lattice texture — hexagonal grid */
 body::after {
   content: '';
   position: fixed; inset: 0;
   pointer-events: none; z-index: 0;
   opacity: 0.04;
-  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
-  background-repeat: repeat;
-  background-size: 256px 256px;
+  background-image:
+    repeating-linear-gradient(60deg, #7C6FF0 0px, transparent 1px, transparent 40px, #7C6FF0 41px),
+    repeating-linear-gradient(-60deg, #00C2D9 0px, transparent 1px, transparent 40px, #00C2D9 41px),
+    repeating-linear-gradient(0deg, #7C6FF0 0px, transparent 1px, transparent 40px, #7C6FF0 41px);
+  background-size: 70px 70px;
+  mask-image: radial-gradient(ellipse at 50% 30%, rgba(0,0,0,0.3) 0%, transparent 70%);
+  -webkit-mask-image: radial-gradient(ellipse at 50% 30%, rgba(0,0,0,0.3) 0%, transparent 70%);
 }
 
 #root { min-height: 100vh; position: relative; z-index: 1; }
 
 ::-webkit-scrollbar { width: 4px; }
 ::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: #D0C9BC; border-radius: 3px; }
-::-webkit-scrollbar-thumb:hover { background: #B8AFA0; }
+::-webkit-scrollbar-thumb { background: #C4C9D8; border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: #A8AEC2; }
 
-::selection { background: rgba(200, 169, 110, 0.2); color: #332E2A; }
+::selection { background: rgba(124, 111, 240, 0.15); color: #1B1D2A; }
 
-/* ── Utilities ── */
+/* ── Card ── */
 
 .ink-card {
   background: #FFFFFF;
-  border: 1px solid rgba(0, 0, 0, 0.05);
-  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.04);
+  border: 1px solid rgba(124, 111, 240, 0.06);
+  box-shadow:
+    0 4px 24px rgba(124, 111, 240, 0.04),
+    0 1px 3px rgba(0, 0, 0, 0.03);
 }
+
+/* ── Glass (viewer overlay — keep dark) ── */
 
 .glass {
   background: linear-gradient(135deg, rgba(18,17,15,0.88) 0%, rgba(18,17,15,0.78) 100%);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
-  border: 1px solid rgba(200,169,110,0.08);
+  border: 1px solid rgba(124,111,240,0.08);
   box-shadow: 0 8px 32px rgba(0,0,0,0.45);
 }
 
@@ -75,18 +84,20 @@ body::after {
   border: 1px solid rgba(255,255,255,0.03);
 }
 
+/* ── Background atmosphere ── */
+
 .bg-ink-wash {
   background-image:
-    radial-gradient(ellipse at 25% 40%, rgba(200,169,110,0.06) 0%, transparent 50%),
-    radial-gradient(ellipse at 75% 60%, rgba(141,163,145,0.04) 0%, transparent 50%),
-    radial-gradient(ellipse at 50% 30%, rgba(201,79,42,0.02) 0%, transparent 40%);
+    radial-gradient(ellipse at 25% 40%, rgba(124,111,240,0.06) 0%, transparent 50%),
+    radial-gradient(ellipse at 75% 60%, rgba(0,194,217,0.05) 0%, transparent 50%),
+    radial-gradient(ellipse at 50% 30%, rgba(240,98,166,0.03) 0%, transparent 40%);
 }
 
 .bg-manuscript-grid {
   background-image:
-    linear-gradient(rgba(51,46,42,0.03) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(51,46,42,0.02) 1px, transparent 1px);
-  background-size: 100px 100px;
+    linear-gradient(rgba(27,29,42,0.02) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(27,29,42,0.015) 1px, transparent 1px);
+  background-size: 80px 80px;
 }
 
 canvas.gsplat-canvas {
@@ -96,16 +107,18 @@ canvas.gsplat-canvas {
   touch-action: none;
 }
 
+/* ── Typography ── */
+
 .font-display {
   font-family: 'Noto Serif SC', 'STSong', 'SimSun', serif;
   font-weight: 600;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.06em;
 }
 
 .font-mono { font-family: 'JetBrains Mono', 'Consolas', monospace; }
 
 .gradient-text {
-  background: linear-gradient(135deg, #332E2A 0%, #B28D55 50%, #C8A96E 100%);
+  background: linear-gradient(135deg, #4A3FC4 0%, #7C6FF0 40%, #00C2D9 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -146,7 +159,8 @@ canvas.gsplat-canvas {
 .btn-primary {
   display: inline-flex; align-items: center; justify-content: center;
   padding: 0.625rem 1.5rem; border-radius: 0.75rem;
-  background: #332E2A; color: #F8F5F0;
+  background: linear-gradient(135deg, #7C6FF0 0%, #5B4FD6 100%);
+  color: #FFFFFF;
   font-size: 0.8125rem; font-weight: 600; letter-spacing: 0.01em;
   transition: all 0.4s cubic-bezier(0.22, 1, 0.36, 1);
   cursor: pointer; border: none; outline: none;
@@ -154,8 +168,7 @@ canvas.gsplat-canvas {
 }
 
 .btn-primary:hover {
-  background: #4A4744;
-  box-shadow: 0 4px 24px rgba(51,46,42,0.2);
+  box-shadow: 0 4px 28px rgba(124, 111, 240, 0.35);
   transform: translateY(-1px);
 }
 
@@ -164,26 +177,26 @@ canvas.gsplat-canvas {
 /* ── Navbar glass ── */
 
 .navbar-glass {
-  background: rgba(248,245,240,0.72);
+  background: rgba(242,244,250,0.72);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
-  border-bottom: 1px solid rgba(51,46,42,0.04);
+  border-bottom: 1px solid rgba(124,111,240,0.05);
 }
 
-/* ── Fog particles ── */
+/* ── Crystal flare particles (replaces fog) ── */
 
 .fog-particle {
   position: absolute;
   border-radius: 50%;
-  background: radial-gradient(circle, rgba(200,169,110,0.06) 0%, transparent 70%);
-  animation: fog-drift var(--drift-duration, 30s) linear infinite;
+  background: radial-gradient(circle, rgba(124,111,240,0.07) 0%, rgba(0,194,217,0.03) 40%, transparent 70%);
+  animation: crystal-drift var(--drift-duration, 30s) linear infinite;
   animation-delay: var(--drift-delay, 0s);
 }
 
-@keyframes fog-drift {
-  0% { transform: translate(0, 0) scale(1); opacity: 0.4; }
-  25% { transform: translate(var(--drift-x, 20px), var(--drift-y, -15px)) scale(1.05); opacity: 0.6; }
-  50% { transform: translate(calc(var(--drift-x) * 2), calc(var(--drift-y) * 0.5)) scale(1); opacity: 0.4; }
-  75% { transform: translate(var(--drift-x), calc(var(--drift-y) * -0.5)) scale(0.95); opacity: 0.3; }
-  100% { transform: translate(0, 0) scale(1); opacity: 0.4; }
+@keyframes crystal-drift {
+  0%   { transform: translate(0, 0) scale(1); opacity: 0.5; }
+  25%  { transform: translate(var(--drift-x, 20px), var(--drift-y, -15px)) scale(1.08); opacity: 0.7; }
+  50%  { transform: translate(calc(var(--drift-x) * 2), calc(var(--drift-y) * 0.5)) scale(1); opacity: 0.5; }
+  75%  { transform: translate(var(--drift-x), calc(var(--drift-y) * -0.5)) scale(0.92); opacity: 0.3; }
+  100% { transform: translate(0, 0) scale(1); opacity: 0.5; }
 }

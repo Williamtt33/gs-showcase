@@ -56,8 +56,8 @@ export default function Gallery() {
             </div>
             <div className="text-center animate-fade-up">
               <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full mb-8 text-[11px] font-medium tracking-[0.05em]"
-                style={{ background: 'rgba(255,255,255,0.8)', border: '1px solid rgba(141,163,145,0.12)', color: '#8DA391' }}>
-                <span className="w-1.5 h-1.5 rounded-full bg-accent-2/60" />
+                style={{ background: 'rgba(255,255,255,0.8)', border: '1px solid rgba(124,111,240,0.1)', color: '#7C6FF0' }}>
+                <span className="w-1.5 h-1.5 rounded-full bg-accent-1/60" />
                 场景画廊
               </div>
               <h1 className="text-4xl sm:text-5xl lg:text-6xl font-display tracking-tight mb-6 leading-[1.22]">
@@ -76,7 +76,7 @@ export default function Gallery() {
                   onClick={() => setActiveTag(null)}
                   className={`px-3.5 py-1.5 rounded-full text-[12px] font-medium tracking-[0.03em] transition-all border-none cursor-pointer ${
                     activeTag === null
-                      ? 'bg-[#332E2A] text-[#F8F5F0] shadow-sm'
+                      ? 'bg-accent-1 text-white shadow-sm'
                       : 'bg-white/80 text-text-3/50 hover:text-text-2 border border-border-1'
                   }`}
                   style={{ cursor: 'pointer' }}
@@ -93,7 +93,7 @@ export default function Gallery() {
                       onClick={() => setActiveTag(isActive ? null : tag)}
                       className={`px-3.5 py-1.5 rounded-full text-[12px] font-medium tracking-[0.03em] transition-all border-none cursor-pointer ${
                         isActive
-                          ? 'bg-[#332E2A] text-[#F8F5F0] shadow-sm'
+                          ? 'bg-accent-1 text-white shadow-sm'
                           : 'bg-white/80 text-text-3/50 hover:text-text-2 border border-border-1'
                       }`}
                       style={{ cursor: 'pointer' }}
@@ -126,7 +126,7 @@ export default function Gallery() {
             ) : models.length === 0 ? (
               <div className="text-center py-40">
                 <div className="inline-block px-6 py-4 rounded-2xl text-center"
-                  style={{ background: 'rgba(255,255,255,0.7)', border: '1px dashed rgba(51,46,42,0.08)' }}>
+                  style={{ background: 'rgba(255,255,255,0.7)', border: '1px dashed rgba(124,111,240,0.1)' }}>
                   <p className="text-text-3/50 text-[14px]">回廊尚空，尚无场景入驻</p>
                   <p className="text-text-3/30 text-[12px] mt-1">前往管理页面上传首个场景</p>
                 </div>
