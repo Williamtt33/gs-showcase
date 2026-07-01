@@ -1,10 +1,12 @@
 import { useState, useEffect, useCallback } from 'react'
+import { usePage } from '../App'
 import { useToast } from './Toast'
 import { getAllModels, deleteModel } from '../store'
 import { supabase } from '../supabase'
 import type { ModelMeta } from '../types'
 
 export default function Admin() {
+  const { go } = usePage()
   const { addToast } = useToast()
   const [authed, setAuthed] = useState(false)
   const [email, setEmail] = useState('')
@@ -119,6 +121,13 @@ export default function Admin() {
                   <span className="text-[10px] text-text-3/40 font-mono">{model.pointCount || '-'}</span>
                   <span className="text-[10px] text-text-3/40 font-mono">{model.size || '-'}</span>
                 </div>
+                <button
+                  onClick={() => go({ route: 'viewer', modelId: model.id, edit: true })}
+                  className="px-3 py-1.5 rounded-lg text-[11px] text-accent-1/70 hover:bg-accent-1/5 transition-colors bg-transparent border-none cursor-pointer"
+                  style={{ cursor: 'pointer' }}
+                >
+                  编辑
+                </button>
                 <button
                   onClick={() => handleDelete(model.id)}
                   className="px-3 py-1.5 rounded-lg text-[11px] text-accent-3/70 hover:bg-accent-3/5 transition-colors bg-transparent border-none cursor-pointer"

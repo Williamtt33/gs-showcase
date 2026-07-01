@@ -409,22 +409,6 @@ export default function Viewer3D({ modelSource, modelName, modelId, readOnly, do
             <span className="w-px h-4 bg-[rgba(199,185,156,0.10)]" />
             <span className="px-2.5 py-1.5 text-[13px] font-medium text-[#d4c5a9]/80 select-none">{modelName}</span>
             <span className="w-px h-4 bg-[rgba(199,185,156,0.10)]" />
-            {readOnly ? (
-              <button
-                onClick={() => go({ route: 'viewer', modelId, edit: true })}
-                className="px-2.5 py-1.5 text-[12px] text-white/50 hover:text-accent-1/80 transition-colors rounded-lg hover:bg-white/[0.04] bg-transparent border-none cursor-pointer"
-                style={{ cursor: 'pointer' }}
-                title="切换编辑模式"
-              >✎ 编辑</button>
-            ) : (
-              <button
-                onClick={() => go({ route: 'viewer', modelId })}
-                className="px-2.5 py-1.5 text-[12px] text-accent-1/70 hover:text-white/80 transition-colors rounded-lg hover:bg-white/[0.04] bg-transparent border-none cursor-pointer"
-                style={{ cursor: 'pointer' }}
-                title="退出编辑模式"
-              >退出编辑</button>
-            )}
-            <span className="w-px h-4 bg-[rgba(199,185,156,0.10)]" />
             <div className="flex items-center gap-1.5 pl-2 pr-1">
               <span className="text-[9px] text-white/25 font-medium uppercase">Spd</span>
               <input
