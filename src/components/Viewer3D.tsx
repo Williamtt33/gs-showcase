@@ -16,7 +16,7 @@ interface Props {
   modelName: string
   modelId: string
   readOnly?: boolean
-  downloadProgress?: number
+  downloadProgress?: number  // pre-scene progress (SoG decode etc.), only used before gsplat reports
 }
 
 const SPEED_MIN = 5; const SPEED_MAX = 150
@@ -388,7 +388,7 @@ export default function Viewer3D({ modelSource, modelName, modelId, readOnly, do
       </div>
 
       {/* Loading */}
-      {isLoading && <LoadingScreen progress={downloadProgress !== undefined ? Math.max(progress, downloadProgress) : progress} />}
+      {isLoading && <LoadingScreen progress={progress > 0 ? progress : (downloadProgress ?? 0)} />}
 
       {/* Error */}
       {error && (

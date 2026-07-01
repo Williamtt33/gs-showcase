@@ -16,13 +16,12 @@ export default function ViewerPage({ modelId, edit }: Props) {
   const [model, setModel] = useState<ModelMeta | null>(null)
   const [source, setSource] = useState<{ type: 'url'; url: string } | { type: 'buffer'; buffer: ArrayBuffer; format?: string } | null>(null)
   const [error, setError] = useState<string | null>(null)
-  const [resolveProgress, setResolveProgress] = useState(UNRESOLVED) // -1 = finding, 0+ = resolving
+  const [resolveProgress, setResolveProgress] = useState(UNRESOLVED)
 
   useEffect(() => {
     let cancelled = false
 
     const load = async () => {
-      // Phase 1: Find model
       setResolveProgress(UNRESOLVED)
       setError(null)
 
@@ -34,14 +33,13 @@ export default function ViewerPage({ modelId, edit }: Props) {
       }
       setModel(m)
 
-      // Phase 2: Resolve model source
       try {
         const src = await resolveModelSource(m, (pct) => {
           if (!cancelled) setResolveProgress(pct)
         })
         if (!cancelled) {
           setSource(src)
-          setResolveProgress(100)
+          // Don't set to 100 — Viewer3D will show its own loading progress
         }
       } catch (e: any) {
         if (!cancelled) setError(e.message || '加载失败')
@@ -80,7 +78,6 @@ export default function ViewerPage({ modelId, edit }: Props) {
       modelName={model.name}
       modelId={modelId}
       readOnly={!edit}
-      downloadProgress={resolveProgress}
     />
   )
 }
