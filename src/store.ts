@@ -38,15 +38,32 @@ export async function getAllModels(): Promise<ModelMeta[]> {
   const builtin = await getBuiltinModels()
   // Merge custom models from localStorage
   let custom: ModelMeta[] = []
+  let needsCleanup = false
   try {
     const raw = localStorage.getItem(STORAGE_KEY_CUSTOM_MODELS)
     custom = raw ? JSON.parse(raw) : []
   } catch { /* localStorage not available */ }
-  // Deduplicate by id (builtin takes precedence)
+  // Deduplicate by id (builtin takes precedence), filter out obviously stale entries
   const seen = new Set(builtin.map(m => m.id))
   const all = [...builtin]
   for (const m of custom) {
-    if (!seen.has(m.id)) { seen.add(m.id); all.push(m) }
+    if (seen.has(m.id)) continue
+    // Skip obvious stale entries (models referencing deleted full-size files)
+    if (!m.file || m.file.trim() === '') { needsCleanup = true; continue }
+    if (/\bfull\b/i.test(m.id) || /\bfull\b/i.test(m.file)) { needsCleanup = true; continue }
+    seen.add(m.id)
+    all.push(m)
+  }
+  // Auto-cleanup stale models from localStorage
+  if (needsCleanup) {
+    try {
+      const valid = custom.filter(m => {
+        if (!m.file || m.file.trim() === '') return false
+        if (/\bfull\b/i.test(m.id) || /\bfull\b/i.test(m.file)) return false
+        return true
+      })
+      localStorage.setItem(STORAGE_KEY_CUSTOM_MODELS, JSON.stringify(valid))
+    } catch { /* ignore */ }
   }
   return all
 }
@@ -220,34 +237,49 @@ export type ModelSource =
   | { type: 'url'; url: string }
   | { type: 'buffer'; buffer: ArrayBuffer }
 
-export async function resolveModelSource(model: ModelMeta): Promise<ModelSource> {
+export async function resolveModelSource(
+  model: ModelMeta,
+  onProgress?: (pct: number) => void,
+): Promise<ModelSource> {
   const file = model.file
+  onProgress?.(5)
+
   // HTTP(S) URL → handle .sog decoding, otherwise use as-is
   if (file.startsWith('http://') || file.startsWith('https://')) {
     if (file.toLowerCase().endsWith('.sog')) {
       // Remote .sog → download + decode to PLY client-side
       const { sogUrlToPly } = await import('./utils/sogDecoder')
-      const plyBuffer = await sogUrlToPly(file)
+      const plyBuffer = await sogUrlToPly(file, (p) => onProgress?.(5 + Math.round(p * 0.9)))
+      onProgress?.(95)
       return { type: 'buffer', buffer: plyBuffer }
     }
+    onProgress?.(50)
     return { type: 'url', url: file }
   }
+
   // Relative path → serve from /models/
   const base = import.meta.env.BASE_URL || '/'
   const url = `${base}models/${file}`
+  onProgress?.(10)
+
   // SoG files: download + decode to PLY
   if (file.toLowerCase().endsWith('.sog')) {
     const { sogUrlToPly } = await import('./utils/sogDecoder')
-    const plyBuffer = await sogUrlToPly(url)
+    const plyBuffer = await sogUrlToPly(url, (p) => onProgress?.(10 + Math.round(p * 0.85)))
+    onProgress?.(95)
     return { type: 'buffer', buffer: plyBuffer }
   }
+
   // .ply / .splat: stream via gsplat LoadAsync (supports progress callback)
   if (file.toLowerCase().endsWith('.ply') || file.toLowerCase().endsWith('.splat')) {
+    onProgress?.(30) // URL resolved, gsplat will handle the rest
     return { type: 'url', url }
   }
+
   // Other files: pre-fetch as ArrayBuffer
   const res = await fetch(url)
   if (!res.ok) throw new Error(`加载模型失败: HTTP ${res.status}`)
   const buffer = await res.arrayBuffer()
+  onProgress?.(100)
   return { type: 'buffer', buffer }
 }

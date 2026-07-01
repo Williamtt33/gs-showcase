@@ -3,56 +3,65 @@ import { resolveModelSource } from '../store'
 import { getModelById } from '../store'
 import type { ModelMeta } from '../types'
 import Viewer3D from './Viewer3D'
+import LoadingScreen from './LoadingScreen'
 
 interface Props {
   modelId: string
   edit?: boolean
 }
 
+const UNRESOLVED = -1
+
 export default function ViewerPage({ modelId, edit }: Props) {
   const [model, setModel] = useState<ModelMeta | null>(null)
   const [source, setSource] = useState<{ type: 'url'; url: string } | { type: 'buffer'; buffer: ArrayBuffer } | null>(null)
   const [error, setError] = useState<string | null>(null)
-  const [loading, setLoading] = useState(true)
+  const [resolveProgress, setResolveProgress] = useState(UNRESOLVED) // -1 = finding, 0+ = resolving
 
   useEffect(() => {
     let cancelled = false
-    setLoading(true)
-    setError(null)
 
-    getModelById(modelId).then(async (m) => {
-      if (cancelled || !m) {
-        if (!cancelled) setError('模型未找到')
-        setLoading(false)
+    const load = async () => {
+      // Phase 1: Find model
+      setResolveProgress(UNRESOLVED)
+      setError(null)
+
+      const m = await getModelById(modelId)
+      if (cancelled) return
+      if (!m) {
+        setError('模型未找到')
         return
       }
       setModel(m)
+
+      // Phase 2: Resolve model source
       try {
-        const src = await resolveModelSource(m)
-        if (!cancelled) setSource(src)
+        const src = await resolveModelSource(m, (pct) => {
+          if (!cancelled) setResolveProgress(pct)
+        })
+        if (!cancelled) {
+          setSource(src)
+          setResolveProgress(100)
+        }
       } catch (e: any) {
         if (!cancelled) setError(e.message || '加载失败')
-      } finally {
-        if (!cancelled) setLoading(false)
       }
-    }).catch(e => {
-      if (!cancelled) { setError(e.message); setLoading(false) }
-    })
+    }
 
+    load()
     return () => { cancelled = true }
   }, [modelId])
 
-  if (loading) {
+  // Still resolving — show progress
+  if (!error && !source) {
     return (
-      <div className="h-screen bg-black flex items-center justify-center">
-        <div className="text-center">
-          <div className="w-8 h-8 border-2 border-white/10 border-t-accent-1 rounded-full animate-spin mx-auto mb-4" />
-          <p className="text-white/30 text-sm">加载中...</p>
-        </div>
+      <div className="h-screen bg-black">
+        <LoadingScreen progress={resolveProgress >= 0 ? Math.max(0, resolveProgress) : 0} />
       </div>
     )
   }
 
+  // Error
   if (error || !model) {
     return (
       <div className="h-screen bg-black flex items-center justify-center">
@@ -65,20 +74,13 @@ export default function ViewerPage({ modelId, edit }: Props) {
     )
   }
 
-  if (!source) {
-    return (
-      <div className="h-screen bg-black flex items-center justify-center">
-        <p className="text-white/40 text-sm">无法解析模型源</p>
-      </div>
-    )
-  }
-
   return (
     <Viewer3D
-      modelSource={source}
+      modelSource={source!}
       modelName={model.name}
       modelId={modelId}
       readOnly={!edit}
+      downloadProgress={resolveProgress}
     />
   )
 }
