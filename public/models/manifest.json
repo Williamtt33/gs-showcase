@@ -14,11 +14,11 @@
     "id": "container",
     "name": "花瓶",
     "description": "花瓶三维重建模型，展现精致瓷器的细腻纹理与光泽",
-    "file": "Container.sog",
+    "file": "Container.splat",
     "thumbnail": "",
     "tags": ["工业", "扫描重建"],
     "pointCount": "945K",
-    "size": "16 MB",
+    "size": "29 MB",
     "featured": true
   },
   {

@@ -22,7 +22,7 @@ async function decodeSogBuffer(arrayBuffer: ArrayBuffer, filename: string, onPro
   const writeFs = new MemoryFileSystem()
   await writePly({
     filename: 'scene.ply',
-    plyData: { elements: [{ name: 'vertex', dataTable }] },
+    plyData: { elements: [{ name: 'vertex', dataTable }], comments: [] },
   } as any, writeFs)
 
   onProgress?.(90)
