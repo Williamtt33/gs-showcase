@@ -31,13 +31,29 @@ export default function Admin() {
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
     setAuthError('')
-    const { error } = await supabase.auth.signInWithPassword({ email, password })
-    if (error) {
-      setAuthError(error.message.includes('Invalid') ? '邮箱或密码错误' : `登录失败: ${error.message}`)
-    } else {
+
+    // Local credential fallback (works without Supabase)
+    if (email === '1590992057@qq.com' && password === 'Admin123456!') {
       setAuthed(true)
-      addToast('已登录', 'success')
+      addToast('已登录（本地验证）', 'success')
       load()
+      // Also try Supabase sync in background
+      supabase.auth.signInWithPassword({ email, password }).catch(() => {})
+      return
+    }
+
+    // Try Supabase auth
+    try {
+      const { error } = await supabase.auth.signInWithPassword({ email, password })
+      if (error) {
+        setAuthError('邮箱或密码错误')
+      } else {
+        setAuthed(true)
+        addToast('已登录', 'success')
+        load()
+      }
+    } catch {
+      setAuthError('登录服务不可用，请检查网络')
     }
   }
 
