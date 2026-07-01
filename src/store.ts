@@ -116,7 +116,9 @@ export async function getHotspots(modelId: string): Promise<Hotspot[]> {
   // localStorage fallback
   try {
     const raw = localStorage.getItem(STORAGE_KEY_HOTSPOTS + modelId)
-    return raw ? JSON.parse(raw) : []
+    if (!raw) return []
+    const parsed = JSON.parse(raw)
+    return Array.isArray(parsed) ? parsed : []
   } catch { return [] }
 }
 
@@ -171,7 +173,9 @@ export async function getCameraPaths(modelId: string): Promise<CameraPath[]> {
   // localStorage fallback
   try {
     const raw = localStorage.getItem(STORAGE_KEY_CAMERA_PATHS + modelId)
-    return raw ? JSON.parse(raw) : []
+    if (!raw) return []
+    const parsed = JSON.parse(raw)
+    return Array.isArray(parsed) ? parsed : []
   } catch { return [] }
 }
 
@@ -235,7 +239,7 @@ export async function uploadThumbnail(modelId: string, dataUrl: string): Promise
 
 export type ModelSource =
   | { type: 'url'; url: string }
-  | { type: 'buffer'; buffer: ArrayBuffer }
+  | { type: 'buffer'; buffer: ArrayBuffer; format?: string }
 
 export async function resolveModelSource(
   model: ModelMeta,
@@ -251,7 +255,7 @@ export async function resolveModelSource(
       const { sogUrlToPly } = await import('./utils/sogDecoder')
       const plyBuffer = await sogUrlToPly(file, (p) => onProgress?.(5 + Math.round(p * 0.9)))
       onProgress?.(95)
-      return { type: 'buffer', buffer: plyBuffer }
+      return { type: 'buffer', buffer: plyBuffer, format: 'ply' }
     }
     onProgress?.(50)
     return { type: 'url', url: file }
@@ -267,7 +271,7 @@ export async function resolveModelSource(
     const { sogUrlToPly } = await import('./utils/sogDecoder')
     const plyBuffer = await sogUrlToPly(url, (p) => onProgress?.(10 + Math.round(p * 0.85)))
     onProgress?.(95)
-    return { type: 'buffer', buffer: plyBuffer }
+    return { type: 'buffer', buffer: plyBuffer, format: 'ply' }
   }
 
   // .ply / .splat: stream via gsplat LoadAsync (supports progress callback)

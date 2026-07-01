@@ -12,7 +12,7 @@ import ControlsHelp from './ControlsHelp'
 import LoadingScreen from './LoadingScreen'
 
 interface Props {
-  modelSource: { type: 'url'; url: string } | { type: 'buffer'; buffer: ArrayBuffer }
+  modelSource: { type: 'url'; url: string } | { type: 'buffer'; buffer: ArrayBuffer; format?: string }
   modelName: string
   modelId: string
   readOnly?: boolean

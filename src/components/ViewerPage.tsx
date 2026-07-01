@@ -14,7 +14,7 @@ const UNRESOLVED = -1
 
 export default function ViewerPage({ modelId, edit }: Props) {
   const [model, setModel] = useState<ModelMeta | null>(null)
-  const [source, setSource] = useState<{ type: 'url'; url: string } | { type: 'buffer'; buffer: ArrayBuffer } | null>(null)
+  const [source, setSource] = useState<{ type: 'url'; url: string } | { type: 'buffer'; buffer: ArrayBuffer; format?: string } | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [resolveProgress, setResolveProgress] = useState(UNRESOLVED) // -1 = finding, 0+ = resolving
 

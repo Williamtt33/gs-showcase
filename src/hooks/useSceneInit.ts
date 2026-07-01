@@ -4,7 +4,7 @@ import type { Scene, Camera, WebGLRenderer, OrbitControls, IntersectionTester } 
 interface UseSceneInitOptions {
   canvasRef: React.RefObject<HTMLCanvasElement | null>
   containerRef: React.RefObject<HTMLDivElement | null>
-  modelSource: { type: 'url'; url: string } | { type: 'buffer'; buffer: ArrayBuffer } | null
+  modelSource: { type: 'url'; url: string } | { type: 'buffer'; buffer: ArrayBuffer; format?: string } | null
 }
 
 interface UseSceneInitResult {
@@ -94,7 +94,9 @@ export function useSceneInit({ canvasRef, containerRef, modelSource }: UseSceneI
 
         if (modelSource.type === 'buffer') {
           setProgress(10) // parsing
-          const splat = await (SPLAT.Loader as any).LoadFromArrayBuffer(
+          const isPly = modelSource.format === 'ply'
+          const loader = isPly ? SPLAT.PLYLoader : SPLAT.Loader
+          const splat = (loader as any).LoadFromArrayBuffer(
             modelSource.buffer, localScene as any,
           )
           setProgress(100)

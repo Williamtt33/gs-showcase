@@ -7,7 +7,7 @@ async function decodeSogBuffer(arrayBuffer: ArrayBuffer, filename: string, onPro
   const readFs = new MemoryReadFileSystem()
   readFs.set(filename, new Uint8Array(arrayBuffer))
 
-  onProgress?.(10)
+  onProgress?.(15)
 
   const [dataTable] = await readFile({
     filename,
@@ -17,7 +17,7 @@ async function decodeSogBuffer(arrayBuffer: ArrayBuffer, filename: string, onPro
     params: {},
   } as any)
 
-  onProgress?.(50)
+  onProgress?.(55)
 
   const writeFs = new MemoryFileSystem()
   await writePly({
@@ -42,38 +42,20 @@ export async function sogFileToPly(file: File): Promise<{ buffer: ArrayBuffer; n
 
 /** Decode a .sog URL (fetch → decode) to PLY ArrayBuffer, with progress 0–100 */
 export async function sogUrlToPly(url: string, onProgress?: (pct: number) => void): Promise<ArrayBuffer> {
-  onProgress?.(0)
+  onProgress?.(5)
 
   const res = await fetch(url)
   if (!res.ok) throw new Error(`下载 SoG 失败: HTTP ${res.status}`)
 
-  // Track download progress if Content-Length is available
-  const contentLength = res.headers.get('content-length')
-  const total = contentLength ? parseInt(contentLength, 10) : 0
-  const reader = res.body?.getReader()
-  if (!reader) throw new Error('无法读取响应流')
+  onProgress?.(20)
 
-  const chunks: Uint8Array[] = []
-  let received = 0
-  while (true) {
-    const { done, value } = await reader.read()
-    if (done) break
-    chunks.push(value)
-    received += value.length
-    if (total > 0) onProgress?.(Math.round((received / total) * 70))
-  }
+  const arrayBuffer = await res.arrayBuffer()
 
-  // Merge chunks
-  const buffer = new Uint8Array(received)
-  let offset = 0
-  for (const chunk of chunks) {
-    buffer.set(chunk, offset)
-    offset += chunk.length
-  }
+  onProgress?.(30)
 
   const filename = url.split('/').pop() ?? 'scene.sog'
-  // Decode: 70% → 100% maps to the decode phase
-  return decodeSogBuffer(buffer.buffer as ArrayBuffer, filename, (pct) => {
-    onProgress?.(70 + Math.round(pct * 0.3))
+  // Decode phase: 30% → 100%
+  return decodeSogBuffer(arrayBuffer, filename, (pct) => {
+    onProgress?.(30 + Math.round(pct * 0.7))
   })
 }
