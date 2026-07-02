@@ -1,8 +1,8 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { usePage } from '../App'
 import { useToast } from './Toast'
-import { getAllModels, deleteModel } from '../store'
-import { supabase } from '../supabase'
+import { getAllModels, deleteModel, setThumbnailOverride, uploadThumbnail } from '../store'
+import { supabase, isSupabaseConfigured } from '../supabase'
 import type { ModelMeta } from '../types'
 
 export default function Admin() {
@@ -14,6 +14,9 @@ export default function Admin() {
   const [authError, setAuthError] = useState('')
   const [models, setModels] = useState<ModelMeta[]>([])
   const [loading, setLoading] = useState(true)
+  const [uploadingThumbId, setUploadingThumbId] = useState<string | null>(null)
+  const [pendingThumbModel, setPendingThumbModel] = useState<string | null>(null)
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   const load = useCallback(() => {
     setLoading(true)
@@ -68,6 +71,39 @@ export default function Admin() {
     }
   }
 
+  const handleThumbClick = (modelId: string) => {
+    setPendingThumbModel(modelId)
+    // Reset input value so re-selecting the same file triggers change
+    if (fileInputRef.current) fileInputRef.current.value = ''
+    fileInputRef.current?.click()
+  }
+
+  const handleThumbFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    const modelId = pendingThumbModel
+    if (!file || !modelId) return
+
+    setUploadingThumbId(modelId)
+    setPendingThumbModel(null)
+
+    try {
+      const dataUrl = await resizeImage(file, 800, 0.75)
+      let thumbnailUrl: string
+      if (isSupabaseConfigured()) {
+        thumbnailUrl = await uploadThumbnail(modelId, dataUrl)
+      } else {
+        thumbnailUrl = dataUrl
+      }
+      setThumbnailOverride(modelId, thumbnailUrl)
+      addToast('封面已更新', 'success')
+      load()
+    } catch (e: any) {
+      addToast(`封面设置失败: ${e.message}`, 'error')
+    } finally {
+      setUploadingThumbId(null)
+    }
+  }
+
   if (!authed) {
     return (
       <main className="min-h-screen bg-surface-0 flex items-center justify-center" style={{ paddingTop: '90px' }}>
@@ -102,6 +138,14 @@ export default function Admin() {
 
   return (
     <main className="min-h-screen bg-surface-0" style={{ paddingTop: '90px' }}>
+      {/* Hidden file input for thumbnail upload */}
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/*"
+        onChange={handleThumbFile}
+        className="hidden"
+      />
       <div className="max-w-4xl mx-auto px-6 py-12">
         <div className="flex items-center justify-between mb-10">
           <h1 className="text-2xl font-display tracking-tight">模型管理</h1>
@@ -129,6 +173,37 @@ export default function Admin() {
                 key={model.id}
                 className="flex items-center gap-4 p-4 rounded-xl bg-white border border-border-1"
               >
+                {/* Thumbnail */}
+                <button
+                  onClick={() => handleThumbClick(model.id)}
+                  className="shrink-0 w-14 h-14 rounded-lg overflow-hidden bg-surface-2 border border-border-1 relative group/thumb"
+                  style={{ cursor: 'pointer' }}
+                  title="点击设置封面"
+                >
+                  {model.thumbnail ? (
+                    <img src={model.thumbnail} alt="" className="w-full h-full object-cover" />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center text-text-3/15">
+                      <svg className="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round">
+                        <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+                        <circle cx="8.5" cy="8.5" r="1.5" />
+                        <polyline points="21,15 16,10 5,21" />
+                      </svg>
+                    </div>
+                  )}
+                  <div className="absolute inset-0 bg-black/0 group-hover/thumb:bg-black/20 transition-colors flex items-center justify-center">
+                    <svg className="w-4 h-4 text-white opacity-0 group-hover/thumb:opacity-90 transition-opacity" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" />
+                      <circle cx="12" cy="13" r="4" />
+                    </svg>
+                  </div>
+                  {uploadingThumbId === model.id && (
+                    <div className="absolute inset-0 bg-white/60 flex items-center justify-center">
+                      <div className="w-4 h-4 border-2 border-accent-1 border-t-transparent rounded-full animate-spin" />
+                    </div>
+                  )}
+                </button>
+
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium text-text-1">{model.name}</p>
                   <p className="text-[11px] text-text-3/50 truncate">{model.file}</p>
@@ -158,4 +233,32 @@ export default function Admin() {
       </div>
     </main>
   )
+}
+
+/** Resize an image file to maxDim on longest side, return JPEG data URL */
+function resizeImage(file: File, maxDim: number, quality: number): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const img = new Image()
+    const url = URL.createObjectURL(file)
+    img.onload = () => {
+      URL.revokeObjectURL(url)
+      let { width, height } = img
+      if (width > maxDim || height > maxDim) {
+        const ratio = Math.min(maxDim / width, maxDim / height)
+        width = Math.round(width * ratio)
+        height = Math.round(height * ratio)
+      }
+      const canvas = document.createElement('canvas')
+      canvas.width = width
+      canvas.height = height
+      const ctx = canvas.getContext('2d')!
+      ctx.drawImage(img, 0, 0, width, height)
+      resolve(canvas.toDataURL('image/jpeg', quality))
+    }
+    img.onerror = () => {
+      URL.revokeObjectURL(url)
+      reject(new Error('图片加载失败'))
+    }
+    img.src = url
+  })
 }

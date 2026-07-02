@@ -1,6 +1,6 @@
 import { supabase, isSupabaseConfigured } from './supabase'
 import type { ModelMeta, Hotspot, CameraPath, Vector3Like } from './types'
-import { STORAGE_KEY_HOTSPOTS, STORAGE_KEY_CAMERA_PATHS, STORAGE_KEY_CUSTOM_MODELS, STORAGE_KEY_INITIAL_CAMERA } from './types'
+import { STORAGE_KEY_HOTSPOTS, STORAGE_KEY_CAMERA_PATHS, STORAGE_KEY_CUSTOM_MODELS, STORAGE_KEY_INITIAL_CAMERA, STORAGE_KEY_THUMBNAILS } from './types'
 
 // ── Helpers ──
 
@@ -65,6 +65,11 @@ export async function getAllModels(): Promise<ModelMeta[]> {
       localStorage.setItem(STORAGE_KEY_CUSTOM_MODELS, JSON.stringify(valid))
     } catch { /* ignore */ }
   }
+  // Apply thumbnail overrides (so built-in models can also have custom covers)
+  const overrides = getThumbnailOverrides()
+  for (const m of all) {
+    if (overrides[m.id]) m.thumbnail = overrides[m.id]
+  }
   return all
 }
 
@@ -92,6 +97,21 @@ export async function deleteModel(id: string): Promise<void> {
     const models: ModelMeta[] = raw ? JSON.parse(raw) : []
     localStorage.setItem(STORAGE_KEY_CUSTOM_MODELS, JSON.stringify(models.filter(x => x.id !== id)))
   } catch { /* localStorage not available */ }
+}
+
+// ── Thumbnail overrides (persisted separately so built-in models can also have custom covers) ──
+
+export function getThumbnailOverrides(): Record<string, string> {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY_THUMBNAILS)
+    return raw ? JSON.parse(raw) : {}
+  } catch { return {} }
+}
+
+export function setThumbnailOverride(modelId: string, url: string): void {
+  const map = getThumbnailOverrides()
+  map[modelId] = url
+  try { localStorage.setItem(STORAGE_KEY_THUMBNAILS, JSON.stringify(map)) } catch { /* quota exceeded */ }
 }
 
 // ── Public API: Hotspots ──
